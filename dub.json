@@ -1,0 +1,33 @@
+{
+	"authors": [
+		"Tomoya Tanjo"
+	],
+	"buildTypes": {
+		"release-static": {
+			"buildOptions": [
+				"releaseMode",
+				"inline",
+				"optimize"
+			],
+			"dflags-posix-ldc": [
+				"-static"
+			]
+		}
+	},
+	"copyright": "Copyright © 2021, Tomoya Tanjo",
+	"dependencies": {
+		"dyaml": {
+			"repository": "git+https://github.com/dlang-community/D-YAML.git",
+			"version": "b124e83e009e454ff9172d0c1c96cf401d13557f"
+		},
+		"sumtype": "~>1.1.1"
+	},
+	"description": "Semantic Annotations for Linked Avro Data in D",
+	"license": "Apache-2.0",
+	"name": "schema-salad-d",
+	"stringImportPaths": [
+		"cwl/v1.0"
+	],
+	"targetPath": "bin",
+	"targetType": "library"
+}
