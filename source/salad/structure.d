@@ -8,14 +8,6 @@ import salad.util;
 
 import sumtype;
 
-unittest
-{
-    auto metaschema = Loader.fromString(import("salad/schema_salad/metaschema/metaschema.yml"))
-                            .load;
-    import std;
-    writeln(metaschema["$base"]);
-}
-
 struct Schema
 {
     string base;
