@@ -10,7 +10,7 @@
 # Compiled Static libraries
 *.a
 *.lib
-bin/
+lib/
 
 # Executables
 *.exe
