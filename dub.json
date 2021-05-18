@@ -26,9 +26,6 @@
 	"homepage": "https://github.com/tom-tan/schema-salad-d",
 	"license": "Apache-2.0",
 	"name": "schema-salad-d",
-	"stringImportPaths": [
-		"cwl/v1.0"
-	],
 	"targetPath": "lib",
 	"targetType": "library"
 }
