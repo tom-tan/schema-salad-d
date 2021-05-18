@@ -75,7 +75,6 @@ auto preprocess(Node node, Context context, string[string] vocabulary, string ba
             }
         }
     }
-
 }
 
 unittest
