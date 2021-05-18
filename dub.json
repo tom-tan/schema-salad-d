@@ -23,6 +23,7 @@
 		"sumtype": "~>1.1.1"
 	},
 	"description": "Semantic Annotations for Linked Avro Data in D",
+	"homepage": "https://github.com/tom-tan/schema-salad-d",
 	"license": "Apache-2.0",
 	"name": "schema-salad-d",
 	"stringImportPaths": [
