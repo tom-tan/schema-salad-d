@@ -1,124 +1,173 @@
 module salad.resolution;
 
-version(none):
+import dyaml;
 
+import salad.schema;
+import salad.type;
 
-// field name resolution
-// identifier resolution
-// link resolution
-// vocabulary resolution
-// $import
-// $include
-// $mixin
-// identifier map
-// DSL
-auto preprocess(Node node, Context context, string[string] vocabulary, string baseURI)
+import std.meta : staticMap;
+import std.traits : isArray, isSomeString;
+import std.typecons : Tuple;
+
+import sumtype;
+
+struct Resolver
 {
-    ///
-    if (node.type == NodeType.mapping)
+    this(Schema s)
     {
-        foreach(string f, Node v; node)
-        {
-            // 3.1. Field name resolution
-            // See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#Field_name_resolution
-            if (auto split = f.findSplit(":"))
-            {
-                if (split[2].startsWith("//"))
-                {
-                    // 3.1. (2) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
-                    auto newF = f;
-                }
-                else
-                {
-                    // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
-                    auto pre = *enforce(split[0] in context);
-                    auto newF = pre ~ split[2];
-                }
-            }
-            else if (auto voc = f in vocabulary)
-            {
-                // 3.1. (3) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
-                auto newF = *voc;
-            }
-
-            // 3.2. identifier resolution
-            if (v.type != NodeType.string)
-            {
-                auto newV = v; // TODO: preprocess
-            }
-            auto id = v.get!string;
-            if (id.startsWith("#"))
-            {
-                // 3.2. (1) If an identifier URI is prefixed with # it is a URI relative fragment identifier. It is resolved relative to the base URI by setting or replacing the fragment portion of the base URI.
-                // TODO: can we assume `baseURI` does not end with "/"?
-                auto newV = baseURI~id;
-            }
-            else if (id.canFind("://"))
-            {
-                // 3.2. (4) If an identifier URI is an absolute URI consisting of a scheme and path, no processing occurs.
-                auto newV = id;
-            }
-            else
-            {
-                // 3.2. (2) If an identifier URI does not contain a scheme and is not prefixed # it is a parent relative fragment identifier. It is resolved relative to the base URI by the following rule:
-
-                if (!baseURI.canFind("#"))
-                {
-                    // if the base URI does not contain a document fragment, set the fragment portion of the base URI.
-                    auto newV = baseURI ~ "#" ~ id;
-                }
-                else
-                {
-                    // If the base URI does contain a document fragment, append a slash / followed by the identifier field to the fragment portion of the base URI.
-                    auto newV = baseURI ~ '/' ~ id;
-                }
-            }
-        }
+        schema = s;
+        termMapping = setupTermMapping(schema);
     }
+
+    auto setupTermMapping(Schema s)
+    {
+        import std.algorithm : filter, joiner, map;
+        import std.array : assocArray;
+        import std.range : empty;
+        import std.typecons : tuple;
+
+        return s.graph
+                .map!(g => g.visit!(string, "jsonldPredicate"))
+                .joiner
+                .filter!(tpl => !tpl[1].empty)
+                .map!(tpl => tuple(tpl[1], tpl[0]))
+                .assocArray;
+    }
+
+    Schema schema;
+
+    string[string] termMapping;
 }
 
 unittest
 {
-    enum schemaStr = q"EOS
-    {
-      "$namespaces": {
-        "acid": "http://example.com/acid#"
-      },
-      "$graph": [{
-        "name": "ExampleType",
-        "type": "record",
-        "fields": [{
-          "name": "base",
-          "type": "string",
-          "jsonldPredicate": "http://example.com/base"
-        }]
-      }]
-    }
-EOS";
+    import std.file : remove;
+    import std.stdio : File;
 
-    auto schema = Loader.fromString(schemaStr)
-                        .load
-                        .as!Schema;
+    enum base = "examples/field-name-resolution";
+    auto s = Loader.fromFile(base~"/schema.json")
+                   .load
+                   .as!Schema;
+    auto r = Resolver(s);
 
-    enum example = q"EOS
-    {
-      "base": "one",
-      "form": {
-        "http://example.com/base": "two",
-        "http://example.com/three": "three",
-      },
-      "acid:four": "four"
-    }
-EOS";
+    auto example = Loader.fromFile(base~"/example.json")
+                         .load;
+    auto processed = preprocess(example, r);
 
-    enum expected = q"EOS
+    auto expected = Loader.fromFile(base~"/expected.json")
+                          .load;
+    
+    enum pr_yml = "processed.yml";
+    auto f = File(pr_yml, "w");
+    dumper.dump(f.lockingTextWriter, processed);
+    f.close;
+    scope(exit) pr_yml.remove;
+
+    auto pr = Loader.fromFile(pr_yml)
+                    .load;
+    assert(pr == expected);
+}
+
+Tuple!(string, PropType)[] visit(PropType, string prop, T)(T t)
+if (is(T == class))
+{
+    import std.algorithm : canFind, filter;
+    import std.meta : anySatisfy;
+    import std.range : only;
+    import std.traits : FieldNameTuple, hasMember;
+    import std.typecons : tuple;
+
+    typeof(return) ret;
+
+    enum FieldNames = FieldNameTuple!T.only;
+    static if (hasMember!(T, prop))
     {
-      "base": "one",
-      "form": {
-        "base": "two",
-        "http://example.com/three": "three",
-      },
-      "http://example.com/acid#four": "four"
+        alias PT = typeof(mixin("t."~prop));
+        enum isPropType(P) = is(P: PropType);
+
+        static if (isPropType!PT)
+        {
+            ret ~= tuple(t.name, mixin("t."~prop));
+        }
+        else static if (isSumType!PT && anySatisfy!(isPropType, PT.Types))
+        {
+            mixin("t."~prop).match!(
+                (PropType pt) { ret ~= tuple(t.name, pt); },
+                (_) {},
+            );
+        }
     }
-EOS";
+    static foreach(f; FieldNames.filter!(a => a != prop))
+    {
+        ret ~= visit!(PropType, prop)(mixin("t."~f));
+    }
+    return ret;
+}
+
+Tuple!(string, PropType)[] visit(PropType, string prop, T)(T t)
+if (!is(T == class))
+{
+    static if (isArray!T && !isSomeString!T)
+    {
+        import std.algorithm : joiner, map;
+        import std.array : array;
+        return t.map!(a => a.visit!(PropType, prop)).joiner.array;
+    }
+    else static if (isSumType!T)
+    {
+        enum visitFun(F) = (F f) => f.visit!(PropType, prop);
+        return t.match!(staticMap!(visitFun, T.Types));
+    }
+    else
+    {
+        return typeof(return).init;
+    }
+}
+
+Node preprocess(Node node, Resolver resolver)
+{
+    ///
+    if (node.type == NodeType.mapping)
+    {
+        Node processed;
+        foreach(string f, Node v; node)
+        {
+            import std.algorithm : canFind, findSplit;
+
+            string resolvedField = f;
+            // 3.1. Field name resolution
+            // See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
+            if (auto split = f.findSplit(":"))
+            {
+                if (auto ns = split[0] in resolver.schema.namespaces)
+                {
+                    // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
+                    resolvedField = *ns ~ split[2];
+                }
+            }
+            
+            if (auto voc = f in resolver.termMapping)
+            {
+                // 3.1. (3) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
+                resolvedField = *voc;
+            }
+
+            if (f.canFind("://"))
+            {
+                // 3.1. (2) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
+                // nop
+            }
+            else
+            {
+                // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
+                // nop
+            }
+            processed.add(resolvedField, preprocess(v, resolver));
+        }
+        return processed;
+    }
+    else
+    {
+        return node;
+    }
 }

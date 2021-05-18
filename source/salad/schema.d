@@ -1,4 +1,4 @@
-module salad.structure;
+module salad.schema;
 
 import dyaml;
 
