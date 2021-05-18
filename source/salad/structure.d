@@ -43,10 +43,23 @@ struct Schema
                         case "record": return T(n.as!SaladRecordSchema);
                         case "enum": return T(n.as!SaladEnumSchema);
                         case "documentation": return T(n.as!Documentation);
-                        default: throw new Exception("");
+                        default: throw new Exception("Invalid data type: "~n.edig("type").as!string);
                         }
                     })
                     .array;
+    }
+}
+
+unittest
+{
+    import std.file : dirEntries, SpanMode;
+    foreach(dir; dirEntries("examples", SpanMode.shallow))
+    {
+        import std.exception : assertNotThrown;
+        Loader.fromFile(dir~"/schema.json")
+              .load
+              .as!Schema
+              .assertNotThrown("Failed to load "~dir);
     }
 }
 
