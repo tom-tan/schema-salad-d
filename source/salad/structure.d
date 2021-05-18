@@ -91,27 +91,11 @@ class SaladRecordSchema
         mixin(Assign!(node, docParent));
         mixin(Assign!(node, docChild));
         mixin(Assign!(node, docAfter));
-        // mixin(Assign!(node, jsonldPredicate));
-        // pragma(msg, Assign!(node, jsonldPredicate));
+        mixin(Assign!(node, jsonldPredicate));
         mixin(Assign!(node, documentRoot));
         mixin(Assign!(node, abstract_));
         mixin(Assign!(node, extends));
         mixin(Assign!(node, specialize));
-        if (auto f = "jsonldPredicate" in node)
-        {
-            jsonldPredicate = ((a)
-            {
-                if (a.type == NodeType.mapping)
-                {
-                    return SumType!(None, string, JsonldPredicate)(a.as!JsonldPredicate);
-                }
-                else if (a.type == NodeType.string)
-                {
-                    return SumType!(None, string, JsonldPredicate)(a.as!string);
-                }
-                else throw new Exception("");
-            })(*f);
-        }
     }
 }
 
