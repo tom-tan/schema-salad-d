@@ -63,7 +63,7 @@ unittest
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#SaladRecordSchema
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 class SaladRecordSchema
 {
     string name;
@@ -72,14 +72,13 @@ class SaladRecordSchema
     Optional!(SaladRecordField[]) fields;
     Optional!string doc;
     Optional!string docParent;
-    Optional!string docChild;
+    Either!(None, string, string[]) docChild;
     Optional!string docAfter;
-    SumType!(None, string, JsonldPredicate) jsonldPredicate;
+    Either!(None, string, JsonldPredicate) jsonldPredicate;
     Optional!bool documentRoot;
     @("abstract") Optional!bool abstract_;
-    Optional!(string[]) extends;
+    Either!(None, string, string[]) extends;
     Optional!(SpecializeDef[]) specialize;
-
 
     this(in Node node) @safe
     in(node.edig("type") == type)
@@ -99,25 +98,26 @@ class SaladRecordSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#SaladRecordField
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
 class SaladRecordField
 {
     string name;
-    SumType!(
+    Either!(
         PrimitiveType,
         RecordSchema,
         EnumSchema,
         ArraySchema,
         string,
-        SumType!(
+        Either!(
             PrimitiveType,
             RecordSchema,
             EnumSchema,
             ArraySchema,
             string)[]
     ) type;
-    Optional!string doc;
-    SumType!(None, string, JsonldPredicate) jsonldPredicate;
+    Either!(None, string, string[]) doc;
+    Either!(None, string, JsonldPredicate) jsonldPredicate;
+    @("default") Optional!Any default_;
 
     this(in Node node) @trusted
     {
@@ -125,10 +125,11 @@ class SaladRecordField
         mixin(Assign!(node, type)); // unsafe
         mixin(Assign!(node, doc));
         mixin(Assign!(node, jsonldPredicate));
+        mixin(Assign!(node, default_));
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#PrimitiveType
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
 class PrimitiveType
 {
     enum Types{
@@ -138,7 +139,7 @@ class PrimitiveType
         long_ = "long",
         float_ = "float",
         double_ = "double",
-        string_ = "string",
+        string = "string",
     }
 
     string type;
@@ -150,7 +151,7 @@ class PrimitiveType
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#Any
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 class Any
 {
     enum Types{
@@ -166,7 +167,7 @@ class Any
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#RecordSchema
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
 class RecordSchema
 {
     enum type = "record";
@@ -179,24 +180,24 @@ class RecordSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#RecordField
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
 class RecordField
 {
     string name;
-    SumType!(
+    Either!(
         PrimitiveType,
         RecordSchema,
         EnumSchema,
         ArraySchema,
         string,
-        SumType!(
+        Either!(
             PrimitiveType,
             RecordSchema,
             EnumSchema,
             ArraySchema,
             string)[]
     ) type;
-    Optional!string doc;
+    Either!(None, string, string[]) doc;
 
     this(in Node node) @trusted
     {
@@ -206,7 +207,7 @@ class RecordField
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#EnumSchema
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
 class EnumSchema
 {
     string[] symbols;
@@ -219,16 +220,16 @@ class EnumSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#ArraySchema
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
 class ArraySchema
 {
-    SumType!(
+    Either!(
         PrimitiveType,
         RecordSchema,
         EnumSchema,
         ArraySchema,
         string,
-        SumType!(
+        Either!(
             PrimitiveType,
             RecordSchema,
             EnumSchema,
@@ -244,7 +245,7 @@ class ArraySchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#JsonldPredicate
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
 class JsonldPredicate
 {
     Optional!string _id;
@@ -256,6 +257,8 @@ class JsonldPredicate
     Optional!string mapPredicate;
     Optional!int refScope;
     Optional!bool typeDSL;
+    Optional!bool secondaryFilesDSL;
+    Optional!string subscope;
 
     this(in Node node) @safe
     {
@@ -268,10 +271,12 @@ class JsonldPredicate
         mixin(Assign!(node, mapPredicate));
         mixin(Assign!(node, refScope));
         mixin(Assign!(node, typeDSL));
+        mixin(Assign!(node, secondaryFilesDSL));
+        mixin(Assign!(node, subscope));
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#SpecializeDef
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
 class SpecializeDef
 {
     string specializeFrom;
@@ -284,23 +289,27 @@ class SpecializeDef
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#SaladEnumSchema
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
 class SaladEnumSchema
 {
+    string name;
     string[] symbols;
     enum type = "enum";
-    Optional!string doc;
+    Optional!bool inVocab;
+    Either!(None, string, string[]) doc;
     Optional!string docParent;
-    Optional!string docChild;
+    Either!(None, string, string[]) docChild;
     Optional!string docAfter;
-    SumType!(None, string, JsonldPredicate) jsonldPredicate;
+    Either!(None, string, JsonldPredicate) jsonldPredicate;
     Optional!bool documentRoot;
-    Optional!(string[]) extends;
+    Either!(None, string, string[]) extends;
 
     this(in Node node) @safe
     in(node.edig("type") == type)
     {
+        mixin(Assign!(node, name));
         mixin(Assign!(node, symbols));
+        mixin(Assign!(node, inVocab));
         mixin(Assign!(node, doc));
         mixin(Assign!(node, docParent));
         mixin(Assign!(node, docChild));
@@ -311,15 +320,15 @@ class SaladEnumSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#Documentation
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
 class Documentation
 {
     string name;
     enum type = "documentation";
     Optional!bool inVocab;
-    Optional!string doc;
+    Either!(None, string, string[]) doc;
     Optional!string docParent;
-    Optional!string docChild;
+    Either!(None, string, string[]) docChild;
     Optional!string docAfter;
 
     this(in Node node) @safe
