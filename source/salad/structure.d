@@ -63,53 +63,6 @@ unittest
     }
 }
 
-unittest
-{
-    enum schemaStr = q"EOS
-    {
-      "$namespaces": {
-        "acid": "http://example.com/acid#"
-      },
-      "$graph": [{
-        "name": "ExampleType",
-        "type": "record",
-        "fields": [{
-          "name": "base",
-          "type": "string",
-          "jsonldPredicate": "http://example.com/base"
-        }]
-      }]
-    }
-EOS";
-
-    auto schema = Loader.fromString(schemaStr)
-                        .load
-                        .as!Schema;
-
-    enum example = q"EOS
-    {
-      "base": "one",
-      "form": {
-        "http://example.com/base": "two",
-        "http://example.com/three": "three",
-      },
-      "acid:four": "four"
-    }
-EOS";
-
-    enum expected = q"EOS
-    {
-      "base": "one",
-      "form": {
-        "base": "two",
-        "http://example.com/three": "three",
-      },
-      "http://example.com/acid#four": "four"
-    }
-EOS";
-}
-
-
 /// See_Also: https://www.commonwl.org/v1.0/SchemaSalad.html#SaladRecordSchema
 class SaladRecordSchema
 {
