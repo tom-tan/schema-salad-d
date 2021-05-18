@@ -29,6 +29,6 @@
 	"stringImportPaths": [
 		"cwl/v1.0"
 	],
-	"targetPath": "bin",
+	"targetPath": "lib",
 	"targetType": "library"
 }
