@@ -10,11 +10,16 @@
         "id": "http://example.com/base#three"
       },
       {
-        "id": "http://example.com/four#five"
+        "id": "http://example.com/four#five",
       },
       {
-        "id": "http://example.com/acid#six"
+        "id": "http://example.com/acid#six",
+      },
+      {
+        "subscopeField": {
+          "id": "http://example.com/base#one/thisIsASubscope/seven"
+        }
       }
-    ]
+    ],
   }
 }

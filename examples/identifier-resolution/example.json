@@ -7,14 +7,19 @@
         "id": "two"
       },
       {
-        "id": "#three"
+        "id": "#three",
       },
       {
-        "id": "four#five"
+        "id": "four#five",
       },
       {
-        "id": "acid:six"
+        "id": "acid:six",
+      },
+      {
+        "subscopeField": {
+          "id": "seven"
+        }
       }
-    ]
+    ],
   }
 }
