@@ -142,36 +142,40 @@ out(result; result.type == node.type)
     }
 }
 
+/**
+See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
+*/
 auto resolveFieldName(Resolver resolver, string field)
 {
     import std.algorithm : canFind, findSplit;
 
-    string resolvedField = field;
-    // See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
-    if (auto split = field.findSplit(":"))
+    if (!field.canFind("://") && field.canFind(":"))
     {
+        auto split = field.findSplit(":");
         if (auto ns = split[0] in resolver.schema.namespaces)
         {
             // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
-            resolvedField = *ns ~ split[2];
+            return *ns ~ split[2];
+        }
+        else
+        {
+            // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
+            return field;
         }
     }
-            
-    if (auto voc = field in resolver.termMapping)
+    else if (auto voc = field in resolver.termMapping)
     {
-        // 3.1. (3) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
-        resolvedField = *voc;
+        // 3.1. (2) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
+        return *voc;
     }
-
-    if (field.canFind("://"))
+    else if (field.canFind("://"))
     {
-        // 3.1. (2) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
-        // nop
+        // 3.1. (3) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
+        return field;
     }
     else
     {
         // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
-        // nop
+        return field;
     }
-    return resolvedField;
 }
