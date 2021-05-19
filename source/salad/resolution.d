@@ -52,7 +52,7 @@ unittest
 
     auto example = Loader.fromFile(base~"/example.json")
                          .load;
-    auto processed = preprocess(example, r);
+    auto processed = r.preprocess(example);
 
     auto expected = Loader.fromFile(base~"/expected.json")
                           .load;
@@ -124,50 +124,60 @@ if (!is(T == class))
     }
 }
 
-Node preprocess(Node node, Resolver resolver)
+Node preprocess(Resolver resolver, Node node)
 {
-    ///
-    if (node.type == NodeType.mapping)
+    switch(node.type)
     {
+    case NodeType.mapping: {
         Node processed;
         foreach(string f, Node v; node)
         {
-            import std.algorithm : canFind, findSplit;
-
-            string resolvedField = f;
-            // 3.1. Field name resolution
-            // See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
-            if (auto split = f.findSplit(":"))
-            {
-                if (auto ns = split[0] in resolver.schema.namespaces)
-                {
-                    // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
-                    resolvedField = *ns ~ split[2];
-                }
-            }
-            
-            if (auto voc = f in resolver.termMapping)
-            {
-                // 3.1. (3) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
-                resolvedField = *voc;
-            }
-
-            if (f.canFind("://"))
-            {
-                // 3.1. (2) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
-                // nop
-            }
-            else
-            {
-                // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
-                // nop
-            }
-            processed.add(resolvedField, preprocess(v, resolver));
+            string resolved = resolver.resolveFieldName(f);
+            processed.add(resolved, resolver.preprocess(v));
         }
         return processed;
     }
-    else
-    {
+    case NodeType.sequence:
+        import std.algorithm : map;
+        import std.array : array;
+        return Node(node.sequence.map!(n => resolver.preprocess(n)).array);
+    case NodeType.string:
+        return node; // TODO
+    default:
         return node;
     }
+}
+
+auto resolveFieldName(Resolver resolver, string field)
+{
+    import std.algorithm : canFind, findSplit;
+
+    string resolvedField = field;
+    // See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
+    if (auto split = field.findSplit(":"))
+    {
+        if (auto ns = split[0] in resolver.schema.namespaces)
+        {
+            // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
+            resolvedField = *ns ~ split[2];
+        }
+    }
+            
+    if (auto voc = field in resolver.termMapping)
+    {
+        // 3.1. (3) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
+        resolvedField = *voc;
+    }
+
+    if (field.canFind("://"))
+    {
+        // 3.1. (2) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
+        // nop
+    }
+    else
+    {
+        // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
+        // nop
+    }
+    return resolvedField;
 }
