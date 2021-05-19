@@ -41,9 +41,6 @@ struct Resolver
 
 unittest
 {
-    import std.file : remove;
-    import std.stdio : File;
-
     enum base = "examples/field-name-resolution";
     auto s = Loader.fromFile(base~"/schema.json")
                    .load
@@ -57,15 +54,7 @@ unittest
     auto expected = Loader.fromFile(base~"/expected.json")
                           .load;
     
-    enum pr_yml = "processed.yml";
-    auto f = File(pr_yml, "w");
-    dumper.dump(f.lockingTextWriter, processed);
-    f.close;
-    scope(exit) pr_yml.remove;
-
-    auto pr = Loader.fromFile(pr_yml)
-                    .load;
-    assert(pr == expected);
+    assert(processed == expected);
 }
 
 Tuple!(string, PropType)[] visit(PropType, string prop, T)(T t)
@@ -124,15 +113,20 @@ if (!is(T == class))
     }
 }
 
+/**
+Note: This function keeps `tag` field for `Node.opEquals`
+*/
 Node preprocess(Resolver resolver, Node node)
+out(result; result.tag == node.tag)
+out(result; result.type == node.type)
 {
     switch(node.type)
     {
     case NodeType.mapping: {
-        Node processed;
-        foreach(string f, Node v; node)
+        Node processed = Node(Node.init, node.tag);
+        foreach(Node f, Node v; node)
         {
-            string resolved = resolver.resolveFieldName(f);
+            auto resolved = Node(resolver.resolveFieldName(f.as!string), f.tag);
             processed.add(resolved, resolver.preprocess(v));
         }
         return processed;
@@ -140,9 +134,9 @@ Node preprocess(Resolver resolver, Node node)
     case NodeType.sequence:
         import std.algorithm : map;
         import std.array : array;
-        return Node(node.sequence.map!(n => resolver.preprocess(n)).array);
+        return Node(node.sequence.map!(n => resolver.preprocess(n)).array, node.tag);
     case NodeType.string:
-        return node; // TODO
+        return node; // TODO: identifier resolution
     default:
         return node;
     }
