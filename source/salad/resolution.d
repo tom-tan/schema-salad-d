@@ -41,6 +41,11 @@ struct Resolver
 
 unittest
 {
+    import std.algorithm : map, joiner;
+    import std.array : array;
+    import std.conv : to;
+    import salad.util : diff;
+
     enum base = "examples/field-name-resolution";
     auto s = Loader.fromFile(base~"/schema.json")
                    .load
@@ -54,7 +59,7 @@ unittest
     auto expected = Loader.fromFile(base~"/expected.json")
                           .load;
     
-    assert(processed == expected);
+    assert(processed == expected, diff(processed, expected).to!string);
 }
 
 Tuple!(string, PropType)[] visit(PropType, string prop, T)(T t)
@@ -136,7 +141,15 @@ out(result; result.type == node.type)
         import std.array : array;
         return Node(node.sequence.map!(n => resolver.preprocess(n)).array, node.tag);
     case NodeType.string:
-        return node; // TODO: identifier resolution
+        // if node is identifier
+        if (false)
+        {
+            return Node(resolver.resolveIdentifier(node.as!string), node.tag);
+        }
+        else
+        {
+            return node;
+        }
     default:
         return node;
     }
@@ -147,10 +160,12 @@ See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
 */
 auto resolveFieldName(Resolver resolver, string field)
 {
-    import std.algorithm : canFind, findSplit;
+    import std.algorithm : canFind;
 
     if (!field.canFind("://") && field.canFind(":"))
     {
+        import std.algorithm : findSplit;
+
         auto split = field.findSplit(":");
         if (auto ns = split[0] in resolver.schema.namespaces)
         {
@@ -177,5 +192,89 @@ auto resolveFieldName(Resolver resolver, string field)
     {
         // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
         return field;
+    }
+}
+
+/**
+See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
+*/
+auto resolveIdentifier(Resolver resolver, string id)
+{
+    import std.algorithm : canFind, startsWith;
+
+    const baseURI = resolver.schema.base;
+
+    //
+    if (id.startsWith("#"))
+    {
+        import std.algorithm : findSplitBefore;
+        // 3.2. (1) If an identifier URI begins with # it is a current document fragment identifier.
+        if (auto b = baseURI.findSplitBefore("#"))
+        {
+            // It is resolved relative to the base URI by ... replacing the fragment portion of the base URI.
+            return b[0]~id;
+        }
+        else
+        {
+            // It is resolved relative to the base URI by setting ... the fragment portion of the base URI.
+            return baseURI ~ id;
+        }
+    }
+    else if (id.canFind("#"))
+    {
+        // 3.2. (2) If an identifier URI contains # in some other position it is a relative URI with fragment identifier. It is resolved relative to the base URI by stripping the last path segment from the base URI and adding the identifier followed by the fragment.
+        import std.path : dirName;
+        return baseURI.dirName~id;
+    }
+    else if (!id.canFind(":"))
+    {
+        // 3.2. (3) If an identifier URI does not contain a scheme and does not contain # it is a parent relative fragment identifier.
+        if (!baseURI.canFind("#"))
+        {
+            // 3.2. (4) If an identifier URI is a parent relative fragment identifier and the base URI does not contain a document fragment, set the document fragment on the base URI.
+            return baseURI ~ "#" ~ id; // #? /?
+        }
+        else if (false /* parent object has `subscope` in `jsonldPredicate` */)
+        {
+            // 3.2. (5) If an identifier URI is a parent relative fragment identifier and the object containing this identifier is assigned to a parent object field defined with subscope in jsonldPredicate, append a slash / to the base URI fragment followed by the value of the parent field subscope. Then append the identifier as described in the next rule.
+            //auto newBase = baseURI ~ "/" ~ parent.subscope;
+            if (baseURI.canFind("#"))
+            {
+                // 3.2. (6) If an identifier URI is a parent relative fragment identifier and the base URI contains a document fragment, append a slash / to the fragment followed by the identifier field to the fragment portion of the base URI.
+
+            }
+            return id; // TODO
+        }
+        else
+        {
+            // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
+            return id;
+        }
+    }
+    else if (!id.canFind("://") && id.canFind(":"))
+    {
+        import std.algorithm : findSplit;
+
+        auto split = id.findSplit(":");
+        if (auto ns = split[0] in resolver.schema.namespaces)
+        {
+            // 3.2. (7) If an identifier URI begins with a namespace prefix declared in $namespaces followed by a colon :, the prefix and colon must be replaced by the namespace declared in $namespaces.
+            return *ns ~ split[2];
+        }
+        else
+        {
+            // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
+            return id;
+        }
+    }
+    else if (id.canFind("://"))
+    {
+        // 3.2. (8) If an identifier URI is an absolute URI consisting of a scheme and path, no processing occurs.
+        return id;
+    }
+    else
+    {
+        // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
+        return id;
     }
 }
