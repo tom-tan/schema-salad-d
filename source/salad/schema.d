@@ -80,22 +80,7 @@ class SaladRecordSchema
     Either!(None, string, string[]) extends;
     Optional!(SpecializeDef[]) specialize;
 
-    this(in Node node) @safe
-    in(node.edig("type") == type)
-    {
-        mixin(Assign!(node, name));
-        mixin(Assign!(node, inVocab));
-        mixin(Assign!(node, fields));
-        mixin(Assign!(node, doc));
-        mixin(Assign!(node, docParent));
-        mixin(Assign!(node, docChild));
-        mixin(Assign!(node, docAfter));
-        mixin(Assign!(node, jsonldPredicate));
-        mixin(Assign!(node, documentRoot));
-        mixin(Assign!(node, abstract_));
-        mixin(Assign!(node, extends));
-        mixin(Assign!(node, specialize));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
@@ -119,14 +104,7 @@ class SaladRecordField
     Either!(None, string, JsonldPredicate) jsonldPredicate;
     @("default") Optional!Any default_;
 
-    this(in Node node) @trusted
-    {
-        mixin(Assign!(node, name));
-        mixin(Assign!(node, type)); // unsafe
-        mixin(Assign!(node, doc));
-        mixin(Assign!(node, jsonldPredicate));
-        mixin(Assign!(node, default_));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
@@ -173,11 +151,7 @@ class RecordSchema
     enum type = "record";
     Optional!(RecordField[]) fields;
 
-    this(in Node node) @safe
-    in(node.edig("type") == type)
-    {
-        mixin(Assign!(node, fields));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
@@ -199,12 +173,7 @@ class RecordField
     ) type;
     Either!(None, string, string[]) doc;
 
-    this(in Node node) @trusted
-    {
-        mixin(Assign!(node, name));
-        mixin(Assign!(node, type)); // unsafe
-        mixin(Assign!(node, doc));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
@@ -213,11 +182,7 @@ class EnumSchema
     string[] symbols;
     enum type = "enum";
 
-    this(in Node node) @safe
-    in(node.edig("type") == type)
-    {
-        mixin(Assign!(node, symbols));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
@@ -238,11 +203,7 @@ class ArraySchema
     ) items;
     enum type = "array";
 
-    this(in Node node) @trusted
-    in(node.edig("type") == type)
-    {
-        mixin(Assign!(node, items)); // unsafe
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
@@ -260,20 +221,7 @@ class JsonldPredicate
     Optional!bool secondaryFilesDSL;
     Optional!string subscope;
 
-    this(in Node node) @safe
-    {
-        mixin(Assign!(node, _id));
-        mixin(Assign!(node, _type));
-        mixin(Assign!(node, _container));
-        mixin(Assign!(node, identity));
-        mixin(Assign!(node, noLinkCheck));
-        mixin(Assign!(node, mapSubject));
-        mixin(Assign!(node, mapPredicate));
-        mixin(Assign!(node, refScope));
-        mixin(Assign!(node, typeDSL));
-        mixin(Assign!(node, secondaryFilesDSL));
-        mixin(Assign!(node, subscope));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
@@ -282,11 +230,7 @@ class SpecializeDef
     string specializeFrom;
     string specializeTo;
 
-    this(in Node node) @safe
-    {
-        mixin(Assign!(node, specializeFrom));
-        mixin(Assign!(node, specializeTo));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
@@ -304,20 +248,7 @@ class SaladEnumSchema
     Optional!bool documentRoot;
     Either!(None, string, string[]) extends;
 
-    this(in Node node) @safe
-    in(node.edig("type") == type)
-    {
-        mixin(Assign!(node, name));
-        mixin(Assign!(node, symbols));
-        mixin(Assign!(node, inVocab));
-        mixin(Assign!(node, doc));
-        mixin(Assign!(node, docParent));
-        mixin(Assign!(node, docChild));
-        mixin(Assign!(node, docAfter));
-        mixin(Assign!(node, jsonldPredicate));
-        mixin(Assign!(node, documentRoot));
-        mixin(Assign!(node, extends));
-    }
+    mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
@@ -331,14 +262,5 @@ class Documentation
     Either!(None, string, string[]) docChild;
     Optional!string docAfter;
 
-    this(in Node node) @safe
-    in(node.edig("type") == type)
-    {
-        mixin(Assign!(node, name));
-        mixin(Assign!(node, inVocab));
-        mixin(Assign!(node, doc));
-        mixin(Assign!(node, docParent));
-        mixin(Assign!(node, docChild));
-        mixin(Assign!(node, docAfter));
-    }
+    mixin genCtor;
 }

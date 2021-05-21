@@ -7,6 +7,39 @@ import dyaml;
 import sumtype;
 
 ///
+mixin template genCtor()
+{
+    this(in Node node) @trusted
+    {
+        alias This = typeof(this);
+        import std.traits : FieldNameTuple;
+
+        static foreach(field; FieldNameTuple!This)
+        {
+            mixin("mixin(Assign!(node, "~field~"));");
+        }
+    }
+}
+
+
+/**
+Returns: a string to construct `T` with a parameter whose variable name is `param`
+Note: Use this function instead of `param.as!T` to prevent circular references
+*/
+string ctorStr(T)(string param)
+{
+    import std.format : format;
+    static if (is(T == class))
+    {
+        return format!"new %1$s(%2$s)"(T.stringof, param);
+    }
+    else
+    {
+        return format!"%2$s.as!%1$s"(T.stringof, param);
+    }
+}
+
+///
 template Assign(alias node, alias field)
 {
     alias Attrs = __traits(getAttributes, field);
@@ -37,16 +70,16 @@ if (!isOptional!(typeof(field)) && !isEither!(typeof(field)))
             import salad.util : edig;
             import std.algorithm : map;
             import std.array : array;
-            %2$s = %1$s.edig("%3$s").sequence.map!(a => a.as!%4$s).array;
-EOS"(node.stringof, field.stringof, fieldName, (ElementType!FieldType).stringof);
+            %2$s = %1$s.edig("%3$s").sequence.map!(a => %4$s).array;
+EOS"(node.stringof, field.stringof, fieldName, ctorStr!(ElementType!FieldType)("a"));
     }
     else
     {
+        enum ctor = ctorStr!(FieldType)(format!`%s.edig("%s")`(node.stringof, fieldName));
         enum Assign = format!q"EOS
             import salad.util : edig;
-            %2$s = %1$s.edig("%3$s").as!%4$s;
-EOS"(node.stringof, field.stringof, fieldName, FieldType.stringof);
-
+            %s = %s;
+EOS"(field.stringof, ctor);
     }
 }
 
@@ -87,18 +120,18 @@ if (isOptional!(typeof(field)))
             {
                 import std.algorithm : map;
                 import std.array : array;
-                %2$s = f.sequence.map!(a => a.as!%4$s).array;
+                %2$s = f.sequence.map!(a => %4$s).array;
             }
-EOS"(node.stringof, field.stringof, fieldName, (ElementType!FieldType).stringof);
+EOS"(node.stringof, field.stringof, fieldName, ctorStr!(ElementType!FieldType)("a"));
     }
     else
     {
         enum Assign = format!q"EOS
             if (auto f = "%3$s" in %1$s)
             {
-                %2$s = f.as!%4$s;
+                %2$s = %4$s;
             }
-EOS"(node.stringof, field.stringof, fieldName, FieldType.stringof);
+EOS"(node.stringof, field.stringof, fieldName, ctorStr!FieldType("(*f)"));
     }
 }
 
@@ -115,7 +148,7 @@ EOS"(node.stringof, field.stringof, fieldName, FieldType.stringof);
     static assert(exp == q"EOS
         if (auto f = "fieldName" in n)
         {
-            param = f.as!bool;
+            param = (*f).as!bool;
         }
 EOS".outdent, exp);
 
@@ -277,9 +310,9 @@ EOS"(FieldType.stringof, DispatchFun!(T, T.Types));
                 {
                     import std.algorithm : map;
                     import std.array :array;
-                    return %1$s(a.sequence.map!(a => a.as!%2$s).array);
+                    return %1$s(a.sequence.map!(a => %2$s).array);
                 }
-EOS"(FieldType.stringof, T.stringof);
+EOS"(FieldType.stringof, ctorStr!T("a"));
         }
     }
     else
@@ -298,9 +331,9 @@ template RecordDispatchStatement(FieldType, RecordTypes...)
         enum RecordDispatchStatement = format!q"EOS
             if (a.type == NodeType.mapping)
             {
-                return %1$s(a.as!%2$s);
+                return %1$s(%2$s);
             }
-EOS"(FieldType.stringof, RecordTypes[0].stringof);
+EOS"(FieldType.stringof, ctorStr!(RecordTypes[0])("a"));
     }
     else
     {
@@ -309,8 +342,8 @@ EOS"(FieldType.stringof, RecordTypes[0].stringof);
         import std.meta : staticMap;
 
         enum RecordCaseStr(T) = format!q"EOS
-            case "%1$s": return %2$s(a.as!%3$s);
-EOS"(T.type, FieldType.stringof, T.stringof);
+            case "%1$s": return %2$s(%3$s);
+EOS"(T.type, FieldType.stringof, ctorStr!T("a"));
 
         enum RecordDispatchStatement = format!q"EOS
             if (a.type == NodeType.mapping)
@@ -323,7 +356,6 @@ EOS"(T.type, FieldType.stringof, T.stringof);
             }
 EOS"([staticMap!(RecordCaseStr, RecordTypes)].joiner("").array);
     }
-
 }
 
 template EnumDispatchStatement(FieldType, bool hasString, EnumTypes...)
