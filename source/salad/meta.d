@@ -4,13 +4,15 @@ import salad.type;
 
 import dyaml;
 
-import sumtype;
-
 ///
 mixin template genCtor()
 {
     this(in Node node) @trusted
     {
+        import salad.util : edig;
+        import std.algorithm : map;
+        import std.array : array;
+
         alias This = typeof(this);
         import std.traits : FieldNameTuple;
 
@@ -42,97 +44,105 @@ string ctorStr(T)(string param)
 ///
 template Assign(alias node, alias field)
 {
+    import std.format : format;
+
     alias Attrs = __traits(getAttributes, field);
+    alias T = typeof(field);
+
     static if (Attrs.length == 0)
     {
-        enum Assign = Assign!(node, field, field.stringof);
+        enum param = field.stringof;
     }
     else
     {
-        enum Assign = Assign!(node, field, Attrs[0]);
+        enum param = Attrs[0];
+    }
+
+    static if (isOptional!T)
+    {
+        enum Assign = format!q"EOS
+            if (auto f = "%s" in %s)
+            {
+                %s
+            }
+EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T));
+    }
+    else static if (isEither!T)
+    {
+        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T);
+    }
+    else
+    {
+        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T);
     }
 }
 
-///
-template Assign(alias node, alias field, string fieldName)
-if (!isOptional!(typeof(field)) && !isEither!(typeof(field)))
+template Assign_(string node, string field, T)
+if (!isSumType!T)
 {
     import std.format : format;
     import std.traits : isArray, isSomeString;
 
-    alias FieldType = typeof(field);
-
-    static if (!isSomeString!FieldType && isArray!FieldType)
+    static if (!isSomeString!T && isArray!T)
     {
         import std.range : ElementType;
+        import std.string : chomp;
 
-        enum Assign = format!q"EOS
-            import salad.util : edig;
-            import std.algorithm : map;
-            import std.array : array;
-            %2$s = %1$s.edig("%3$s").sequence.map!(a => %4$s).array;
-EOS"(node.stringof, field.stringof, fieldName, ctorStr!(ElementType!FieldType)("a"));
+        enum Assign_ = format!q"EOS
+            %s = %s.sequence.map!(a => %s).array;
+EOS"(field, node, ctorStr!(ElementType!T)("a")).chomp;
     }
     else
     {
-        enum ctor = ctorStr!(FieldType)(format!`%s.edig("%s")`(node.stringof, fieldName));
-        enum Assign = format!q"EOS
-            import salad.util : edig;
-            %s = %s;
-EOS"(field.stringof, ctor);
+        enum Assign_ = format!"%s = %s;"(field, ctorStr!T(node));
+    }
+}
+
+template Assign_(string node, string field, T)
+if (isSumType!T)
+{
+    import std.format : format;
+    static if (isOptional!T && T.Types.length == 2)
+    {
+        enum Assign_ = Assign_!(node, field, T.Types[1]);
+    }
+    else static if (isEither!T && T.Types.length == 1)
+    {
+        enum Assign_ = Assign_!(node, field, T[0]);
+    }
+    else
+    {
+        static if (isOptional!T)
+        {
+            alias Types = T.Types[1..$];
+        }
+        else static if (isEither!T)
+        {
+            alias Types = T.Types;
+        }
+        enum Assign_ = format!q"EOS
+            {
+                %s = (%s)(%s);
+            }
+EOS"(field, DispatchFun!(T, Types), node);
     }
 }
 
 //
 @safe unittest
 {
+    import salad.util : edig;
     import std.exception : assertNotThrown;
     import std.string : outdent;
 
     enum fieldName = "fieldName";
     Node n = [ fieldName: "string value" ];
-    string strVariable;
-    enum exp = Assign!(n, strVariable, fieldName).outdent;
-    static assert(exp == q"EOS
-        import salad.util : edig;
-        strVariable = n.edig("fieldName").as!string;
-EOS".outdent, exp);
+    @(fieldName) string strVariable;
+    enum exp = Assign!(n, strVariable).outdent;
+    static assert(exp == `strVariable = n.edig("fieldName").as!string;`, exp);
 
     mixin(exp);
     assert(strVariable == "string value");
-}
-
-///
-template Assign(alias node, alias field, string fieldName)
-if (isOptional!(typeof(field)))
-{
-    import std.format : format;
-    import std.traits : isArray, isSomeString;
-
-    alias FieldType = field.Types[1];
-
-    static if (!isSomeString!FieldType && isArray!FieldType)
-    {
-        import std.range : ElementType;
-
-        enum Assign = format!q"EOS
-            if (auto f = "%3$s" in %1$s)
-            {
-                import std.algorithm : map;
-                import std.array : array;
-                %2$s = f.sequence.map!(a => %4$s).array;
-            }
-EOS"(node.stringof, field.stringof, fieldName, ctorStr!(ElementType!FieldType)("a"));
-    }
-    else
-    {
-        enum Assign = format!q"EOS
-            if (auto f = "%3$s" in %1$s)
-            {
-                %2$s = %4$s;
-            }
-EOS"(node.stringof, field.stringof, fieldName, ctorStr!FieldType("(*f)"));
-    }
 }
 
 // optional of non-array type
@@ -143,8 +153,8 @@ EOS"(node.stringof, field.stringof, fieldName, ctorStr!FieldType("(*f)"));
 
     enum fieldName = "fieldName";
     Node n = [ fieldName: true ];
-    Optional!bool param;
-    enum exp = Assign!(n, param, fieldName).outdent;
+    @(fieldName) Optional!bool param;
+    enum exp = Assign!(n, param).outdent;
     static assert(exp == q"EOS
         if (auto f = "fieldName" in n)
         {
@@ -159,19 +169,19 @@ EOS".outdent, exp);
 // optional of array type
 unittest
 {
+    import std.algorithm : map;
+    import std.array : array;
     import std.exception : assertNotThrown;
     import std.string : outdent;
 
     enum fieldName = "fieldName";
     Node n = [ fieldName: [1, 2, 3] ];
-    Optional!(int[]) params;
-    enum exp = Assign!(n, params, fieldName).outdent;
+    @(fieldName) Optional!(int[]) params;
+    enum exp = Assign!(n, params).outdent;
     static assert(exp == q"EOS
         if (auto f = "fieldName" in n)
         {
-            import std.algorithm : map;
-            import std.array : array;
-            params = f.sequence.map!(a => a.as!int).array;
+                        params = (*f).sequence.map!(a => a.as!int).array;
         }
 EOS".outdent, exp);
 
@@ -179,35 +189,7 @@ EOS".outdent, exp);
     assertNotThrown(params.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
 }
 
-template Assign(alias node, alias field, string fieldName)
-if (isEither!(typeof(field)))
-{
-    import std.format : format;
-    alias Types = field.Types;
-
-    static if (is(Types[0] == None))
-    {
-        enum Assign = format!q"EOS
-            if (auto f = "%2$s" in %1$s)
-            {
-                %3$s = (%4$s)(*f);
-            }
-EOS"(node.stringof, fieldName, field.stringof,
-     DispatchFun!(typeof(field), Types[1..$]));
-    }
-    else
-    {
-        enum Assign = format!q"EOS
-            {
-                auto f = %1$s.edig("%2$s");
-                %3$s = (%4$s)(f);
-            }
-EOS"(node.stringof, fieldName, field.stringof,
-     DispatchFun!(typeof(field), Types));
-    }
-}
-
-template DispatchFun(FieldType, Types...)
+template DispatchFun(RetType, Types...)
 {
     import std.format : format;
     import std.meta : anySatisfy, Filter, staticMap;
@@ -221,7 +203,7 @@ template DispatchFun(FieldType, Types...)
     }
     else
     {
-        enum ArrayStatement = ArrayDispatchStatement!(FieldType, ArrayTypes);
+        enum ArrayStatement = ArrayDispatchStatement!(RetType, ArrayTypes);
     }
 
     // TODO: field name `type` can be changed
@@ -233,7 +215,7 @@ template DispatchFun(FieldType, Types...)
     }
     else
     {
-        enum RecordStatement = RecordDispatchStatement!(FieldType, RecordTypes);
+        enum RecordStatement = RecordDispatchStatement!(RetType, RecordTypes);
     }
 
     enum isEnum(T) = is(T == class) && is(T.Types == enum);
@@ -244,11 +226,11 @@ template DispatchFun(FieldType, Types...)
         static if (hasString)
         {
             enum EnumStatement = format!q"EOS
-            if (a.type == NodeType.string)
-            {
-                return %s(a.as!string);
-            }
-EOS"(FieldType.stringof);
+                if (a.type == NodeType.string)
+                {
+                    return %s(a.as!string);
+                }
+EOS"(RetType.stringof);
         }
         else
         {
@@ -257,7 +239,7 @@ EOS"(FieldType.stringof);
     }
     else
     {
-        enum EnumStatement = EnumDispatchStatement!(FieldType, hasString, EnumTypes);
+        enum EnumStatement = EnumDispatchStatement!(RetType, hasString, EnumTypes);
     }
 
     static assert(Types.length == 
@@ -283,7 +265,7 @@ EOS"(FieldType.stringof);
 EOS"(FunBody);
 }
 
-template ArrayDispatchStatement(FieldType, ArrayTypes...)
+template ArrayDispatchStatement(RetType, ArrayTypes...)
 {
     static if (ArrayTypes.length == 1)
     {
@@ -295,24 +277,20 @@ template ArrayDispatchStatement(FieldType, ArrayTypes...)
             enum ArrayDispatchStatement = format!q"EOS
                 if (a.type == NodeType.sequence)
                 {
-                    import std.algorithm : map;
-                    import std.array :array;
-                    return %1$s(a.sequence.map!(
-                        %2$s
+                    return %s(a.sequence.map!(
+                        %s
                     ).array);
                 }
-EOS"(FieldType.stringof, DispatchFun!(T, T.Types));
+EOS"(RetType.stringof, DispatchFun!(T, T.Types));
         }
         else
         {
             enum ArrayDispatchStatement = format!q"EOS
                 if (a.type == NodeType.sequence)
                 {
-                    import std.algorithm : map;
-                    import std.array :array;
-                    return %1$s(a.sequence.map!(a => %2$s).array);
+                    return %s(a.sequence.map!(a => %s).array);
                 }
-EOS"(FieldType.stringof, ctorStr!T("a"));
+EOS"(RetType.stringof, ctorStr!T("a"));
         }
     }
     else
@@ -322,7 +300,7 @@ EOS"(FieldType.stringof, ctorStr!T("a"));
     }
 }
 
-template RecordDispatchStatement(FieldType, RecordTypes...)
+template RecordDispatchStatement(RetType, RecordTypes...)
 {
     import std.format : format;
 
@@ -331,9 +309,9 @@ template RecordDispatchStatement(FieldType, RecordTypes...)
         enum RecordDispatchStatement = format!q"EOS
             if (a.type == NodeType.mapping)
             {
-                return %1$s(%2$s);
+                return %s(%s);
             }
-EOS"(FieldType.stringof, ctorStr!(RecordTypes[0])("a"));
+EOS"(RetType.stringof, ctorStr!(RecordTypes[0])("a"));
     }
     else
     {
@@ -342,8 +320,8 @@ EOS"(FieldType.stringof, ctorStr!(RecordTypes[0])("a"));
         import std.meta : staticMap;
 
         enum RecordCaseStr(T) = format!q"EOS
-            case "%1$s": return %2$s(%3$s);
-EOS"(T.type, FieldType.stringof, ctorStr!T("a"));
+            case "%s": return %s(%s);
+EOS"(T.type, RetType.stringof, ctorStr!T("a"));
 
         enum RecordDispatchStatement = format!q"EOS
             if (a.type == NodeType.mapping)
@@ -358,7 +336,7 @@ EOS"([staticMap!(RecordCaseStr, RecordTypes)].joiner("").array);
     }
 }
 
-template EnumDispatchStatement(FieldType, bool hasString, EnumTypes...)
+template EnumDispatchStatement(RetType, bool hasString, EnumTypes...)
 {
     import std.algorithm : joiner, map;
     import std.array : array;
@@ -367,16 +345,16 @@ template EnumDispatchStatement(FieldType, bool hasString, EnumTypes...)
     import std.traits : EnumMembers;
 
     enum EnumCaseStr(T) = format!q"EOS
-        case %1$s: return %2$s(a.as!%3$s);
+        case %s: return %s(a.as!%s);
 EOS"([EnumMembers!(T.Types)].map!(m => format!`"%s"`(cast(string)m))
                             .joiner(", ")
                             .array,
-     FieldType.stringof, T.stringof);
+     RetType.stringof, T.stringof);
     static if (hasString)
     {
         enum DefaultStr = format!q"EOS
-            return %1$s(value);
-EOS"(FieldType.stringof);
+            return %s(value);
+EOS"(RetType.stringof);
     }
     else
     {

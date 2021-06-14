@@ -6,14 +6,12 @@ import salad.meta;
 import salad.type;
 import salad.util;
 
-import sumtype;
-
-struct Schema
+struct SaladSchema
 {
     string base;
     string[string] namespaces;
     string[] schemas;
-    SumType!(SaladRecordSchema, SaladEnumSchema, Documentation)[] graph;
+    Either!(SaladRecordSchema, SaladEnumSchema, Documentation)[] graph;
 
     this(in Node node) @trusted
     {
@@ -21,6 +19,7 @@ struct Schema
         import std.array : array, assocArray;
         import std.typecons : tuple;
 
+        // TODO: load implied context
         base = node.dig("$base", "").as!string;
         namespaces = node.dig("$namespaces", (string[string]).init)
                          .mapping
@@ -58,13 +57,15 @@ unittest
         import std.exception : assertNotThrown;
         Loader.fromFile(dir~"/schema.json")
               .load
-              .as!Schema
+              .as!SaladSchema
               .assertNotThrown("Failed to load "~dir);
     }
 }
 
+interface DocumentSchema{}
+
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
-class SaladRecordSchema
+class SaladRecordSchema : DocumentSchema
 {
     string name;
     enum type = "record";
@@ -72,19 +73,78 @@ class SaladRecordSchema
     Optional!(SaladRecordField[]) fields;
     Optional!string doc;
     Optional!string docParent;
-    Either!(None, string, string[]) docChild;
+    Optional!(string, string[]) docChild;
     Optional!string docAfter;
-    Either!(None, string, JsonldPredicate) jsonldPredicate;
+    Optional!(string, JsonldPredicate) jsonldPredicate;
     Optional!bool documentRoot;
     @("abstract") Optional!bool abstract_;
-    Either!(None, string, string[]) extends;
+    Optional!(string, string[]) extends;
     Optional!(SpecializeDef[]) specialize;
 
     mixin genCtor;
+/+
+    auto matchSchema(Node node)
+    {
+        if (node.type == NodeType.mapping)
+        {
+            return fields.match!(
+                (SaladRecordField[] srfs) => srfs.all!(s => s.matchSchema(node)),
+                (None _) => true,
+            );
+        }
+        else
+        {
+            return false;
+        }
+    }+/
+/+
+    auto load(Node node)
+    {
+        auto ro = RecordObject;
+        ro.schema = this;
+        fields.match!(
+            (SaladRecordField fs) {
+                fs.each!((fschema) {
+                    auto name = fschema.name;
+                    fschema.type.match!(
+                        (PrimitiveType pt) => pt.load(node.edig(name)),
+                        (RecordSchema rs) => rs.load(node.edig(name)),
+                        (EnumSchema es) => es.load(node.edig(name)),
+                        (ArraySchema as) => as.load(node.edig(name)),
+                        (string s) => /* definition of s*/,
+                        //
+                    );
+                    if (auto fval = name in node)
+                    {
+                        switch((*fval).type)
+                        {
+                        case NodeType.boolean:
+                            // enforce(fieldSchema.type == PrimitiveType && type.type == type.Type.boolean)
+                            break;
+                        case NodeType.integer: break;
+                        case NodeType.sequence: break;
+                        case NodeType.string: break;
+                        case NodeType.mapping: break;
+                        case NodeType.null_: break;
+                        default: break;
+                        }
+                    }
+                    else
+                    {
+                        fschema.default_.match!(
+                            (Any _) => XXX,
+                            (_) {},
+                        );
+                    }
+                });
+            },
+            (None _) {},
+        )
+    }+/
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
-class SaladRecordField
+class SaladRecordField : DocumentSchema
 {
     string name;
     Either!(
@@ -100,15 +160,39 @@ class SaladRecordField
             ArraySchema,
             string)[]
     ) type;
-    Either!(None, string, string[]) doc;
-    Either!(None, string, JsonldPredicate) jsonldPredicate;
+    Optional!(string, string[]) doc;
+    Optional!(string, JsonldPredicate) jsonldPredicate;
     @("default") Optional!Any default_;
 
     mixin genCtor;
+
+/+
+    bool matchSchema(Node node)
+    in(node.type == NodeType.mapping)
+    {
+        if (auto f = name in node)
+        {
+            return type.match!(
+                (PritiveType pt) => pt.matchSchema(*f),
+                (RecordSchema rs) => rs.matchSchema(*f),
+                (EnumSchema es) => es.matchSchema(*f),
+                (ArraySchema as) => as.matchSchema(*f),
+                (string s) => true, // TODO: 
+                rest => zip(),
+            );
+        }
+        else
+        {
+            return default_.match!(
+                (Any _) => true,
+                _ => false,
+            );
+        }
+    }+/
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
-class PrimitiveType
+class PrimitiveType : DocumentSchema
 {
     enum Types{
         null_ = "null",
@@ -130,7 +214,7 @@ class PrimitiveType
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
-class Any
+class Any : DocumentSchema
 {
     enum Types{
         Any = "Any",
@@ -146,7 +230,7 @@ class Any
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
-class RecordSchema
+class RecordSchema : DocumentSchema
 {
     enum type = "record";
     Optional!(RecordField[]) fields;
@@ -155,7 +239,7 @@ class RecordSchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
-class RecordField
+class RecordField : DocumentSchema
 {
     string name;
     Either!(
@@ -171,13 +255,13 @@ class RecordField
             ArraySchema,
             string)[]
     ) type;
-    Either!(None, string, string[]) doc;
+    Optional!(string, string[]) doc;
 
     mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
-class EnumSchema
+class EnumSchema : DocumentSchema
 {
     string[] symbols;
     enum type = "enum";
@@ -186,7 +270,7 @@ class EnumSchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
-class ArraySchema
+class ArraySchema : DocumentSchema
 {
     Either!(
         PrimitiveType,
@@ -207,7 +291,7 @@ class ArraySchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
-class JsonldPredicate
+class JsonldPredicate : DocumentSchema
 {
     Optional!string _id;
     Optional!string _type;
@@ -225,7 +309,7 @@ class JsonldPredicate
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
-class SpecializeDef
+class SpecializeDef : DocumentSchema
 {
     string specializeFrom;
     string specializeTo;
@@ -234,32 +318,32 @@ class SpecializeDef
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
-class SaladEnumSchema
+class SaladEnumSchema : DocumentSchema
 {
     string name;
     string[] symbols;
     enum type = "enum";
     Optional!bool inVocab;
-    Either!(None, string, string[]) doc;
+    Optional!(string, string[]) doc;
     Optional!string docParent;
-    Either!(None, string, string[]) docChild;
+    Optional!(string, string[]) docChild;
     Optional!string docAfter;
-    Either!(None, string, JsonldPredicate) jsonldPredicate;
+    Optional!(string, JsonldPredicate) jsonldPredicate;
     Optional!bool documentRoot;
-    Either!(None, string, string[]) extends;
+    Optional!(string, string[]) extends;
 
     mixin genCtor;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
-class Documentation
+class Documentation : DocumentSchema
 {
     string name;
     enum type = "documentation";
     Optional!bool inVocab;
-    Either!(None, string, string[]) doc;
+    Optional!(string, string[]) doc;
     Optional!string docParent;
-    Either!(None, string, string[]) docChild;
+    Optional!(string, string[]) docChild;
     Optional!string docAfter;
 
     mixin genCtor;

@@ -1,14 +1,19 @@
 module salad.type;
 
-import sumtype;
+public import sumtype;
+import std.meta : allSatisfy, anySatisfy, templateNot;
 
 struct None{}
 
-alias Optional(T) = SumType!(None, T);
+private enum isNone(T) = is(T == None);
 
-enum isOptional(T) = isSumType!T &&
-    T.Types.length == 2 &&
-    is(T.Types[0] == None);
+template Optional(TS...)
+if (allSatisfy!(templateNot!isNone, TS))
+{
+    alias Optional = SumType!(None, TS);
+}
+
+enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templateNot!isNone, T.Types[1..$]);
 
 // test for Optional!T
 @safe unittest
@@ -18,16 +23,19 @@ enum isOptional(T) = isSumType!T &&
     assertNotThrown(op.tryMatch!((None _) {}));
 }
 
-alias Either(TS...) = SumType!TS;
+template Either(TS...)
+if (allSatisfy!(templateNot!isNone, TS))
+{
+    alias Either = SumType!TS;
+}
 
-enum isEither(T) = isSumType!T &&
-    (T.Types.length > 2 || !is(T.Types[0] == None));
+enum isEither(T) = isSumType!T && allSatisfy!(templateNot!isNone, T.Types);
 
 @safe unittest
 {
     static assert(isEither!(SumType!(int, string, double)));
     static assert(!isEither!(Optional!int));
     static assert(isEither!(SumType!(int, string)));
-    static assert(isEither!(SumType!(None, int, string)));
+    static assert(!isEither!(SumType!(None, int, string)));
     static assert(!isEither!string);
 }

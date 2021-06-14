@@ -13,13 +13,13 @@ import sumtype;
 
 struct Resolver
 {
-    this(Schema s)
+    this(SaladSchema s)
     {
         schema = s;
         termMapping = setupTermMapping(schema);
     }
 
-    auto setupTermMapping(Schema s)
+    auto setupTermMapping(SaladSchema s)
     {
         import std.algorithm : filter, joiner, map;
         import std.array : assocArray;
@@ -34,7 +34,7 @@ struct Resolver
                 .assocArray;
     }
 
-    Schema schema;
+    SaladSchema schema;
 
     string[string] termMapping;
 }
@@ -49,7 +49,7 @@ unittest
     enum base = "examples/field-name-resolution";
     auto s = Loader.fromFile(base~"/schema.json")
                    .load
-                   .as!Schema;
+                   .as!SaladSchema;
     auto r = Resolver(s);
 
     auto example = Loader.fromFile(base~"/example.json")
