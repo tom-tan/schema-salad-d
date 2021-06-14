@@ -23,7 +23,6 @@ mixin template genCtor()
     }
 }
 
-
 /**
 Returns: a string to construct `T` with a parameter whose variable name is `param`
 Note: Use this function instead of `param.as!T` to prevent circular references
@@ -77,6 +76,68 @@ EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T));
     }
 }
 
+///
+@safe unittest
+{
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
+    import std.string : outdent;
+
+    enum fieldName = "fieldName";
+    Node n = [ fieldName: "string value" ];
+    @(fieldName) string strVariable;
+    enum exp = Assign!(n, strVariable).outdent;
+    static assert(exp == `strVariable = n.edig("fieldName").as!string;`, exp);
+
+    mixin(exp);
+    assert(strVariable == "string value");
+}
+
+/// optional of non-array type
+@safe unittest
+{
+    import std.exception : assertNotThrown;
+    import std.string : outdent;
+
+    enum fieldName = "fieldName";
+    Node n = [ fieldName: true ];
+    @(fieldName) Optional!bool param;
+    enum exp = Assign!(n, param).outdent;
+    static assert(exp == q"EOS
+        if (auto f = "fieldName" in n)
+        {
+            param = (*f).as!bool;
+        }
+EOS".outdent, exp);
+
+    mixin(exp);
+    assertNotThrown(param.tryMatch!((bool b) => assert(b)));
+}
+
+/// optional of array type
+unittest
+{
+    import std.algorithm : map;
+    import std.array : array;
+    import std.exception : assertNotThrown;
+    import std.string : outdent;
+
+    enum fieldName = "fieldName";
+    Node n = [ fieldName: [1, 2, 3] ];
+    @(fieldName) Optional!(int[]) params;
+    enum exp = Assign!(n, params).outdent;
+    // TODO
+    static assert(exp == q"EOS
+        if (auto f = "fieldName" in n)
+        {
+                        params = (*f).sequence.map!(a => a.as!int).array;
+        }
+EOS".outdent, exp);
+
+    mixin(exp);
+    assertNotThrown(params.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
+}
+
 template Assign_(string node, string field, T)
 if (!isSumType!T)
 {
@@ -126,67 +187,6 @@ if (isSumType!T)
             }
 EOS"(field, DispatchFun!(T, Types), node);
     }
-}
-
-//
-@safe unittest
-{
-    import salad.util : edig;
-    import std.exception : assertNotThrown;
-    import std.string : outdent;
-
-    enum fieldName = "fieldName";
-    Node n = [ fieldName: "string value" ];
-    @(fieldName) string strVariable;
-    enum exp = Assign!(n, strVariable).outdent;
-    static assert(exp == `strVariable = n.edig("fieldName").as!string;`, exp);
-
-    mixin(exp);
-    assert(strVariable == "string value");
-}
-
-// optional of non-array type
-@safe unittest
-{
-    import std.exception : assertNotThrown;
-    import std.string : outdent;
-
-    enum fieldName = "fieldName";
-    Node n = [ fieldName: true ];
-    @(fieldName) Optional!bool param;
-    enum exp = Assign!(n, param).outdent;
-    static assert(exp == q"EOS
-        if (auto f = "fieldName" in n)
-        {
-            param = (*f).as!bool;
-        }
-EOS".outdent, exp);
-
-    mixin(exp);
-    assertNotThrown(param.tryMatch!((bool b) => assert(b)));
-}
-
-// optional of array type
-unittest
-{
-    import std.algorithm : map;
-    import std.array : array;
-    import std.exception : assertNotThrown;
-    import std.string : outdent;
-
-    enum fieldName = "fieldName";
-    Node n = [ fieldName: [1, 2, 3] ];
-    @(fieldName) Optional!(int[]) params;
-    enum exp = Assign!(n, params).outdent;
-    static assert(exp == q"EOS
-        if (auto f = "fieldName" in n)
-        {
-                        params = (*f).sequence.map!(a => a.as!int).array;
-        }
-EOS".outdent, exp);
-
-    mixin(exp);
-    assertNotThrown(params.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
 }
 
 template DispatchFun(RetType, Types...)
