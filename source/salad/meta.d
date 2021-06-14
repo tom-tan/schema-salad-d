@@ -126,7 +126,7 @@ unittest
     Node n = [ fieldName: [1, 2, 3] ];
     @(fieldName) Optional!(int[]) params;
     enum exp = Assign!(n, params).outdent;
-    // TODO
+    // TODO: ignore spaces
     static assert(exp == q"EOS
         if (auto f = "fieldName" in n)
         {
