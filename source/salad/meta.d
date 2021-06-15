@@ -76,17 +76,26 @@ EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T));
     }
 }
 
+version(unittest)
+{
+    auto stripLeftAll(string str) @safe
+    {
+        import std.algorithm : joiner, map;
+        import std.array : array;
+        import std.string : split, stripLeft;
+        return str.split.map!stripLeft.joiner("\n").array;
+    }
+}
+
 ///
 @safe unittest
 {
     import salad.util : edig;
-    import std.exception : assertNotThrown;
-    import std.string : outdent;
 
     enum fieldName = "fieldName";
     Node n = [ fieldName: "string value" ];
     @(fieldName) string strVariable;
-    enum exp = Assign!(n, strVariable).outdent;
+    enum exp = Assign!(n, strVariable);
     static assert(exp == `strVariable = n.edig("fieldName").as!string;`, exp);
 
     mixin(exp);
@@ -97,18 +106,17 @@ EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T));
 @safe unittest
 {
     import std.exception : assertNotThrown;
-    import std.string : outdent;
 
     enum fieldName = "fieldName";
     Node n = [ fieldName: true ];
     @(fieldName) Optional!bool param;
-    enum exp = Assign!(n, param).outdent;
+    enum exp = Assign!(n, param).stripLeftAll;
     static assert(exp == q"EOS
         if (auto f = "fieldName" in n)
         {
             param = (*f).as!bool;
         }
-EOS".outdent, exp);
+EOS".stripLeftAll, exp);
 
     mixin(exp);
     assertNotThrown(param.tryMatch!((bool b) => assert(b)));
@@ -120,19 +128,17 @@ unittest
     import std.algorithm : map;
     import std.array : array;
     import std.exception : assertNotThrown;
-    import std.string : outdent;
 
     enum fieldName = "fieldName";
     Node n = [ fieldName: [1, 2, 3] ];
     @(fieldName) Optional!(int[]) params;
-    enum exp = Assign!(n, params).outdent;
-    // TODO: ignore spaces
+    enum exp = Assign!(n, params).stripLeftAll;
     static assert(exp == q"EOS
         if (auto f = "fieldName" in n)
         {
-                        params = (*f).sequence.map!(a => a.as!int).array;
+            params = (*f).sequence.map!(a => a.as!int).array;
         }
-EOS".outdent, exp);
+EOS".stripLeftAll, exp);
 
     mixin(exp);
     assertNotThrown(params.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
