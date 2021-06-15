@@ -62,7 +62,14 @@ unittest
     }
 }
 
-interface DocumentSchema{}
+abstract class DocumentSchema
+{
+    bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        throw new Exception("It should be overridden by its subclass");
+    }
+
+}
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 class SaladRecordSchema : DocumentSchema
@@ -82,13 +89,15 @@ class SaladRecordSchema : DocumentSchema
     Optional!(SpecializeDef[]) specialize;
 
     mixin genCtor;
-/+
-    auto matchSchema(Node node)
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
     {
         if (node.type == NodeType.mapping)
         {
+            import std.algorithm : all;
+
             return fields.match!(
-                (SaladRecordField[] srfs) => srfs.all!(s => s.matchSchema(node)),
+                (SaladRecordField[] srfs) => srfs.all!(s => s.matchSchema(node, docSchema)),
                 (None _) => true,
             );
         }
@@ -96,7 +105,7 @@ class SaladRecordSchema : DocumentSchema
         {
             return false;
         }
-    }+/
+    }
 /+
     auto load(Node node)
     {
@@ -166,19 +175,23 @@ class SaladRecordField : DocumentSchema
 
     mixin genCtor;
 
-/+
-    bool matchSchema(Node node)
-    in(node.type == NodeType.mapping)
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
     {
-        if (auto f = name in node)
+        if (node.type != NodeType.mapping)
         {
+            return false;
+        }
+        else if (auto f = name in node)
+        {
+            import std.algorithm : any;
+
             return type.match!(
-                (PritiveType pt) => pt.matchSchema(*f),
-                (RecordSchema rs) => rs.matchSchema(*f),
-                (EnumSchema es) => es.matchSchema(*f),
-                (ArraySchema as) => as.matchSchema(*f),
-                (string s) => true, // TODO: 
-                rest => zip(),
+                (PrimitiveType pt) => pt.matchSchema(*f, docSchema),
+                (RecordSchema rs) => rs.matchSchema(*f, docSchema),
+                (EnumSchema es) => es.matchSchema(*f, docSchema),
+                (ArraySchema as) => as.matchSchema(*f, docSchema),
+                (string s) => s.matchSchema(*f, docSchema),
+                rest => rest.any!(s => s.matchSchema(*f, docSchema)),
             );
         }
         else
@@ -188,7 +201,7 @@ class SaladRecordField : DocumentSchema
                 _ => false,
             );
         }
-    }+/
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
@@ -210,6 +223,20 @@ class PrimitiveType : DocumentSchema
     {
         type = node.as!string;
         // enforce
+    }
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        final switch(type) with(Types)
+        {
+        case null_: return node.type == NodeType.null_;
+        case boolean: return node.type == NodeType.boolean;
+        case int_: return node.type == NodeType.integer;
+        case long_: return node.type == NodeType.integer;
+        case float_: return node.type == NodeType.decimal;
+        case double_: return node.type == NodeType.decimal;
+        case string: return node.type == NodeType.string;
+        }
     }
 }
 
@@ -236,6 +263,17 @@ class RecordSchema : DocumentSchema
     Optional!(RecordField[]) fields;
 
     mixin genCtor;
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        import std.algorithm : all;
+
+        return fields.match!(
+            (RecordField[] rf) => node.type == NodeType.mapping
+                ? rf.all!(f => f.matchSchema(node, docSchema)) : false,
+            _ => true,
+        );
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
@@ -258,6 +296,31 @@ class RecordField : DocumentSchema
     Optional!(string, string[]) doc;
 
     mixin genCtor;
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        if (node.type != NodeType.mapping)
+        {
+            return false;
+        }
+        else if (auto f = name in node)
+        {
+            import std.algorithm : any;
+
+            return type.match!(
+                (PrimitiveType pt) => pt.matchSchema(*f, docSchema),
+                (RecordSchema rs) => rs.matchSchema(*f, docSchema),
+                (EnumSchema es) => es.matchSchema(*f, docSchema),
+                (ArraySchema as) => as.matchSchema(*f, docSchema),
+                (string s) => s.matchSchema(*f, docSchema),
+                rest => rest.any!(s => s.matchSchema(*f, docSchema)),
+            );
+        }
+        else
+        {
+            return false;
+        }
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
@@ -267,6 +330,19 @@ class EnumSchema : DocumentSchema
     enum type = "enum";
 
     mixin genCtor;
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        if (node.type == NodeType.string)
+        {
+            import std.algorithm : canFind;
+            return symbols.canFind(node.as!string);
+        }
+        else
+        {
+            return false;
+        }
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
@@ -288,6 +364,27 @@ class ArraySchema : DocumentSchema
     enum type = "array";
 
     mixin genCtor;
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        if (node.type == NodeType.sequence)
+        {
+            import std.algorithm : all, any;
+
+            return items.match!(
+                (PrimitiveType pt) => node.sequence.all!(n => pt.matchSchema(n, docSchema)),
+                (RecordSchema rs) => node.sequence.all!(n => rs.matchSchema(n, docSchema)),
+                (EnumSchema es) => node.sequence.all!(n => es.matchSchema(n, docSchema)),
+                (ArraySchema as) => node.sequence.all!(n => as.matchSchema(n, docSchema)),
+                (string s) => node.sequence.all!(n => s.matchSchema(n, docSchema)),
+                rest => node.sequence.all!(n => rest.any!(s => s.matchSchema(n, docSchema))),
+            );
+        }
+        else
+        {
+            return false;
+        }
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
@@ -333,6 +430,19 @@ class SaladEnumSchema : DocumentSchema
     Optional!(string, string[]) extends;
 
     mixin genCtor;
+
+    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    {
+        if (node.type == NodeType.string)
+        {
+            import std.algorithm : canFind;
+            return symbols.canFind(node.as!string);
+        }
+        else
+        {
+            return false;
+        }
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
@@ -347,4 +457,17 @@ class Documentation : DocumentSchema
     Optional!string docAfter;
 
     mixin genCtor;
+}
+
+bool matchSchema(string schemaName, Node node, DocumentSchema[string] docSchema)
+{
+    return docSchema[schemaName].matchSchema(node, docSchema);
+}
+
+bool matchSchema(T)(T either, Node node, DocumentSchema[string] docSchema)
+if (isEither!T)
+{
+    return either.match!(
+        s => s.matchSchema(node, docSchema),
+    );
 }
