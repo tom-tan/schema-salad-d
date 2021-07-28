@@ -27,5 +27,8 @@
 	"license": "Apache-2.0",
 	"name": "schema-salad-d",
 	"targetPath": "lib",
-	"targetType": "library"
+	"targetType": "library",
+	"stringImportPaths": [
+		"examples"
+	]
 }

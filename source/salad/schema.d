@@ -2,9 +2,13 @@ module salad.schema;
 
 import dyaml;
 
+import salad.ast;
+import salad.exception;
 import salad.meta;
 import salad.type;
 import salad.util;
+
+import std.typecons : Tuple;
 
 struct SaladSchema
 {
@@ -42,7 +46,7 @@ struct SaladSchema
                         case "record": return T(n.as!SaladRecordSchema);
                         case "enum": return T(n.as!SaladEnumSchema);
                         case "documentation": return T(n.as!Documentation);
-                        default: throw new Exception("Invalid data type: "~n.edig("type").as!string);
+                        default: throw new SchemaException("Invalid data type: "~n.edig("type").as!string, n);
                         }
                     })
                     .array;
@@ -64,11 +68,12 @@ unittest
 
 abstract class DocumentSchema
 {
-    bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    ///
+    AST parse(Node node, DocumentSchema[string] docSchema)
+    out(result; result)
     {
-        throw new Exception("It should be overridden by its subclass");
+        assert(false, "It should be overridden by its subclass");
     }
-
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
@@ -89,67 +94,40 @@ class SaladRecordSchema : DocumentSchema
     Optional!(SpecializeDef[]) specialize;
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, DocumentSchema[string] docSchema)
     {
-        if (node.type == NodeType.mapping)
+        auto ast(T)(T val)
         {
-            import std.algorithm : all;
+            return new AST(node, "SaladRecordSchema", val);
+        }
 
-            return fields.match!(
-                (SaladRecordField[] srfs) => srfs.all!(s => s.matchSchema(node, docSchema)),
-                (None _) => true,
-            );
-        }
-        else
-        {
-            return false;
-        }
-    }
-/+
-    auto load(Node node)
-    {
-        auto ro = RecordObject;
-        ro.schema = this;
-        fields.match!(
-            (SaladRecordField fs) {
-                fs.each!((fschema) {
-                    auto name = fschema.name;
-                    fschema.type.match!(
-                        (PrimitiveType pt) => pt.load(node.edig(name)),
-                        (RecordSchema rs) => rs.load(node.edig(name)),
-                        (EnumSchema es) => es.load(node.edig(name)),
-                        (ArraySchema as) => as.load(node.edig(name)),
-                        (string s) => /* definition of s*/,
-                        //
-                    );
-                    if (auto fval = name in node)
+        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
+
+        return fields.match!(
+            (SaladRecordField[] srfs) {
+                import std.algorithm : map;
+
+                RecordType ret;
+                foreach(fname, value; srfs.map!(s => s.parse_(node, docSchema)))
+                {
+                    import std.algorithm : canFind;
+                    if (fname.canFind(":"))
                     {
-                        switch((*fval).type)
-                        {
-                        case NodeType.boolean:
-                            // enforce(fieldSchema.type == PrimitiveType && type.type == type.Type.boolean)
-                            break;
-                        case NodeType.integer: break;
-                        case NodeType.sequence: break;
-                        case NodeType.string: break;
-                        case NodeType.mapping: break;
-                        case NodeType.null_: break;
-                        default: break;
-                        }
+                        // extension field
+                        ret.extensionFields[fname] = value;
                     }
                     else
                     {
-                        fschema.default_.match!(
-                            (Any _) => XXX,
-                            (_) {},
-                        );
+                        ret.fields[fname] = value;
                     }
-                });
+                }
+                return ast(ret);
             },
-            (None _) {},
-        )
-    }+/
+            (None _) => ast(None()),
+        );
+    }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
@@ -174,32 +152,56 @@ class SaladRecordField : DocumentSchema
     @("default") Optional!Any default_;
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    Tuple!(string, AST) parse_(Node node, DocumentSchema[string] docSchema)
     {
-        if (node.type != NodeType.mapping)
+        auto tpl(T)(T val) 
         {
-            return false;
+            import std.typecons : tuple;
+            return tuple(name, new AST(node, "SaladRecordField", val));
         }
-        else if (auto f = name in node)
-        {
-            import std.algorithm : any;
 
+        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
+        if (auto f = name in node)
+        {
             return type.match!(
-                (PrimitiveType pt) => pt.matchSchema(*f, docSchema),
-                (RecordSchema rs) => rs.matchSchema(*f, docSchema),
-                (EnumSchema es) => es.matchSchema(*f, docSchema),
-                (ArraySchema as) => as.matchSchema(*f, docSchema),
-                (string s) => s.matchSchema(*f, docSchema),
-                rest => rest.any!(s => s.matchSchema(*f, docSchema)),
+                (PrimitiveType pt) => tpl(pt.parse(*f, docSchema)),
+                (RecordSchema rs) => tpl(rs.parse(*f, docSchema)),
+                (EnumSchema es) => tpl(es.parse(*f, docSchema)),
+                (ArraySchema as) => tpl(as.parse(*f, docSchema)),
+                (string s) => tpl(s.parse(*f, docSchema)),
+                (rest) {
+                    import std.algorithm : filter, map;
+                    import std.array : array;
+                    import std.format : format;
+                    auto ret = rest.map!(s => s.parse(*f, docSchema).speculate)
+                                   .array;
+                    auto types = ret.map!"a.ast".filter!"a";
+                    auto exceptions = ret.map!"a.exception".filter!"a";
+                    if (types.empty)
+                    {
+                        assert(!exceptions.empty);
+                        throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
+                    }
+                    // TODO: consider the case of finds.length > 1 (ambiguous candidates)
+                    return tpl(types.front);
+                },
             );
         }
         else
         {
-            return default_.match!(
-                (Any _) => true,
-                _ => false,
-            );
+            try
+            {
+                throw new SchemaException("any is not supported yet", node);
+                // return default_.tryMatch!((Any any) => tpl(this.match(any, docSchema)));
+            }
+            catch(MatchException e)
+            {
+                import std.format : format;
+                throw new SchemaException(format!"Both of the field value and default value for %s are not provided"(name),
+                                          node);
+            }
         }
     }
 }
@@ -225,17 +227,33 @@ class PrimitiveType : DocumentSchema
         // enforce
     }
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    mixin genToString;
+
+    override AST parse(Node node, DocumentSchema[string] docSchema)
     {
         final switch(type) with(Types)
         {
-        case null_: return node.type == NodeType.null_;
-        case boolean: return node.type == NodeType.boolean;
-        case int_: return node.type == NodeType.integer;
-        case long_: return node.type == NodeType.integer;
-        case float_: return node.type == NodeType.decimal;
-        case double_: return node.type == NodeType.decimal;
-        case string: return node.type == NodeType.string;
+        case null_:
+            schemaEnforce(node.type == NodeType.null_, "null is expected", node);
+            return new AST(node, "null", None());
+        case boolean:
+            schemaEnforce(node.type == NodeType.boolean, "boolean is expected", node);
+            return new AST(node, "boolean", node.as!bool);
+        case int_:
+            schemaEnforce(node.type == NodeType.integer, "integer is expected", node);
+            return new AST(node, "integer", node.as!long);
+        case long_:
+            schemaEnforce(node.type == NodeType.integer, "integer is expected", node);
+            return new AST(node, "integer", node.as!long);
+        case float_:
+            schemaEnforce(node.type == NodeType.decimal, "decimal is expected", node);
+            return new AST(node, "float", node.as!real);
+        case double_:
+            schemaEnforce(node.type == NodeType.decimal, "decimal is expected", node);
+            return new AST(node, "float", node.as!real);
+        case string:
+            schemaEnforce(node.type == NodeType.string, "string is expected", node);
+            return new AST(node, "string", node.as!(.string));
         }
     }
 }
@@ -263,15 +281,38 @@ class RecordSchema : DocumentSchema
     Optional!(RecordField[]) fields;
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, DocumentSchema[string] docSchema)
     {
-        import std.algorithm : all;
+        auto ast(T)(T val)
+        {
+            return new AST(node, "RecordSchema", val);
+        }
 
         return fields.match!(
-            (RecordField[] rf) => node.type == NodeType.mapping
-                ? rf.all!(f => f.matchSchema(node, docSchema)) : false,
-            _ => true,
+            (RecordField[] rf) {
+                import std.algorithm : map;
+
+                schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
+
+                RecordType ret;
+                foreach(fname, value; rf.map!(s => s.parse_(node, docSchema)))
+                {
+                    import std.algorithm : canFind;
+                    if (fname.canFind(":"))
+                    {
+                        // extension field
+                        ret.extensionFields[fname] = value;
+                    }
+                    else
+                    {
+                        ret.fields[fname] = value;
+                    }
+                }
+                return ast(ret);
+            },
+            (None _) => ast(None()),
         );
     }
 }
@@ -296,30 +337,44 @@ class RecordField : DocumentSchema
     Optional!(string, string[]) doc;
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    Tuple!(string, AST) parse_(Node node, DocumentSchema[string] docSchema)
     {
-        if (node.type != NodeType.mapping)
-        {
-            return false;
-        }
-        else if (auto f = name in node)
-        {
-            import std.algorithm : any;
+        import std.format : format;
 
-            return type.match!(
-                (PrimitiveType pt) => pt.matchSchema(*f, docSchema),
-                (RecordSchema rs) => rs.matchSchema(*f, docSchema),
-                (EnumSchema es) => es.matchSchema(*f, docSchema),
-                (ArraySchema as) => as.matchSchema(*f, docSchema),
-                (string s) => s.matchSchema(*f, docSchema),
-                rest => rest.any!(s => s.matchSchema(*f, docSchema)),
-            );
-        }
-        else
+        auto tpl(T)(T val)
         {
-            return false;
+            import std.typecons : tuple;
+            return tuple(name, new AST(node, "RecordField", val));
         }
+
+        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
+        auto f = schemaEnforce(name in node, format!"field `%s` is not available"(name), node);
+
+        return type.match!(
+            (PrimitiveType pt) => tpl(pt.parse(*f, docSchema)),
+            (RecordSchema rs) => tpl(rs.parse(*f, docSchema)),
+            (EnumSchema es) => tpl(es.parse(*f, docSchema)),
+            (ArraySchema as) => tpl(as.parse(*f, docSchema)),
+            (string s) => tpl(s.parse(*f, docSchema)),
+            (rest) {
+                import std.algorithm : filter, map;
+                import std.array : array;
+                auto ret = rest.map!(s => s.parse(*f, docSchema).speculate)
+                               .array;
+                auto types = ret.map!"a.ast".filter!"a";
+                auto exceptions = ret.map!"a.exception".filter!"a";
+                if (types.empty)
+                {
+                    import std.format : format;
+                    assert(!exceptions.empty);
+                    throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
+                }
+                // TODO: consider the case of types.length > 1 (ambiguous candidates)
+                return tpl(types.front);
+            },
+        );
     }
 }
 
@@ -330,18 +385,19 @@ class EnumSchema : DocumentSchema
     enum type = "enum";
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, DocumentSchema[string] docSchema)
     {
-        if (node.type == NodeType.string)
-        {
-            import std.algorithm : canFind;
-            return symbols.canFind(node.as!string);
-        }
-        else
-        {
-            return false;
-        }
+        import std.algorithm : find;
+        import std.format : format;
+        import std.range : empty, front;
+
+        schemaEnforce(node.type == NodeType.string, "string is expected", node);
+        auto s = node.as!string;
+        auto syms = symbols.find(s);
+        schemaEnforce(!syms.empty, format!"Unknown symbol `%s`"(s), node);
+        return new AST(node, "EnumSchema", syms.front);
     }
 }
 
@@ -364,26 +420,41 @@ class ArraySchema : DocumentSchema
     enum type = "array";
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, DocumentSchema[string] docSchema)
     {
-        if (node.type == NodeType.sequence)
-        {
-            import std.algorithm : all, any;
+        import std.algorithm : map;
+        import std.array : array;
 
-            return items.match!(
-                (PrimitiveType pt) => node.sequence.all!(n => pt.matchSchema(n, docSchema)),
-                (RecordSchema rs) => node.sequence.all!(n => rs.matchSchema(n, docSchema)),
-                (EnumSchema es) => node.sequence.all!(n => es.matchSchema(n, docSchema)),
-                (ArraySchema as) => node.sequence.all!(n => as.matchSchema(n, docSchema)),
-                (string s) => node.sequence.all!(n => s.matchSchema(n, docSchema)),
-                rest => node.sequence.all!(n => rest.any!(s => s.matchSchema(n, docSchema))),
-            );
-        }
-        else
+        auto ast(T)(T val)
         {
-            return false;
+            return new AST(node, "ArraySchema", val);
         }
+
+        schemaEnforce(node.type == NodeType.sequence, "sequence is expected", node);
+        return items.match!(
+            (PrimitiveType pt) => ast(node.sequence.map!(n => pt.parse(n, docSchema)).array),
+            (RecordSchema rs) => ast(node.sequence.map!(n => rs.parse(n, docSchema)).array),
+            (EnumSchema es) => ast(node.sequence.map!(n => es.parse(n, docSchema)).array),
+            (ArraySchema as) => ast(node.sequence.map!(n => as.parse(n, docSchema)).array),
+            (string s) => ast(node.sequence.map!(n => s.parse(n, docSchema)).array),
+            rest => ast(node.sequence.map!((n) {
+                import std.algorithm : filter, map;
+                import std.format : format;
+                auto ret = rest.map!(s => s.parse(n, docSchema).speculate)
+                               .array;
+                auto types = ret.map!"a.ast".filter!"a";
+                auto exceptions = ret.map!"a.exception".filter!"a";
+                if (types.empty)
+                {
+                    assert(!exceptions.empty);
+                    throw new SchemaException("No matching element types for array", node, exceptions.front);
+                }
+                // TODO: consider the case of types.length > 1 (ambiguous candidates)
+                return types.front;
+            }).array),
+        );
     }
 }
 
@@ -403,6 +474,7 @@ class JsonldPredicate : DocumentSchema
     Optional!string subscope;
 
     mixin genCtor;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
@@ -412,6 +484,7 @@ class SpecializeDef : DocumentSchema
     string specializeTo;
 
     mixin genCtor;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
@@ -430,18 +503,20 @@ class SaladEnumSchema : DocumentSchema
     Optional!(string, string[]) extends;
 
     mixin genCtor;
+    mixin genToString;
 
-    override bool matchSchema(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, DocumentSchema[string] docSchema)
     {
-        if (node.type == NodeType.string)
-        {
-            import std.algorithm : canFind;
-            return symbols.canFind(node.as!string);
-        }
-        else
-        {
-            return false;
-        }
+        import std.algorithm : find;
+        import std.format : format;
+        import std.range : empty, front;
+
+        schemaEnforce(node.type == NodeType.string,
+                      format!"string is expected but %s occurs"(node.type), node);
+        auto s = node.as!string;
+        auto syms = symbols.find(s);
+        schemaEnforce(!syms.empty, format!"Unknown symbol `%s`"(s), node);
+        return new AST(node, "SaladEnumSchema", syms.front);
     }
 }
 
@@ -457,17 +532,30 @@ class Documentation : DocumentSchema
     Optional!string docAfter;
 
     mixin genCtor;
+    mixin genToString;
 }
 
-bool matchSchema(string schemaName, Node node, DocumentSchema[string] docSchema)
+AST parse(string schemaName, Node node, DocumentSchema[string] docSchema)
 {
-    return docSchema[schemaName].matchSchema(node, docSchema);
+    return docSchema[schemaName].parse(node, docSchema);
 }
 
-bool matchSchema(T)(T either, Node node, DocumentSchema[string] docSchema)
+AST parse(T)(T either, Node node, DocumentSchema[string] docSchema)
 if (isEither!T)
 {
     return either.match!(
-        s => s.matchSchema(node, docSchema),
+        s => s.parse(node, docSchema),
     );
+}
+
+Tuple!(AST, "ast", Exception, "exception") speculate(lazy AST ast)
+{
+    try
+    {
+        return typeof(return)(ast(), null);
+    }
+    catch(SchemaException e)
+    {
+        return typeof(return)(null, e);
+    }
 }

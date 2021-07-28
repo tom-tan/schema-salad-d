@@ -1,0 +1,150 @@
+module salad.parser;
+
+import dyaml;
+
+import salad.ast;
+import salad.exception;
+import salad.schema;
+import salad.type;
+
+struct Parser
+{
+    ///
+    this(SaladSchema s)
+    {
+        import std.algorithm : filter, map;
+        import std.array : array, assocArray;
+        import std.exception : enforce;
+        import std.range : empty;
+        import std.typecons : tuple;
+
+        schema = s;
+        auto defs = s.graph
+                     .filter!(ds => ds.match!(
+                        (SaladRecordSchema _) => true,
+                        (SaladEnumSchema _) => true,
+                        _ => false,
+                     ))
+                     .array;
+        auto docRoots = defs.map!(ds => ds.match!((Documentation _) => null,
+                                                  s => s.documentRoot
+                                                        .match!((bool isRoot) => isRoot
+                                                                    ? cast(DocumentSchema)s
+                                                                    : null,
+                                                                _ => null)))
+                            .map!(a => cast(SaladRecordSchema)a,
+                                  a => cast(SaladEnumSchema)a)
+                            .array;
+        docRecordRoots = docRoots.map!"a[0]".filter!"a".array;
+        docEnumRoots = docRoots.map!"a[1]".filter!"a".array;
+        enforce(!docRecordRoots.empty || !docEnumRoots.empty, "No root candidates for given schema");
+        docSchema = defs.map!(ds => ds.match!(
+                            (SaladRecordSchema srs) => tuple(srs.name, cast(DocumentSchema)srs),
+                            (SaladEnumSchema ses) => tuple(ses.name, cast(DocumentSchema)ses),
+                            _ => tuple("", DocumentSchema.init),
+                        ))
+                        .filter!(a => !a[0].empty)
+                        .assocArray;
+    }
+
+    AST parse(Node node)
+    {
+        if (node.type == NodeType.string)
+        {
+            import std.algorithm : filter, map;
+            import std.array : array, empty;
+            import std.range : front;
+
+            schemaEnforce(!docEnumRoots.empty, "No candidates for SaladEnumSchema", node);
+            auto ret = docEnumRoots.map!(doc => doc.parse(node, docSchema).speculate)
+                                   .array;
+            auto types = ret.map!"a.ast".filter!"a".array;
+            auto exceptions = ret.map!"a.exception".filter!"a";
+            if (types.empty)
+            {
+                throw new SchemaException("No matched types", node, exceptions.front);
+            }
+            else if (types.length == 1)
+            {
+                return types.front;
+            }
+            else
+            {
+                // warning?
+                throw new SchemaException("Ambiguous type", node);
+            }
+        }
+        else if (node.type == NodeType.mapping)
+        {
+            import std.algorithm : filter, map;
+            import std.array : array, empty;
+            import std.range : front;
+
+            schemaEnforce(!docRecordRoots.empty, "No candidates for SaladRecordSchema", node);
+            auto ret = docRecordRoots.map!(doc => doc.parse(node, docSchema).speculate)
+                                     .array;
+            auto types = ret.map!"a.ast".filter!"a".array;
+            auto exceptions = ret.map!"a.exception".filter!"a";
+            if (types.empty)
+            {
+                assert(!exceptions.empty);
+                throw new SchemaException("No matched types", node, exceptions.front);
+            }
+            else if (types.length == 1)
+            {
+                return types.front;
+            }
+            else
+            {
+                // warning
+                throw new SchemaException("Ambiguous type", node);
+            }
+        }
+        throw new SchemaException("Root document should be enum or record object", node);
+    }
+
+    SaladSchema schema;
+    SaladRecordSchema[] docRecordRoots;
+    SaladEnumSchema[] docEnumRoots;
+    DocumentSchema[] docRoots;
+    DocumentSchema[string] docSchema;
+}
+
+unittest
+{
+    import dyaml;
+
+    enum schemaStr = q"EOS
+{
+    "$namespaces": {
+        "acid": "http://example.com/acid#"
+    },
+    "$graph": [{
+        "name": "ExampleType",
+        "type": "record",
+        "documentRoot": true,
+        "fields": [{
+            "name": "base",
+            "type": "string",
+            "jsonldPredicate": "http://example.com/base"
+        }]
+    }]
+}
+EOS";
+    enum docStr = q"EOS
+{
+    "base": "one",
+    "form": {
+        "http://example.com/base": "two",
+        "http://example.com/three": "three",
+    },
+    "acid:four": "four"
+}
+EOS";
+
+    auto schema = Loader.fromString(schemaStr).load.as!SaladSchema;
+    auto parser = Parser(schema);
+    auto doc = Loader.fromString(docStr).load;
+
+    auto ast = parser.parse(doc);
+}

@@ -23,6 +23,7 @@ enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templa
     assertNotThrown(op.tryMatch!((None _) {}));
 }
 
+// TODO: more appropriate name
 template Either(TS...)
 if (allSatisfy!(templateNot!isNone, TS))
 {

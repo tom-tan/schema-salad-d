@@ -12,14 +12,48 @@ mixin template genCtor()
         import salad.util : edig;
         import std.algorithm : map;
         import std.array : array;
+        import std.traits : FieldNameTuple;
 
         alias This = typeof(this);
-        import std.traits : FieldNameTuple;
 
         static foreach(field; FieldNameTuple!This)
         {
             mixin("mixin(Assign!(node, "~field~"));");
         }
+    }
+}
+
+///
+mixin template genToString()
+{
+    override string toString() @trusted
+    {
+        import std.conv : to;
+        import std.array : join;
+        import std.format : format;
+        import std.traits : FieldNameTuple;
+
+        string[] fstrs;
+
+        alias This = typeof(this);
+
+        static foreach(field; FieldNameTuple!This)
+        {
+            static if (isOptional!(typeof(mixin(field))))
+            {
+                mixin(field).match!((None _) { return; },
+                                    (rest) { fstrs ~= format!"%s: %s"(field, rest); return; });
+            }
+            else static if (isEither!(typeof(mixin(field))))
+            {
+                mixin(field).match!(f => fstrs ~= format!"%s: %s"(field, f));
+            }
+            else
+            {
+                fstrs ~= format!"%s: %s"(field, mixin(field));
+            }
+        }
+        return format!"%s(%s)"(This.stringof, fstrs.join(", "));
     }
 }
 
