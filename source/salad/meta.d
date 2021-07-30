@@ -9,6 +9,7 @@ mixin template genCtor()
 {
     this(in Node node) @trusted
     {
+        import dyaml;
         import salad.util : edig;
         import std.algorithm : map;
         import std.array : array;

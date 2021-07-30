@@ -1,4 +1,4 @@
-module salad.resolution;
+module salad.resolver;
 
 import dyaml;
 
@@ -6,6 +6,7 @@ import salad.schema;
 import salad.type;
 
 import std.meta : staticMap;
+import std.range : empty;
 import std.traits : isArray, isSomeString;
 import std.typecons : Tuple;
 
@@ -16,10 +17,21 @@ struct Resolver
     this(SaladSchema s)
     {
         schema = s;
-        termMapping = setupTermMapping(schema);
+        URI2vocab = setupURI2Vocab(schema);
+        vocab2URI = setupVocab2URI(URI2vocab);
+        assert(URI2vocab.length == vocab2URI.length);
+
+        vocab2Schema = setupVocab2Schema(schema);
     }
 
-    auto setupTermMapping(SaladSchema s)
+    SaladSchema schema;
+
+    string[string] vocab2URI;
+    string[string] URI2vocab;
+    DocumentSchema[string] vocab2Schema;
+
+private:
+    auto setupURI2Vocab(SaladSchema s)
     {
         import std.algorithm : filter, joiner, map;
         import std.array : assocArray;
@@ -34,33 +46,62 @@ struct Resolver
                 .assocArray;
     }
 
-    SaladSchema schema;
+    auto setupVocab2URI(string[string] URI2vocab)
+    in(!URI2vocab.empty)
+    {
+        import std.algorithm : map;
+        import std.array : assocArray, byPair;
+        import std.typecons : tuple;
 
-    string[string] termMapping;
+        return URI2vocab.byPair
+                        .map!(tpl => tuple(tpl[1], tpl[0]))
+                        .assocArray;
+    }
+
+    auto setupVocab2Schema(SaladSchema schema)
+    {
+        import std.algorithm : filter, map;
+        import std.array : assocArray;
+        import std.typecons : tuple;
+
+        return schema.graph
+                     .filter!(ds => ds.match!(
+                        (SaladRecordSchema _) => true,
+                        (SaladEnumSchema _) => true,
+                        _ => false,
+                     ))
+                     .map!(ds => ds.match!(
+                            (SaladRecordSchema srs) => tuple(srs.name, cast(DocumentSchema)srs),
+                            (SaladEnumSchema ses) => tuple(ses.name, cast(DocumentSchema)ses),
+                            _ => tuple("", DocumentSchema.init),
+                     ))
+                     .filter!(a => !a[0].empty)
+                     .assocArray;
+    }
 }
 
-unittest
-{
-    import std.algorithm : map, joiner;
-    import std.array : array;
-    import std.conv : to;
-    import salad.util : diff;
+// unittest
+// {
+//     import std.algorithm : map, joiner;
+//     import std.array : array;
+//     import std.conv : to;
+//     import salad.util : diff;
 
-    enum base = "examples/field-name-resolution";
-    auto s = Loader.fromFile(base~"/schema.json")
-                   .load
-                   .as!SaladSchema;
-    auto r = Resolver(s);
+//     enum base = "examples/field-name-resolution";
+//     auto s = Loader.fromFile(base~"/schema.json")
+//                    .load
+//                    .as!SaladSchema;
+//     auto r = Resolver(s);
 
-    auto example = Loader.fromFile(base~"/example.json")
-                         .load;
-    auto processed = r.preprocess(example);
+//     auto example = Loader.fromFile(base~"/example.json")
+//                          .load;
+//     auto processed = r.preprocess(example);
 
-    auto expected = Loader.fromFile(base~"/expected.json")
-                          .load;
+//     auto expected = Loader.fromFile(base~"/expected.json")
+//                           .load;
     
-    assert(processed == expected, diff(processed, expected).to!string);
-}
+//     assert(processed == expected, diff(processed, expected).to!string);
+// }
 
 Tuple!(string, PropType)[] visit(PropType, string prop, T)(T t)
 if (is(T == class))
@@ -161,24 +202,20 @@ See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Field_name_resolution
 auto resolveFieldName(Resolver resolver, string field)
 {
     import std.algorithm : canFind;
+    import std.format : format;
 
     if (!field.canFind("://") && field.canFind(":"))
     {
         import std.algorithm : findSplit;
+        import std.exception : enforce;
 
         auto split = field.findSplit(":");
-        if (auto ns = split[0] in resolver.schema.namespaces)
-        {
-            // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
-            return *ns ~ split[2];
-        }
-        else
-        {
-            // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
-            return field;
-        }
+        auto ns = enforce(split[0] in resolver.schema.namespaces,
+                          format!"No such namespaces: `%s`"(split[0]));
+        // 3.1. (1) If an field name URI begins with a namespace prefix declared in the document context (@context) followed by a colon :, the prefix and colon must be replaced by the namespace declared in @context.
+        return *ns ~ split[2];
     }
-    else if (auto voc = field in resolver.termMapping)
+    else if (auto voc = field in resolver.URI2vocab)
     {
         // 3.1. (2) If there is a vocabulary term which maps to the URI of a resolved field, the field name must be replace with the vocabulary term.
         return *voc;
@@ -188,10 +225,13 @@ auto resolveFieldName(Resolver resolver, string field)
         // 3.1. (3) If a field name URI is an absolute URI consisting of a scheme and path and is not part of the vocabulary, no processing occurs.
         return field;
     }
+    else if (field in resolver.vocab2URI)
+    {
+        return field;
+    }
     else
     {
-        // TODO: Under "strict" validation, it is an error for a document to include fields which are not part of the vocabulary and not resolvable to absolute URIs.
-        return field;
+        throw new Exception(format!"There are no vocabularies for `%s`"(field));
     }
 }
 

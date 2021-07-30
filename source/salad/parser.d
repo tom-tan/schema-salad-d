@@ -1,9 +1,10 @@
 module salad.parser;
 
-import dyaml;
+import dyaml : Node;
 
 import salad.ast;
 import salad.exception;
+import salad.resolver;
 import salad.schema;
 import salad.type;
 
@@ -38,17 +39,14 @@ struct Parser
         docRecordRoots = docRoots.map!"a[0]".filter!"a".array;
         docEnumRoots = docRoots.map!"a[1]".filter!"a".array;
         enforce(!docRecordRoots.empty || !docEnumRoots.empty, "No root candidates for given schema");
-        docSchema = defs.map!(ds => ds.match!(
-                            (SaladRecordSchema srs) => tuple(srs.name, cast(DocumentSchema)srs),
-                            (SaladEnumSchema ses) => tuple(ses.name, cast(DocumentSchema)ses),
-                            _ => tuple("", DocumentSchema.init),
-                        ))
-                        .filter!(a => !a[0].empty)
-                        .assocArray;
     }
 
     AST parse(Node node)
     {
+        import dyaml : NodeType;
+
+        auto resolver = Resolver(schema);
+
         if (node.type == NodeType.string)
         {
             import std.algorithm : filter, map;
@@ -56,7 +54,7 @@ struct Parser
             import std.range : front;
 
             schemaEnforce(!docEnumRoots.empty, "No candidates for SaladEnumSchema", node);
-            auto ret = docEnumRoots.map!(doc => doc.parse(node, docSchema).speculate)
+            auto ret = docEnumRoots.map!(doc => doc.parse(node, resolver).speculate)
                                    .array;
             auto types = ret.map!"a.ast".filter!"a".array;
             auto exceptions = ret.map!"a.exception".filter!"a";
@@ -81,7 +79,7 @@ struct Parser
             import std.range : front;
 
             schemaEnforce(!docRecordRoots.empty, "No candidates for SaladRecordSchema", node);
-            auto ret = docRecordRoots.map!(doc => doc.parse(node, docSchema).speculate)
+            auto ret = docRecordRoots.map!(doc => doc.parse(node, resolver).speculate)
                                      .array;
             auto types = ret.map!"a.ast".filter!"a".array;
             auto exceptions = ret.map!"a.exception".filter!"a";
@@ -106,8 +104,6 @@ struct Parser
     SaladSchema schema;
     SaladRecordSchema[] docRecordRoots;
     SaladEnumSchema[] docEnumRoots;
-    DocumentSchema[] docRoots;
-    DocumentSchema[string] docSchema;
 }
 
 unittest
@@ -134,7 +130,7 @@ EOS";
     enum docStr = q"EOS
 {
     "base": "one",
-    "form": {
+    "acid:form": {
         "http://example.com/base": "two",
         "http://example.com/three": "three",
     },

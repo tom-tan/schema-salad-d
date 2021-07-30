@@ -1,10 +1,11 @@
 module salad.schema;
 
-import dyaml;
+import dyaml : Node, NodeType;
 
 import salad.ast;
 import salad.exception;
 import salad.meta;
+import salad.resolver;
 import salad.type;
 import salad.util;
 
@@ -55,6 +56,7 @@ struct SaladSchema
 
 unittest
 {
+    import dyaml;
     import std.file : dirEntries, SpanMode;
     foreach(dir; dirEntries("examples", SpanMode.shallow))
     {
@@ -69,7 +71,7 @@ unittest
 abstract class DocumentSchema
 {
     ///
-    AST parse(Node node, DocumentSchema[string] docSchema)
+    AST parse(Node node, Resolver resolver)
     out(result; result)
     {
         assert(false, "It should be overridden by its subclass");
@@ -96,33 +98,60 @@ class SaladRecordSchema : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, Resolver resolver)
     {
+        import std.format : format;
+
         auto ast(T)(T val)
         {
             return new AST(node, "SaladRecordSchema", val);
         }
 
-        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
+        schemaEnforce(node.type == NodeType.mapping, format!"mapping is expected but actual: %s"(node.type), node);
 
         return fields.match!(
             (SaladRecordField[] srfs) {
                 import std.algorithm : map;
+                import std.array : array;
+                import std.range : empty;
 
+                auto rest = srfs.dup;
                 RecordType ret;
-                foreach(fname, value; srfs.map!(s => s.parse_(node, docSchema)))
+                foreach(string field, Node val; node)
                 {
                     import std.algorithm : canFind;
-                    if (fname.canFind(":"))
+
+                    auto resolved = resolver.resolveFieldName(field);
+
+                    if (resolved.canFind("://"))
                     {
-                        // extension field
-                        ret.extensionFields[fname] = value;
+                        ret.extensionFields[resolved] = new AST(val, "Any", val);
                     }
                     else
                     {
-                        ret.fields[fname] = value;
+                        import std.algorithm : find;
+
+                        auto rng = rest.find!(r => r.name == resolved).array;
+                        schemaEnforce(!rng.empty, format!"No corresponding schema for `%s`"(resolved), node);
+                    
+                        if (rng.length == 1)
+                        {
+                            import std.algorithm : remove;
+                            import std.range : front;
+
+                            auto r = rng.front;
+                            rest = rest.remove!(a => a.name == r.name);
+                            auto tpl = r.parse_(node, resolver);
+                            ret.fields[tpl[0]] = tpl[1];
+                        }
+                        else
+                        {
+                            // ambiguous schema: there are several candidates
+                            throw new SchemaException("ambiguous schema: there are several candidates (not yet implemented)", node);
+                        }
                     }
                 }
+                schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
                 return ast(ret);
             },
             (None _) => ast(None()),
@@ -154,7 +183,7 @@ class SaladRecordField : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    Tuple!(string, AST) parse_(Node node, DocumentSchema[string] docSchema)
+    Tuple!(string, AST) parse_(Node node, Resolver resolver)
     {
         auto tpl(T)(T val) 
         {
@@ -166,16 +195,16 @@ class SaladRecordField : DocumentSchema
         if (auto f = name in node)
         {
             return type.match!(
-                (PrimitiveType pt) => tpl(pt.parse(*f, docSchema)),
-                (RecordSchema rs) => tpl(rs.parse(*f, docSchema)),
-                (EnumSchema es) => tpl(es.parse(*f, docSchema)),
-                (ArraySchema as) => tpl(as.parse(*f, docSchema)),
-                (string s) => tpl(s.parse(*f, docSchema)),
+                (PrimitiveType pt) => tpl(pt.parse(*f, resolver)),
+                (RecordSchema rs) => tpl(rs.parse(*f, resolver)),
+                (EnumSchema es) => tpl(es.parse(*f, resolver)),
+                (ArraySchema as) => tpl(as.parse(*f, resolver)),
+                (string s) => tpl(s.parse(*f, resolver)),
                 (rest) {
                     import std.algorithm : filter, map;
                     import std.array : array;
                     import std.format : format;
-                    auto ret = rest.map!(s => s.parse(*f, docSchema).speculate)
+                    auto ret = rest.map!(s => s.parse(*f, resolver).speculate)
                                    .array;
                     auto types = ret.map!"a.ast".filter!"a";
                     auto exceptions = ret.map!"a.exception".filter!"a";
@@ -194,7 +223,7 @@ class SaladRecordField : DocumentSchema
             try
             {
                 throw new SchemaException("any is not supported yet", node);
-                // return default_.tryMatch!((Any any) => tpl(this.match(any, docSchema)));
+                // return default_.tryMatch!((Any any) => tpl(this.match(any, resolver)));
             }
             catch(MatchException e)
             {
@@ -229,7 +258,7 @@ class PrimitiveType : DocumentSchema
 
     mixin genToString;
 
-    override AST parse(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, Resolver resolver)
     {
         final switch(type) with(Types)
         {
@@ -283,7 +312,7 @@ class RecordSchema : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, Resolver resolver)
     {
         auto ast(T)(T val)
         {
@@ -293,23 +322,48 @@ class RecordSchema : DocumentSchema
         return fields.match!(
             (RecordField[] rf) {
                 import std.algorithm : map;
+                import std.array : array;
+                import std.format : format;
+                import std.range : empty;
 
                 schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
 
+                auto rest = rf.dup;
                 RecordType ret;
-                foreach(fname, value; rf.map!(s => s.parse_(node, docSchema)))
+                foreach(string field, Node val; node)
                 {
-                    import std.algorithm : canFind;
-                    if (fname.canFind(":"))
+                    import std.algorithm : canFind, find;
+
+                    auto resolved = resolver.resolveFieldName(field);
+                    if (resolved.canFind("://"))
                     {
-                        // extension field
-                        ret.extensionFields[fname] = value;
+                        ret.extensionFields[resolved] = new AST(val, "Any", val);
                     }
                     else
                     {
-                        ret.fields[fname] = value;
+                        import std.algorithm : find;
+
+                        auto rng = rest.find!(r => r.name == resolved).array;
+                        schemaEnforce(!rng.empty, format!"No corresponding schema for `%s`"(resolved), node);
+                    
+                        if (rng.length == 1)
+                        {
+                            import std.algorithm : remove;
+                            import std.range : front;
+
+                            auto r = rng.front;
+                            rest = rest.remove!(a => a.name == r.name);
+                            auto tpl = r.parse_(node, resolver);
+                            ret.fields[tpl[0]] = tpl[1];
+                        }
+                        else
+                        {
+                            // ambiguous schema: there are several candidates
+                            throw new SchemaException("ambiguous schema: there are several candidates (not yet implemented)", node);
+                        }
                     }
                 }
+                schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
                 return ast(ret);
             },
             (None _) => ast(None()),
@@ -339,7 +393,7 @@ class RecordField : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    Tuple!(string, AST) parse_(Node node, DocumentSchema[string] docSchema)
+    Tuple!(string, AST) parse_(Node node, Resolver resolver)
     {
         import std.format : format;
 
@@ -353,15 +407,15 @@ class RecordField : DocumentSchema
         auto f = schemaEnforce(name in node, format!"field `%s` is not available"(name), node);
 
         return type.match!(
-            (PrimitiveType pt) => tpl(pt.parse(*f, docSchema)),
-            (RecordSchema rs) => tpl(rs.parse(*f, docSchema)),
-            (EnumSchema es) => tpl(es.parse(*f, docSchema)),
-            (ArraySchema as) => tpl(as.parse(*f, docSchema)),
-            (string s) => tpl(s.parse(*f, docSchema)),
+            (PrimitiveType pt) => tpl(pt.parse(*f, resolver)),
+            (RecordSchema rs) => tpl(rs.parse(*f, resolver)),
+            (EnumSchema es) => tpl(es.parse(*f, resolver)),
+            (ArraySchema as) => tpl(as.parse(*f, resolver)),
+            (string s) => tpl(s.parse(*f, resolver)),
             (rest) {
                 import std.algorithm : filter, map;
                 import std.array : array;
-                auto ret = rest.map!(s => s.parse(*f, docSchema).speculate)
+                auto ret = rest.map!(s => s.parse(*f, resolver).speculate)
                                .array;
                 auto types = ret.map!"a.ast".filter!"a";
                 auto exceptions = ret.map!"a.exception".filter!"a";
@@ -387,7 +441,7 @@ class EnumSchema : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, Resolver resolver)
     {
         import std.algorithm : find;
         import std.format : format;
@@ -422,7 +476,7 @@ class ArraySchema : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, Resolver resolver)
     {
         import std.algorithm : map;
         import std.array : array;
@@ -434,15 +488,15 @@ class ArraySchema : DocumentSchema
 
         schemaEnforce(node.type == NodeType.sequence, "sequence is expected", node);
         return items.match!(
-            (PrimitiveType pt) => ast(node.sequence.map!(n => pt.parse(n, docSchema)).array),
-            (RecordSchema rs) => ast(node.sequence.map!(n => rs.parse(n, docSchema)).array),
-            (EnumSchema es) => ast(node.sequence.map!(n => es.parse(n, docSchema)).array),
-            (ArraySchema as) => ast(node.sequence.map!(n => as.parse(n, docSchema)).array),
-            (string s) => ast(node.sequence.map!(n => s.parse(n, docSchema)).array),
+            (PrimitiveType pt) => ast(node.sequence.map!(n => pt.parse(n, resolver)).array),
+            (RecordSchema rs) => ast(node.sequence.map!(n => rs.parse(n, resolver)).array),
+            (EnumSchema es) => ast(node.sequence.map!(n => es.parse(n, resolver)).array),
+            (ArraySchema as) => ast(node.sequence.map!(n => as.parse(n, resolver)).array),
+            (string s) => ast(node.sequence.map!(n => s.parse(n, resolver)).array),
             rest => ast(node.sequence.map!((n) {
                 import std.algorithm : filter, map;
                 import std.format : format;
-                auto ret = rest.map!(s => s.parse(n, docSchema).speculate)
+                auto ret = rest.map!(s => s.parse(n, resolver).speculate)
                                .array;
                 auto types = ret.map!"a.ast".filter!"a";
                 auto exceptions = ret.map!"a.exception".filter!"a";
@@ -505,7 +559,7 @@ class SaladEnumSchema : DocumentSchema
     mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, DocumentSchema[string] docSchema)
+    override AST parse(Node node, Resolver resolver)
     {
         import std.algorithm : find;
         import std.format : format;
@@ -535,16 +589,16 @@ class Documentation : DocumentSchema
     mixin genToString;
 }
 
-AST parse(string schemaName, Node node, DocumentSchema[string] docSchema)
+AST parse(string schemaName, Node node, Resolver resolver)
 {
-    return docSchema[schemaName].parse(node, docSchema);
+    return resolver.vocab2Schema[schemaName].parse(node, resolver);
 }
 
-AST parse(T)(T either, Node node, DocumentSchema[string] docSchema)
+AST parse(T)(T either, Node node, Resolver resolver)
 if (isEither!T)
 {
     return either.match!(
-        s => s.parse(node, docSchema),
+        s => s.parse(node, resolver),
     );
 }
 
