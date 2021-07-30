@@ -143,4 +143,6 @@ EOS";
     auto doc = Loader.fromString(docStr).load;
 
     auto ast = parser.parse(doc);
+    ast.dig("base", "").value.tryMatch!((string s) => assert(s == "one"));
+    ast.dig("http://example.com/acid#four", "").value.tryMatch!((Node n) => assert(n == "four"));
 }
