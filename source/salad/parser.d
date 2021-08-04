@@ -101,6 +101,13 @@ struct Parser
         throw new SchemaException("Root document should be enum or record object", node);
     }
 
+    AST parseAs(Node node, string vocabulary)
+    {
+        auto resolver = Resolver(schema);
+        auto schema = resolver.lookup(vocabulary);
+        return schema.parse(node, resolver);
+    }
+
     SaladSchema schema;
     SaladRecordSchema[] docRecordRoots;
     SaladEnumSchema[] docEnumRoots;
@@ -138,11 +145,21 @@ EOS";
 }
 EOS";
 
+    import salad.util : nedig = edig;
+
     auto schema = Loader.fromString(schemaStr).load.as!SaladSchema;
     auto parser = Parser(schema);
     auto doc = Loader.fromString(docStr).load;
 
     auto ast = parser.parse(doc);
-    ast.dig("base", "").value.tryMatch!((string s) => assert(s == "one"));
-    ast.dig("http://example.com/acid#four", "").value.tryMatch!((Node n) => assert(n == "four"));
+    ast.edig("base").value.tryMatch!((string s) => assert(s == "one"));
+
+    // Child fields in extension fields are provided as Node objects.
+    // No resolution rules are applied to them.
+    ast.edig("http://example.com/acid#four").value.tryMatch!((Node n) => assert(n == "four"));
+
+    auto formNode = ast.edig(["http://example.com/acid#form"]).value.tryMatch!((Node n) => n);
+    assert(formNode.nedig("http://example.com/base") == "two");
+    // auto etAst = parser.parseAs(formNode, "ExampleType");
+    // etAst.edig("base").value.tryMatch!((string s) => assert(s == "two"));
 }
