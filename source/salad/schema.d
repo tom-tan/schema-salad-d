@@ -116,7 +116,7 @@ class SaladRecordSchema : DocumentSchema
                 import std.range : empty;
 
                 auto rest = srfs.dup;
-                RecordType ret;
+                AST[string] ret;
                 foreach(string field, Node val; node)
                 {
                     import std.algorithm : canFind;
@@ -125,7 +125,7 @@ class SaladRecordSchema : DocumentSchema
 
                     if (resolved.canFind("://"))
                     {
-                        ret.extensionFields[resolved] = new AST(val, "Any", val);
+                        ret[resolved] = new AST(val, "Any", val);
                     }
                     else
                     {
@@ -142,7 +142,7 @@ class SaladRecordSchema : DocumentSchema
                             auto r = rng.front;
                             rest = rest.remove!(a => a.name == r.name);
                             auto tpl = r.parse_(node, resolver);
-                            ret.fields[tpl[0]] = tpl[1];
+                            ret[tpl[0]] = tpl[1];
                         }
                         else
                         {
@@ -331,7 +331,7 @@ class RecordSchema : DocumentSchema
                 schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
 
                 auto rest = rf.dup;
-                RecordType ret;
+                AST[string] ret;
                 foreach(string field, Node val; node)
                 {
                     import std.algorithm : canFind, find;
@@ -339,7 +339,7 @@ class RecordSchema : DocumentSchema
                     auto resolved = resolver.resolveFieldName(field);
                     if (resolved.canFind("://"))
                     {
-                        ret.extensionFields[resolved] = new AST(val, "Any", val);
+                        ret[resolved] = new AST(val, "Any", val);
                     }
                     else
                     {
@@ -356,7 +356,7 @@ class RecordSchema : DocumentSchema
                             auto r = rng.front;
                             rest = rest.remove!(a => a.name == r.name);
                             auto tpl = r.parse_(node, resolver);
-                            ret.fields[tpl[0]] = tpl[1];
+                            ret[tpl[0]] = tpl[1];
                         }
                         else
                         {

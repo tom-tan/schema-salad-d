@@ -6,24 +6,11 @@ import salad.type;
 
 import std.typecons : Tuple;
 
-///
-struct RecordType
-{
-    AST[string] fields;
-    AST[string] extensionFields;
-
-    string toString() @trusted
-    {
-        import std.format : format;
-        return format!"RecordType(fields: %s, exts: %s)"(fields, extensionFields);
-    }
-}
-
 alias ASTNodeType = Optional!(bool,
                               long,
                               real,
                               string,
-                              RecordType,
+                              AST[string],
                               AST[],
                               AST, 
                               Node);
@@ -67,6 +54,12 @@ AST dig(T)(AST ast, string[] keys, T default_)
     {
         return a.dig(keys, default_);
     }
+    else if (auto n = ast.value.match!((Node n) => &n, others => null))
+    {
+        import salad.util : dig;
+        auto digged = n.dig(keys, default_);
+        return new AST(digged, "Any", digged);
+    }
     else if (keys.empty)
     {
         return ast;
@@ -74,16 +67,14 @@ AST dig(T)(AST ast, string[] keys, T default_)
 
     auto k = keys[0];
 
-    auto rec = ast.value.tryMatch!((RecordType rt) => rt);
-    if (k.canFind("://"))
+    auto rec = ast.value.tryMatch!((AST[string] rec) => rec);
+    if (auto a = k in rec)
     {
-        if (auto a = k in rec.extensionFields)
-        {
-            import salad.util : dig;
-            auto n = a.value.tryMatch!((Node n) => n.dig(keys[1..$], default_));
-            return new AST(n, "Any", n);
-        }
-        else
+        return (*a).dig(keys[1..$], default_);
+    }
+    else
+    {
+        if (k.canFind("://"))
         {
             static if (is(T: void[]))
             {
@@ -93,22 +84,19 @@ AST dig(T)(AST ast, string[] keys, T default_)
             {
                 auto n = Node(default_);
             }
-            return new AST(n, "Any", n);
-        }
-    }
-    else if (auto a = k in rec.fields)
-    {
-        return (*a).dig(keys[1..$], default_);
-    }
-    else
-    {
-        static if (is(T : void[]))
-        {
-            return new AST(Node.init, "Any", (AST[]).init);
+            return new AST(Node.init, "Any", n);
         }
         else
         {
-            return new AST(Node.init, "Any", default_);
+            static if (is(T : void[]))
+            {
+                auto def = (AST[]).init;
+            }
+            else
+            {
+                auto def = default_;
+            }
+            return new AST(Node.init, "Any", def);
         }
     }
 }
@@ -129,6 +117,12 @@ AST edig(Ex = Exception)(AST ast, string[] keys)
     {
         return a.edig!Ex(keys);
     }
+    else if (auto n = ast.value.match!((return ref Node n) => &n, others => null))
+    {
+        import salad.util : edig;
+        auto digged = (*n).edig!Ex(keys);
+        return new AST(digged, "Any", digged);
+    }
     else if (keys.empty)
     {
         return ast;
@@ -136,22 +130,8 @@ AST edig(Ex = Exception)(AST ast, string[] keys)
 
     auto k = keys[0];
 
-    auto rec = ast.value.tryMatch!((RecordType rt) => rt);
-    if (k.canFind("://"))
-    {
-        if (auto a = k in rec.extensionFields)
-        {
-            import salad.util : edig;
-            auto n = a.value.tryMatch!((Node n) => n.edig!Ex(keys[1..$]));
-            return new AST(n, "Any", n);
-        }
-        else
-        {
-            import std.format : format;
-            throw new Ex(format!"No such field: %s"(k));
-        }
-    }
-    else if (auto a = k in rec.fields)
+    auto rec = ast.value.tryMatch!((AST[string] rec) => rec);
+    if (auto a = k in rec)
     {
         return (*a).edig!Ex(keys[1..$]);
     }
