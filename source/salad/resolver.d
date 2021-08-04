@@ -24,6 +24,11 @@ struct Resolver
         vocab2Schema = setupVocab2Schema(schema);
     }
 
+    auto lookup(string vocabulary)
+    {
+        return vocab2Schema[vocabulary];
+    }
+
     SaladSchema schema;
 
     string[string] vocab2URI;
