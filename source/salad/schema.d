@@ -322,7 +322,7 @@ class RecordSchema : DocumentSchema
         }
 
         return fields.match!(
-            (RecordField[] rf) {
+            (RecordField[] rfs) {
                 import std.algorithm : map;
                 import std.array : array;
                 import std.format : format;
@@ -330,7 +330,7 @@ class RecordSchema : DocumentSchema
 
                 schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
 
-                auto rest = rf.dup;
+                auto rest = rfs.dup;
                 AST[string] ret;
                 foreach(string field, Node val; node)
                 {
