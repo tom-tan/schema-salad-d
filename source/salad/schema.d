@@ -282,7 +282,9 @@ class PrimitiveType : DocumentSchema
             return new AST(node, "float", node.as!real);
         case string:
             schemaEnforce(node.type == NodeType.string, "string is expected", node);
-            return new AST(node, "string", node.as!(.string));
+            auto id = node.as!(.string);
+            // auto resolved = resolver.resolveIdentifier(id);
+            return new AST(node, "string", id);
         }
     }
 }
@@ -591,7 +593,7 @@ class Documentation : DocumentSchema
 
 AST parse(string schemaName, Node node, Resolver resolver)
 {
-    return resolver.vocab2Schema[schemaName].parse(node, resolver);
+    return resolver.lookup(schemaName).parse(node, resolver);
 }
 
 AST parse(T)(T either, Node node, Resolver resolver)
