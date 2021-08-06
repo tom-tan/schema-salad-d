@@ -20,7 +20,7 @@
 			"repository": "git+https://github.com/dlang-community/D-YAML.git",
 			"version": "2ac6511216eed1626e4fbdac1a28de71a6f7fc91"
 		},
-		"sumtype": "~>1.1.1"
+		"sumtype": "~>1.1.2"
 	},
 	"description": "Semantic Annotations for Linked Avro Data in D",
 	"homepage": "https://github.com/tom-tan/schema-salad-d",
