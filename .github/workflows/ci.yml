@@ -27,7 +27,7 @@ jobs:
   test:
     strategy:
       matrix:
-        dc: [dmd-2.096.1, ldc-latest]
+        dc: [dmd-2.096.1, ldc-1.26.0]
     runs-on: ubuntu-latest
 
     steps:
