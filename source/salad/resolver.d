@@ -17,6 +17,8 @@ struct Resolver
     this(SaladSchema s)
     {
         schema = s;
+
+        baseURI = schema.base;
         URI2vocab = setupURI2Vocab(schema);
         vocab2URI = setupVocab2URI(URI2vocab);
         assert(URI2vocab.length == vocab2URI.length);
@@ -31,6 +33,8 @@ struct Resolver
 
     SaladSchema schema;
 
+    string baseURI;
+    string subscope;
     string[string] vocab2URI;
     string[string] URI2vocab;
     DocumentSchema[string] vocab2Schema;
@@ -44,10 +48,10 @@ private:
         import std.typecons : tuple;
 
         return s.graph
-                .map!(g => g.visit!(string, "jsonldPredicate"))
+                .map!(g => g.visit!(JsonldPredicate, "jsonldPredicate"))
                 .joiner
-                .filter!(tpl => !tpl[1].empty)
-                .map!(tpl => tuple(tpl[1], tpl[0]))
+                .filter!(tpl => tpl[1] && !tpl[1]._id.empty)
+                .map!(tpl => tuple(tpl[1]._id, tpl[0]))
                 .assocArray;
     }
 
@@ -118,6 +122,10 @@ if (is(T == class))
     import std.typecons : tuple;
 
     typeof(return) ret;
+    if (t is null)
+    {
+        return ret;
+    }
 
     enum FieldNames = FieldNameTuple!T.only;
     static if (hasMember!(T, prop))
@@ -155,8 +163,7 @@ if (!is(T == class))
     }
     else static if (isSumType!T)
     {
-        enum visitFun(F) = (F f) => f.visit!(PropType, prop);
-        return t.match!(staticMap!(visitFun, T.Types));
+        return t.match!(f => f.visit!(PropType, prop));
     }
     else
     {
@@ -187,10 +194,10 @@ out(result; result.type == node.type)
         import std.array : array;
         return Node(node.sequence.map!(n => resolver.preprocess(n)).array, node.tag);
     case NodeType.string:
-        // if node is identifier
-        if (false)
+        if (false /+ node is identifier+/)
         {
-            return Node(resolver.resolveIdentifier(node.as!string), node.tag);
+            // return Node(resolver.resolveIdentifier(node.as!string), node.tag);
+            return node;
         }
         else
         {
@@ -243,17 +250,17 @@ auto resolveFieldName(Resolver resolver, string field)
 /**
 See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
 */
-auto resolveIdentifier(Resolver resolver, string id)
+auto resolveIdentifier(Resolver resolver, string id, JsonldPredicate jp)
 {
     import std.algorithm : canFind, startsWith;
 
     const baseURI = resolver.schema.base;
 
     //
-    if (id.startsWith("#"))
+    if (id.startsWith("#")) // 3.2. (1) If an identifier URI begins with `#` it is a current document fragment identifier.
     {
         import std.algorithm : findSplitBefore;
-        // 3.2. (1) If an identifier URI begins with # it is a current document fragment identifier.
+
         if (auto b = baseURI.findSplitBefore("#"))
         {
             // It is resolved relative to the base URI by ... replacing the fragment portion of the base URI.
@@ -267,17 +274,17 @@ auto resolveIdentifier(Resolver resolver, string id)
     }
     else if (id.canFind("#"))
     {
-        // 3.2. (2) If an identifier URI contains # in some other position it is a relative URI with fragment identifier. It is resolved relative to the base URI by stripping the last path segment from the base URI and adding the identifier followed by the fragment.
+        // 3.2. (2) If an identifier URI contains `#` in some other position it is a relative URI with fragment identifier.
+        // It is resolved relative to the base URI by stripping the last path segment from the base URI and adding the identifier followed by the fragment.
         import std.path : dirName;
         return baseURI.dirName~id;
     }
-    else if (!id.canFind(":"))
+    else if (!id.canFind(":")) // 3.2. (3) If an identifier URI does not contain a scheme and does not contain `#` it is a parent relative fragment identifier.
     {
-        // 3.2. (3) If an identifier URI does not contain a scheme and does not contain # it is a parent relative fragment identifier.
         if (!baseURI.canFind("#"))
         {
             // 3.2. (4) If an identifier URI is a parent relative fragment identifier and the base URI does not contain a document fragment, set the document fragment on the base URI.
-            return baseURI ~ "#" ~ id; // #? /?
+            return baseURI ~ "#" ~ id;
         }
         else if (false /* parent object has `subscope` in `jsonldPredicate` */)
         {

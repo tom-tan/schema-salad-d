@@ -2,14 +2,102 @@ module salad.schema;
 
 import dyaml : Node, NodeType;
 
-import salad.ast;
+import salad.ast : AST;
 import salad.exception;
 import salad.meta;
 import salad.resolver;
+import salad.canonicalizer;
 import salad.type;
-import salad.util;
 
+import so = salad.schema_original;
+
+import std.algorithm : map;
+import std.array : array;
 import std.typecons : Tuple;
+
+private Optional!string concat(Optional!(string, string[]) ss)
+{
+    import std.array : join;
+
+    return ss.match!(
+        (string s) => Optional!string(s),
+        (string[] ss) => Optional!string(ss.join("\n")),
+        none => Optional!string.init,
+    );
+}
+
+private auto canonicalize(Optional!(string, so.JsonldPredicate) jp)
+{
+    return jp.match!(
+        (string id) {
+            auto pred = new JsonldPredicate;
+            if (id == "@id")
+            {
+                pred._type = "@id";
+                pred.identity = true;
+            }
+            else
+            {
+                pred._id = id;
+            }
+            return pred;
+        },
+        (so.JsonldPredicate pred) => new JsonldPredicate(pred),
+        none => null,
+    );
+}
+
+private Either!(
+            PrimitiveType,
+            RecordSchema,
+            EnumSchema,
+            ArraySchema,
+            string)[] canonicalize(Either!(
+                                    so.PrimitiveType,
+                                    so.RecordSchema,
+                                    so.EnumSchema,
+                                    so.ArraySchema,
+                                    string,
+                                    Either!(
+                                        so.PrimitiveType,
+                                        so.RecordSchema,
+                                        so.EnumSchema,
+                                        so.ArraySchema,
+                                        string)[]
+                                    ) type)
+{
+    import std.range : ElementType;
+
+    alias RetElemType = ElementType!(typeof(return));
+
+    return type.match!(
+        (so.PrimitiveType pt) => [RetElemType(new PrimitiveType(pt))],
+        (so.RecordSchema rs) => [RetElemType(new RecordSchema(rs))],
+        (so.EnumSchema es) => [RetElemType(new EnumSchema(es))],
+        (so.ArraySchema as) => [RetElemType(new ArraySchema(as))],
+        (string str) => [RetElemType(str)],
+        (Either!(
+            so.PrimitiveType,
+            so.RecordSchema,
+            so.EnumSchema,
+            so.ArraySchema,
+            string)[] types) => types.map!(
+                t => t.match!(
+                    (so.PrimitiveType pt) => RetElemType(new PrimitiveType(pt)),
+                    (so.RecordSchema rs) => RetElemType(new RecordSchema(rs)),
+                    (so.EnumSchema es) => RetElemType(new EnumSchema(es)),
+                    (so.ArraySchema as) => RetElemType(new ArraySchema(as)),
+                    str => RetElemType(str),
+                )
+            ).array,
+    );
+}
+
+private auto orDefault(T, U)(T val, U default_)
+if (isOptional!T && is(T.Types[1] == U))
+{
+    return val.match!((U u) => u, none => default_);
+}
 
 struct SaladSchema
 {
@@ -20,6 +108,7 @@ struct SaladSchema
 
     this(in Node node) @trusted
     {
+        import salad.util : dig, edig;
         import std.algorithm : map;
         import std.array : array, assocArray;
         import std.typecons : tuple;
@@ -71,36 +160,40 @@ unittest
 abstract class DocumentSchema
 {
     ///
-    AST parse(Node node, Resolver resolver)
+    AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     out(result; result)
     {
         assert(false, "It should be overridden by its subclass");
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 class SaladRecordSchema : DocumentSchema
 {
-    string name;
-    enum type = "record";
-    Optional!bool inVocab;
-    Optional!(SaladRecordField[]) fields;
-    Optional!string doc;
-    Optional!string docParent;
-    Optional!(string, string[]) docChild;
-    Optional!string docAfter;
-    Optional!(string, JsonldPredicate) jsonldPredicate;
-    Optional!bool documentRoot;
-    @("abstract") Optional!bool abstract_;
-    Optional!(string, string[]) extends;
-    Optional!(SpecializeDef[]) specialize;
+    mixin Canonicalize!(
+        so.SaladRecordSchema,
+        "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
+        "fields", (Optional!(so.SaladRecordField[]) fields) =>
+                        fields.match!((so.SaladRecordField[] fs) => fs.map!(f => new SaladRecordField(f)).array,
+                                      none => (SaladRecordField[]).init),
+        "doc", (Optional!(string, string[]) doc) => doc.concat,
+        "docChild", (Optional!(string, string[]) doc) => doc.concat,
+        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
+        "documentRoot", (Optional!bool documentRoot) => documentRoot.orDefault(false),
+        "abstract", (Optional!bool abstract_) => abstract_.orDefault(false),
+        "extends", (Optional!(string, string[]) extends) => extends.match!((string s) => [s],
+                                                                           (string[] ss) => ss,
+                                                                           none => (string[]).init),
+        "specialize", (Optional!(so.SpecializeDef[]) specialize) => 
+                            specialize.match!((so.SpecializeDef[] sd) => sd.map!(s => new SpecializeDef(s)).array,
+                                              none => (SpecializeDef[]).init),
+    );
 
-    mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, Resolver resolver)
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
         import std.format : format;
+        import std.range : empty;
 
         auto ast(T)(T val)
         {
@@ -109,81 +202,93 @@ class SaladRecordSchema : DocumentSchema
 
         schemaEnforce(node.type == NodeType.mapping, format!"mapping is expected but actual: %s"(node.type), node);
 
-        return fields.match!(
-            (SaladRecordField[] srfs) {
-                import std.algorithm : map;
-                import std.array : array;
-                import std.range : empty;
+        auto rest = fields.dup;
+        AST[string] ret;
 
-                auto rest = srfs.dup;
-                AST[string] ret;
-                foreach(string field, Node val; node)
-                {
-                    import std.algorithm : canFind;
+        // auto ids = srfs.find!(srf => srf.jsonldPredicate.match!(
+        //     (string s) => s == "@id",
+        //     (JsonldPredicate jp) => jp._type.match!((string s) => s == "@id", others => false) && 
+        //                             jp.identity.match!((bool b) => b, others => false),
+        //     others => false,
+        // )).array;
+        // string id;
+        // schemaEnforce(ids.length <= 1, "Only one identifier field is allowed", node);
+        // Resolver nextResolver;
+        // if (ids.length == 1)
+        // {
+        //     auto idField = ids.front;
+        //     id = idField.name;
+        //     rest = rest.remove!(a => a.name == idField.name);
+        //     nextResolver = resolver.withNewURI();
+        // }
+        // else
+        // {
+        //     nextResolver = resolver;
+        // }
+        foreach(string field, Node val; node)
+        {
+            import std.algorithm : canFind;
 
-                    auto resolved = resolver.resolveFieldName(field);
+            auto resolved = resolver.resolveFieldName(field);
 
-                    if (resolved.canFind("://"))
-                    {
-                        ret[resolved] = new AST(val, "Any", val);
-                    }
-                    else
-                    {
-                        import std.algorithm : find;
+            if (resolved.canFind("://"))
+            {
+                ret[resolved] = new AST(val, "Any", val);
+            }
+            else
+            {
+                import std.algorithm : find;
 
-                        auto rng = rest.find!(r => r.name == resolved).array;
-                        schemaEnforce(!rng.empty, format!"No corresponding schema for `%s`"(resolved), node);
+                auto rng = rest.find!(r => r.name == resolved).array;
+                schemaEnforce(!rng.empty, format!"No corresponding schema for `%s`"(resolved), node);
                     
-                        if (rng.length == 1)
-                        {
-                            import std.algorithm : remove;
-                            import std.range : front;
+                if (rng.length == 1)
+                {
+                    import std.algorithm : remove;
+                    import std.range : front;
 
-                            auto r = rng.front;
-                            rest = rest.remove!(a => a.name == r.name);
-                            auto tpl = r.parse_(node, resolver);
-                            ret[tpl[0]] = tpl[1];
-                        }
-                        else
-                        {
-                            // ambiguous schema: there are several candidates
-                            throw new SchemaException("ambiguous schema: there are several candidates (not yet implemented)", node);
-                        }
-                    }
+                    auto r = rng.front;
+                    rest = rest.remove!(a => a.name == r.name);
+                    auto tpl = r.parse_(node, resolver);
+                    ret[tpl[0]] = tpl[1];
                 }
-                schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
-                return ast(ret);
-            },
-            (None _) => ast(None()),
-        );
+                else
+                {
+                    // ambiguous schema: there are several candidates
+                    throw new SchemaException("ambiguous schema: there are several candidates (not yet implemented)", node);
+                }
+            }
+        }
+        schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
+        return ast(ret);
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
 class SaladRecordField : DocumentSchema
 {
-    string name;
-    Either!(
-        PrimitiveType,
-        RecordSchema,
-        EnumSchema,
-        ArraySchema,
-        string,
-        Either!(
-            PrimitiveType,
-            RecordSchema,
-            EnumSchema,
-            ArraySchema,
-            string)[]
-    ) type;
-    Optional!(string, string[]) doc;
-    Optional!(string, JsonldPredicate) jsonldPredicate;
-    @("default") Optional!Any default_;
+    mixin Canonicalize!(
+        so.SaladRecordField,
+        "type", (Either!(
+                    so.PrimitiveType,
+                    so.RecordSchema,
+                    so.EnumSchema,
+                    so.ArraySchema,
+                    string,
+                    Either!(
+                        so.PrimitiveType,
+                        so.RecordSchema,
+                        so.EnumSchema,
+                        so.ArraySchema,
+                        string)[]
+                    ) type) => type.canonicalize,
+        "doc", (Optional!(string, string[]) doc) => doc.concat,
+        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
+        "default_", (Optional!(so.Any) default_) => default_.match!((so.Any any) => new Any(any), none => null),
+    );
 
-    mixin genCtor;
     mixin genToString;
 
-    Tuple!(string, AST) parse_(Node node, Resolver resolver)
+    Tuple!(string, AST) parse_(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
         auto tpl(T)(T val) 
         {
@@ -194,29 +299,20 @@ class SaladRecordField : DocumentSchema
         schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
         if (auto f = name in node)
         {
-            return type.match!(
-                (PrimitiveType pt) => tpl(pt.parse(*f, resolver)),
-                (RecordSchema rs) => tpl(rs.parse(*f, resolver)),
-                (EnumSchema es) => tpl(es.parse(*f, resolver)),
-                (ArraySchema as) => tpl(as.parse(*f, resolver)),
-                (string s) => tpl(s.parse(*f, resolver)),
-                (rest) {
-                    import std.algorithm : filter, map;
-                    import std.array : array;
-                    import std.format : format;
-                    auto ret = rest.map!(s => s.parse(*f, resolver).speculate)
-                                   .array;
-                    auto types = ret.map!"a.ast".filter!"a";
-                    auto exceptions = ret.map!"a.exception".filter!"a";
-                    if (types.empty)
-                    {
-                        assert(!exceptions.empty);
-                        throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
-                    }
-                    // TODO: consider the case of finds.length > 1 (ambiguous candidates)
-                    return tpl(types.front);
-                },
-            );
+            import std.algorithm : filter, map;
+            import std.array : array;
+            import std.format : format;
+            auto ret = type.map!(s => s.parse(*f, resolver).speculate)
+                           .array;
+            auto ts = ret.map!"a.ast".filter!"a";
+            auto exceptions = ret.map!"a.exception".filter!"a";
+            if (ts.empty)
+            {
+                assert(!exceptions.empty);
+                throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
+            }
+            // TODO: consider the case of finds.length > 1 (ambiguous candidates)
+            return tpl(ts.front);
         }
         else
         {
@@ -235,32 +331,15 @@ class SaladRecordField : DocumentSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
 class PrimitiveType : DocumentSchema
 {
-    enum Types{
-        null_ = "null",
-        boolean = "boolean",
-        int_ = "int",
-        long_ = "long",
-        float_ = "float",
-        double_ = "double",
-        string = "string",
-    }
-
-    string type;
-
-    this(in Node node) @safe
-    {
-        type = node.as!string;
-        // enforce
-    }
+    mixin Canonicalize!(so.PrimitiveType);
 
     mixin genToString;
 
-    override AST parse(Node node, Resolver resolver)
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
-        final switch(type) with(Types)
+        final switch(type) with(so.PrimitiveType.Types)
         {
         case null_:
             schemaEnforce(node.type == NodeType.null_, "null is expected", node);
@@ -282,121 +361,118 @@ class PrimitiveType : DocumentSchema
             return new AST(node, "float", node.as!real);
         case string:
             schemaEnforce(node.type == NodeType.string, "string is expected", node);
-            auto id = node.as!(.string);
-            // auto resolved = resolver.resolveIdentifier(id);
-            return new AST(node, "string", id);
+            auto val = node.as!(.string);
+            // if (jp &&
+            //     jp._type.match!((string s) => s, others => "") == "@id" &&
+            //     jp.identity.match!((bool b) => b, others => false) == true)
+            // {
+            //     auto id = resolver.resolveIdentifier(val, jp);
+            //     return new AST(node, "string", id);
+            // }
+            // else
+            // {
+                return new AST(node, "string", val);
+            // }
         }
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 class Any : DocumentSchema
 {
-    enum Types{
-        Any = "Any",
-    }
-
-    string type;
-
-    this(in Node node) @safe
-    {
-        type = node.as!string;
-        // enforce
-    }
+    mixin Canonicalize!(so.Any);
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
 class RecordSchema : DocumentSchema
 {
-    enum type = "record";
-    Optional!(RecordField[]) fields;
+    mixin Canonicalize!(
+        so.RecordSchema,
+        "fields", (Optional!(so.RecordField[]) fields) =>
+                    fields.match!((so.RecordField[] rf) => rf.map!(r => new RecordField(r)).array,
+                                  none => (RecordField[]).init),
+    );
 
-    mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, Resolver resolver)
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
+        import std.algorithm : map;
+        import std.array : array;
+        import std.format : format;
+        import std.range : empty;
+
         auto ast(T)(T val)
         {
             return new AST(node, "RecordSchema", val);
         }
 
-        return fields.match!(
-            (RecordField[] rfs) {
-                import std.algorithm : map;
-                import std.array : array;
-                import std.format : format;
-                import std.range : empty;
+        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
 
-                schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
+        auto rest = fields.dup;
+        AST[string] ret;
+        foreach(string field, Node val; node)
+        {
+            import std.algorithm : canFind, find;
 
-                auto rest = rfs.dup;
-                AST[string] ret;
-                foreach(string field, Node val; node)
-                {
-                    import std.algorithm : canFind, find;
+            auto resolved = resolver.resolveFieldName(field);
+            if (resolved.canFind("://"))
+            {
+                ret[resolved] = new AST(val, "Any", val);
+            }
+            else
+            {
+                import std.algorithm : find;
 
-                    auto resolved = resolver.resolveFieldName(field);
-                    if (resolved.canFind("://"))
-                    {
-                        ret[resolved] = new AST(val, "Any", val);
-                    }
-                    else
-                    {
-                        import std.algorithm : find;
-
-                        auto rng = rest.find!(r => r.name == resolved).array;
-                        schemaEnforce(!rng.empty, format!"No corresponding schema for `%s`"(resolved), node);
+                auto rng = rest.find!(r => r.name == resolved).array;
+                schemaEnforce(!rng.empty, format!"No corresponding schema for `%s`"(resolved), node);
                     
-                        if (rng.length == 1)
-                        {
-                            import std.algorithm : remove;
-                            import std.range : front;
+                if (rng.length == 1)
+                {
+                    import std.algorithm : remove;
+                    import std.range : front;
 
-                            auto r = rng.front;
-                            rest = rest.remove!(a => a.name == r.name);
-                            auto tpl = r.parse_(node, resolver);
-                            ret[tpl[0]] = tpl[1];
-                        }
-                        else
-                        {
-                            // ambiguous schema: there are several candidates
-                            throw new SchemaException("ambiguous schema: there are several candidates (not yet implemented)", node);
-                        }
-                    }
+                    auto r = rng.front;
+                    rest = rest.remove!(a => a.name == r.name);
+                    auto tpl = r.parse_(node, resolver);
+                    ret[tpl[0]] = tpl[1];
                 }
-                schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
-                return ast(ret);
-            },
-            (None _) => ast(None()),
-        );
+                else
+                {
+                    // ambiguous schema: there are several candidates
+                    throw new SchemaException("ambiguous schema: there are several candidates (not yet implemented)", node);
+                }
+            }
+        }
+        schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
+        return ast(ret);
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
 class RecordField : DocumentSchema
 {
-    string name;
-    Either!(
-        PrimitiveType,
-        RecordSchema,
-        EnumSchema,
-        ArraySchema,
-        string,
-        Either!(
-            PrimitiveType,
-            RecordSchema,
-            EnumSchema,
-            ArraySchema,
-            string)[]
-    ) type;
-    Optional!(string, string[]) doc;
+    mixin Canonicalize!(
+        so.RecordField,
+        "type", (Either!(
+                    so.PrimitiveType,
+                    so.RecordSchema,
+                    so.EnumSchema,
+                    so.ArraySchema,
+                    string,
+                    Either!(
+                        so.PrimitiveType,
+                        so.RecordSchema,
+                        so.EnumSchema,
+                        so.ArraySchema,
+                        string)[]
+                    ) type) => type.canonicalize,
+        "doc", (Optional!(string, string[]) doc) => doc.concat,
+    );
 
-    mixin genCtor;
     mixin genToString;
 
-    Tuple!(string, AST) parse_(Node node, Resolver resolver)
+    Tuple!(string, AST) parse_(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
+        import std.algorithm : filter, map;
+        import std.array : array;
         import std.format : format;
 
         auto tpl(T)(T val)
@@ -408,42 +484,27 @@ class RecordField : DocumentSchema
         schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
         auto f = schemaEnforce(name in node, format!"field `%s` is not available"(name), node);
 
-        return type.match!(
-            (PrimitiveType pt) => tpl(pt.parse(*f, resolver)),
-            (RecordSchema rs) => tpl(rs.parse(*f, resolver)),
-            (EnumSchema es) => tpl(es.parse(*f, resolver)),
-            (ArraySchema as) => tpl(as.parse(*f, resolver)),
-            (string s) => tpl(s.parse(*f, resolver)),
-            (rest) {
-                import std.algorithm : filter, map;
-                import std.array : array;
-                auto ret = rest.map!(s => s.parse(*f, resolver).speculate)
-                               .array;
-                auto types = ret.map!"a.ast".filter!"a";
-                auto exceptions = ret.map!"a.exception".filter!"a";
-                if (types.empty)
-                {
-                    import std.format : format;
-                    assert(!exceptions.empty);
-                    throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
-                }
-                // TODO: consider the case of types.length > 1 (ambiguous candidates)
-                return tpl(types.front);
-            },
-        );
+        auto ret = type.map!(s => s.parse(*f, resolver).speculate)
+                       .array;
+        auto ts = ret.map!"a.ast".filter!"a";
+        auto exceptions = ret.map!"a.exception".filter!"a";
+        if (ts.empty)
+        {
+            assert(!exceptions.empty);
+            throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
+        }
+        // TODO: consider the case of types.length > 1 (ambiguous candidates)
+        return tpl(ts.front);
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
 class EnumSchema : DocumentSchema
 {
-    string[] symbols;
-    enum type = "enum";
+    mixin Canonicalize!(so.EnumSchema);
 
-    mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, Resolver resolver)
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
         import std.algorithm : find;
         import std.format : format;
@@ -457,28 +518,28 @@ class EnumSchema : DocumentSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
 class ArraySchema : DocumentSchema
 {
-    Either!(
-        PrimitiveType,
-        RecordSchema,
-        EnumSchema,
-        ArraySchema,
-        string,
-        Either!(
-            PrimitiveType,
-            RecordSchema,
-            EnumSchema,
-            ArraySchema,
-            string)[]
-    ) items;
-    enum type = "array";
+    mixin Canonicalize!(
+        so.ArraySchema,
+        "items", (Either!(
+                    so.PrimitiveType,
+                    so.RecordSchema,
+                    so.EnumSchema,
+                    so.ArraySchema,
+                    string,
+                    Either!(
+                        so.PrimitiveType,
+                        so.RecordSchema,
+                        so.EnumSchema,
+                        so.ArraySchema,
+                        string)[]
+                    ) items) => items.canonicalize,
+    );
 
-    mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, Resolver resolver)
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
         import std.algorithm : map;
         import std.array : array;
@@ -489,79 +550,64 @@ class ArraySchema : DocumentSchema
         }
 
         schemaEnforce(node.type == NodeType.sequence, "sequence is expected", node);
-        return items.match!(
-            (PrimitiveType pt) => ast(node.sequence.map!(n => pt.parse(n, resolver)).array),
-            (RecordSchema rs) => ast(node.sequence.map!(n => rs.parse(n, resolver)).array),
-            (EnumSchema es) => ast(node.sequence.map!(n => es.parse(n, resolver)).array),
-            (ArraySchema as) => ast(node.sequence.map!(n => as.parse(n, resolver)).array),
-            (string s) => ast(node.sequence.map!(n => s.parse(n, resolver)).array),
-            rest => ast(node.sequence.map!((n) {
-                import std.algorithm : filter, map;
-                import std.format : format;
-                auto ret = rest.map!(s => s.parse(n, resolver).speculate)
-                               .array;
-                auto types = ret.map!"a.ast".filter!"a";
-                auto exceptions = ret.map!"a.exception".filter!"a";
-                if (types.empty)
-                {
-                    assert(!exceptions.empty);
-                    throw new SchemaException("No matching element types for array", node, exceptions.front);
-                }
-                // TODO: consider the case of types.length > 1 (ambiguous candidates)
-                return types.front;
-            }).array),
-        );
+        return ast(node.sequence.map!((n) {
+            import std.algorithm : filter;
+            import std.format : format;
+            auto ret = items.map!(s => s.parse(n, resolver).speculate)
+                            .array;
+            auto ts = ret.map!"a.ast".filter!"a";
+            auto exceptions = ret.map!"a.exception".filter!"a";
+            if (ts.empty)
+            {
+                assert(!exceptions.empty);
+                throw new SchemaException("No matching element types for array", node, exceptions.front);
+            }
+            // TODO: consider the case of types.length > 1 (ambiguous candidates)
+            return ts.front;
+        }).array);
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
 class JsonldPredicate : DocumentSchema
 {
-    Optional!string _id;
-    Optional!string _type;
-    Optional!string _container;
-    Optional!bool identity;
-    Optional!bool noLinkCheck;
-    Optional!string mapSubject;
-    Optional!string mapPredicate;
-    Optional!int refScope;
-    Optional!bool typeDSL;
-    Optional!bool secondaryFilesDSL;
-    Optional!string subscope;
-
-    mixin genCtor;
-    mixin genToString;
+    mixin Canonicalize!(
+        so.JsonldPredicate,
+        "_id", (Optional!string _id) => _id.orDefault(""),
+        "_type", (Optional!string _type) => _type.orDefault(""),
+        "_container", (Optional!string _container) => _container.orDefault(""),
+        "identity", (Optional!bool identity) => identity.orDefault(false),
+        "noLinkCheck", (Optional!bool noLinkCheck) => noLinkCheck.orDefault(false),
+        "mapSubject", (Optional!string mapSubject) => mapSubject.orDefault(""),
+        "mapPreidcate", (Optional!string mapPredicate) => mapPredicate.orDefault(""),
+        "refScope", (Optional!int refScope) => refScope.orDefault(0),
+        "typeDSL", (Optional!bool typeDSL) => typeDSL.orDefault(false),
+        "secondaryFilesDSL", (Optional!bool secondaryFilesDSL) => secondaryFilesDSL.orDefault(false),
+        "subscope", (Optional!string subscope) => subscope.orDefault(""),
+    );
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
 class SpecializeDef : DocumentSchema
 {
-    string specializeFrom;
-    string specializeTo;
-
-    mixin genCtor;
-    mixin genToString;
+    mixin Canonicalize!(so.SpecializeDef);
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
 class SaladEnumSchema : DocumentSchema
 {
-    string name;
-    string[] symbols;
-    enum type = "enum";
-    Optional!bool inVocab;
-    Optional!(string, string[]) doc;
-    Optional!string docParent;
-    Optional!(string, string[]) docChild;
-    Optional!string docAfter;
-    Optional!(string, JsonldPredicate) jsonldPredicate;
-    Optional!bool documentRoot;
-    Optional!(string, string[]) extends;
+    mixin Canonicalize!(
+        so.SaladEnumSchema,
+        "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
+        "doc", (Optional!(string, string[]) doc) => doc.concat,
+        "docChild", (Optional!(string, string[]) docChild) => docChild.concat,
+        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
+        "documentRoot", (Optional!bool documentRoot) => documentRoot.orDefault(false),
+        "extends", (Optional!(string, string[]) extends) => extends.match!((string s) => [s],
+                                                                           (string[] ss) => ss,
+                                                                           none => (string[]).init),
+    );
 
-    mixin genCtor;
     mixin genToString;
 
-    override AST parse(Node node, Resolver resolver)
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
     {
         import std.algorithm : find;
         import std.format : format;
@@ -576,27 +622,23 @@ class SaladEnumSchema : DocumentSchema
     }
 }
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
 class Documentation : DocumentSchema
 {
-    string name;
-    enum type = "documentation";
-    Optional!bool inVocab;
-    Optional!(string, string[]) doc;
-    Optional!string docParent;
-    Optional!(string, string[]) docChild;
-    Optional!string docAfter;
-
-    mixin genCtor;
-    mixin genToString;
+    mixin Canonicalize!(
+        so.Documentation,
+        "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
+        "doc", (Optional!(string, string[]) doc) => doc.concat,
+        "docChild", (Optional!(string, string[]) docChild) => docChild.concat,
+    );
 }
 
-AST parse(string schemaName, Node node, Resolver resolver)
+
+AST parse(string schemaName, Node node, Resolver resolver, JsonldPredicate jp = null)
 {
     return resolver.lookup(schemaName).parse(node, resolver);
 }
 
-AST parse(T)(T either, Node node, Resolver resolver)
+AST parse(T)(T either, Node node, Resolver resolver, JsonldPredicate jp = null)
 if (isEither!T)
 {
     return either.match!(

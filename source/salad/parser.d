@@ -28,11 +28,7 @@ struct Parser
                      ))
                      .array;
         auto docRoots = defs.map!(ds => ds.match!((Documentation _) => null,
-                                                  s => s.documentRoot
-                                                        .match!((bool isRoot) => isRoot
-                                                                    ? cast(DocumentSchema)s
-                                                                    : null,
-                                                                _ => null)))
+                                                  s => s.documentRoot ? cast(DocumentSchema)s : null))
                             .map!(a => cast(SaladRecordSchema)a,
                                   a => cast(SaladEnumSchema)a)
                             .array;

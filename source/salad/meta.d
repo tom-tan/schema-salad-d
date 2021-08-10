@@ -7,9 +7,11 @@ import dyaml;
 ///
 mixin template genCtor()
 {
+    import dyaml : Node, NodeType;
+
+    this() {}
     this(in Node node) @trusted
     {
-        import dyaml;
         import salad.util : edig;
         import std.algorithm : map;
         import std.array : array;
