@@ -156,6 +156,6 @@ EOS";
 
     auto formNode = ast.edig(["http://example.com/acid#form"]).value.tryMatch!((Node n) => n);
     assert(formNode.nedig("http://example.com/base") == "two");
-    // auto etAst = parser.parseAs(formNode, "ExampleType");
-    // etAst.edig("base").value.tryMatch!((string s) => assert(s == "two"));
+    auto etAst = parser.parseAs(formNode, "ExampleType");
+    etAst.edig("base").value.tryMatch!((string s) => assert(s == "two"));
 }

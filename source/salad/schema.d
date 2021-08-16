@@ -249,7 +249,7 @@ class SaladRecordSchema : DocumentSchema
 
                     auto r = rng.front;
                     rest = rest.remove!(a => a.name == r.name);
-                    auto tpl = r.parse_(node, resolver);
+                    auto tpl = r.parse_(resolved, val, resolver);
                     ret[tpl[0]] = tpl[1];
                 }
                 else
@@ -259,6 +259,7 @@ class SaladRecordSchema : DocumentSchema
                 }
             }
         }
+        // TODO: use `default` fields for non-provided fields
         schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
         return ast(ret);
     }
@@ -288,46 +289,30 @@ class SaladRecordField : DocumentSchema
 
     mixin genToString;
 
-    Tuple!(string, AST) parse_(Node node, Resolver resolver, JsonldPredicate jp = null)
+    Tuple!(string, AST) parse_(string resolved, Node node, Resolver resolver, JsonldPredicate jp = null)
+    in(resolved == name)
     {
+        import std.algorithm : filter, map;
+        import std.array : array;
+        import std.format : format;
+
         auto tpl(T)(T val) 
         {
             import std.typecons : tuple;
             return tuple(name, new AST(node, "SaladRecordField", val));
         }
 
-        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
-        if (auto f = name in node)
+        auto ret = type.map!(s => s.parse(node, resolver).speculate)
+                       .array;
+        auto ts = ret.map!"a.ast".filter!"a";
+        auto exceptions = ret.map!"a.exception".filter!"a";
+        if (ts.empty)
         {
-            import std.algorithm : filter, map;
-            import std.array : array;
-            import std.format : format;
-            auto ret = type.map!(s => s.parse(*f, resolver).speculate)
-                           .array;
-            auto ts = ret.map!"a.ast".filter!"a";
-            auto exceptions = ret.map!"a.exception".filter!"a";
-            if (ts.empty)
-            {
-                assert(!exceptions.empty);
-                throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
-            }
-            // TODO: consider the case of finds.length > 1 (ambiguous candidates)
-            return tpl(ts.front);
+            assert(!exceptions.empty);
+            throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
         }
-        else
-        {
-            try
-            {
-                throw new SchemaException("any is not supported yet", node);
-                // return default_.tryMatch!((Any any) => tpl(this.match(any, resolver)));
-            }
-            catch(MatchException e)
-            {
-                import std.format : format;
-                throw new SchemaException(format!"Both of the field value and default value for %s are not provided"(name),
-                                          node);
-            }
-        }
+        // TODO: consider the case of finds.length > 1 (ambiguous candidates)
+        return tpl(ts.front);
     }
 }
 
@@ -432,7 +417,7 @@ class RecordSchema : DocumentSchema
 
                     auto r = rng.front;
                     rest = rest.remove!(a => a.name == r.name);
-                    auto tpl = r.parse_(node, resolver);
+                    auto tpl = r.parse_(resolved, node, resolver);
                     ret[tpl[0]] = tpl[1];
                 }
                 else
@@ -469,7 +454,8 @@ class RecordField : DocumentSchema
 
     mixin genToString;
 
-    Tuple!(string, AST) parse_(Node node, Resolver resolver, JsonldPredicate jp = null)
+    Tuple!(string, AST) parse_(string resolved, Node node, Resolver resolver, JsonldPredicate jp = null)
+    in(resolved == name)
     {
         import std.algorithm : filter, map;
         import std.array : array;
@@ -481,10 +467,7 @@ class RecordField : DocumentSchema
             return tuple(name, new AST(node, "RecordField", val));
         }
 
-        schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
-        auto f = schemaEnforce(name in node, format!"field `%s` is not available"(name), node);
-
-        auto ret = type.map!(s => s.parse(*f, resolver).speculate)
+        auto ret = type.map!(s => s.parse(node, resolver).speculate)
                        .array;
         auto ts = ret.map!"a.ast".filter!"a";
         auto exceptions = ret.map!"a.exception".filter!"a";
