@@ -63,23 +63,36 @@ mixin template genToString()
     }
 }
 
+/**
+UDA for identifier maps
+See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
+*/
 struct idMap(string subject, string predicate = "") {}
 enum bool isIDMap(alias uda) = isInstanceOf!(idMap, uda);
 enum bool hasIDMap(alias symbol) = Filter!(isIDMap, __traits(getAttributes, symbol)).length > 0;
 template getIDMap(alias value)
 {
     import std.typecons : Tuple;
+    alias RetType = Tuple!(string, "subject", string, "predicate");
+
     static if (isIDMap!value)
     {
-        enum string getIDMap = TemplateArgsOf!value[0];
+        enum getIDMap = RetType(TemplateArgsOf!value);
     }
     else
     {
         alias uda = Filter!(isIDMap, __traits(getAttributes, value))[0];
-        alias RetType = Tuple!(string, "subject", string, "predicate");
-        enum string getIDMap = TemplateArgsOf!uda[0];
+        enum getIDMap = RetType(TemplateArgsOf!uda);
     }
 }
+
+/**
+UDA for DSL for types
+See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
+*/
+struct typeDSL{}
+enum bool isTypeDSL(alias uda) = isInstanceOf!(typeDSL, uda);
+enum bool hasTypeDSL(alias symbol) = Filter!(isTypeDSL, __traits(getAttributes, symbol)).length > 0;
 
 /**
 Returns: a string to construct `T` with a parameter whose variable name is `param`

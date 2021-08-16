@@ -31,6 +31,7 @@ class SaladRecordSchema
 class SaladRecordField
 {
     string name_;
+    @typeDSL
     Either!(
         PrimitiveType,
         RecordSchema,
@@ -107,6 +108,7 @@ class RecordSchema
 class RecordField
 {
     string name_;
+    @typeDSL 
     Either!(
         PrimitiveType,
         RecordSchema,
