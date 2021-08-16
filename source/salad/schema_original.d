@@ -20,7 +20,7 @@ class SaladRecordSchema
     Optional!string docAfter_;
     Optional!(string, JsonldPredicate) jsonldPredicate_;
     Optional!bool documentRoot_;
-    @("abstract") Optional!bool abstract_;
+    Optional!bool abstract_;
     Optional!(string, string[]) extends_;
     Optional!(SpecializeDef[]) specialize_; // TODO: map<specializeFrom, specializeTo>
 
@@ -46,7 +46,7 @@ class SaladRecordField
     ) type_;
     Optional!(string, string[]) doc_;
     Optional!(string, JsonldPredicate) jsonldPredicate_;
-    @("default") Optional!Any default_;
+    Optional!Any default_;
 
 
     mixin genCtor;
