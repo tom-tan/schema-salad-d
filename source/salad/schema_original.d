@@ -13,7 +13,7 @@ class SaladRecordSchema
     string name_;
     enum type_ = "record";
     Optional!bool inVocab_;
-    Optional!(SaladRecordField[]) fields_; // TODO: map<name, type>
+    @idMap!("name", "type") Optional!(SaladRecordField[]) fields_;
     Optional!(string, string[]) doc_;
     Optional!string docParent_;
     Optional!(string, string[]) docChild_;
@@ -22,7 +22,7 @@ class SaladRecordSchema
     Optional!bool documentRoot_;
     Optional!bool abstract_;
     Optional!(string, string[]) extends_;
-    Optional!(SpecializeDef[]) specialize_; // TODO: map<specializeFrom, specializeTo>
+    @idMap!("specializeFrom", "specializeTo") Optional!(SpecializeDef[]) specialize_;
 
     mixin genCtor;
 }
@@ -98,7 +98,7 @@ class Any
 class RecordSchema
 {
     enum type_ = "record";
-    Optional!(RecordField[]) fields_; // TODO: map<name, type>
+    @idMap!("name", "type") Optional!(RecordField[]) fields_;
 
     mixin genCtor;
 }

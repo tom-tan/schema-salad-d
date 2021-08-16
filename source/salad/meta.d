@@ -63,6 +63,24 @@ mixin template genToString()
     }
 }
 
+struct idMap(string subject, string predicate = "") {}
+enum bool isIDMap(alias uda) = isInstanceOf!(idMap, uda);
+enum bool hasIDMap(alias symbol) = Filter!(isIDMap, __traits(getAttributes, symbol)).length > 0;
+template getIDMap(alias value)
+{
+    import std.typecons : Tuple;
+    static if (isIDMap!value)
+    {
+        enum string getIDMap = TemplateArgsOf!value[0];
+    }
+    else
+    {
+        alias uda = Filter!(isIDMap, __traits(getAttributes, value))[0];
+        alias RetType = Tuple!(string, "subject", string, "predicate");
+        enum string getIDMap = TemplateArgsOf!uda[0];
+    }
+}
+
 /**
 Returns: a string to construct `T` with a parameter whose variable name is `param`
 Note: Use this function instead of `param.as!T` to prevent circular references
