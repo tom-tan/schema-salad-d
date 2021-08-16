@@ -195,11 +195,6 @@ class SaladRecordSchema : DocumentSchema
         import std.format : format;
         import std.range : empty;
 
-        auto ast(T)(T val)
-        {
-            return new AST(node, "SaladRecordSchema", val);
-        }
-
         schemaEnforce(node.type == NodeType.mapping, format!"mapping is expected but actual: %s"(node.type), node);
 
         auto rest = fields.dup;
@@ -261,7 +256,7 @@ class SaladRecordSchema : DocumentSchema
         }
         // TODO: use `default` fields for non-provided fields
         schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
-        return ast(ret);
+        return new AST(node, "SaladRecordSchema", ret);
     }
 }
 
@@ -295,12 +290,7 @@ class SaladRecordField : DocumentSchema
         import std.algorithm : filter, map;
         import std.array : array;
         import std.format : format;
-
-        auto tpl(T)(T val) 
-        {
-            import std.typecons : tuple;
-            return tuple(name, new AST(node, "SaladRecordField", val));
-        }
+        import std.typecons : tuple;
 
         auto ret = type.map!(s => s.parse(node, resolver).speculate)
                        .array;
@@ -312,7 +302,7 @@ class SaladRecordField : DocumentSchema
             throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
         }
         // TODO: consider the case of finds.length > 1 (ambiguous candidates)
-        return tpl(ts.front);
+        return tuple(name, new AST(node, "SaladRecordField", ts.front));
     }
 }
 
@@ -365,6 +355,11 @@ class PrimitiveType : DocumentSchema
 class Any : DocumentSchema
 {
     mixin Canonicalize!(so.Any);
+
+    override AST parse(Node node, Resolver resolver, JsonldPredicate jp = null)
+    {
+        return new AST(node, "Any", node);
+    }
 }
 
 class RecordSchema : DocumentSchema
@@ -384,11 +379,6 @@ class RecordSchema : DocumentSchema
         import std.array : array;
         import std.format : format;
         import std.range : empty;
-
-        auto ast(T)(T val)
-        {
-            return new AST(node, "RecordSchema", val);
-        }
 
         schemaEnforce(node.type == NodeType.mapping, "mapping is expected", node);
 
@@ -428,7 +418,7 @@ class RecordSchema : DocumentSchema
             }
         }
         schemaEnforce(rest.empty, format!"Missing fields: %(%s, %)"(rest.map!"a.name".array), node);
-        return ast(ret);
+        return new AST(node, "RecordSchema", ret);
     }
 }
 
@@ -460,12 +450,7 @@ class RecordField : DocumentSchema
         import std.algorithm : filter, map;
         import std.array : array;
         import std.format : format;
-
-        auto tpl(T)(T val)
-        {
-            import std.typecons : tuple;
-            return tuple(name, new AST(node, "RecordField", val));
-        }
+        import std.typecons : tuple;
 
         auto ret = type.map!(s => s.parse(node, resolver).speculate)
                        .array;
@@ -477,7 +462,7 @@ class RecordField : DocumentSchema
             throw new SchemaException(format!"No matching types for `%s`"(name), node, exceptions.front);
         }
         // TODO: consider the case of types.length > 1 (ambiguous candidates)
-        return tpl(ts.front);
+        return tuple(name, new AST(node, "RecordField", ts.front)); //tpl(ts.front);
     }
 }
 
@@ -527,13 +512,9 @@ class ArraySchema : DocumentSchema
         import std.algorithm : map;
         import std.array : array;
 
-        auto ast(T)(T val)
-        {
-            return new AST(node, "ArraySchema", val);
-        }
-
         schemaEnforce(node.type == NodeType.sequence, "sequence is expected", node);
-        return ast(node.sequence.map!((n) {
+        return new AST(node, "ArraySchema",
+                       node.sequence.map!((n) {
             import std.algorithm : filter;
             import std.format : format;
             auto ret = items.map!(s => s.parse(n, resolver).speculate)
