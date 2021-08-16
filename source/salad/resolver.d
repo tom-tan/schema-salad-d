@@ -50,8 +50,8 @@ private:
         return s.graph
                 .map!(g => g.visit!(JsonldPredicate, "jsonldPredicate"))
                 .joiner
-                .filter!(tpl => tpl[1] && !tpl[1]._id.empty)
-                .map!(tpl => tuple(tpl[1]._id, tpl[0]))
+                .filter!(tpl => tpl[1] && !tpl[1]._id_.empty)
+                .map!(tpl => tuple(tpl[1]._id_, tpl[0]))
                 .assocArray;
     }
 
@@ -80,8 +80,8 @@ private:
                         _ => false,
                      ))
                      .map!(ds => ds.match!(
-                            (SaladRecordSchema srs) => tuple(srs.name, cast(DocumentSchema)srs),
-                            (SaladEnumSchema ses) => tuple(ses.name, cast(DocumentSchema)ses),
+                            (SaladRecordSchema srs) => tuple(srs.name_, cast(DocumentSchema)srs),
+                            (SaladEnumSchema ses) => tuple(ses.name_, cast(DocumentSchema)ses),
                             _ => tuple("", DocumentSchema.init),
                      ))
                      .filter!(a => !a[0].empty)
@@ -121,6 +121,7 @@ if (is(T == class))
     import std.traits : FieldNameTuple, hasMember;
     import std.typecons : tuple;
 
+    enum prop_ = prop~"_";
     typeof(return) ret;
     if (t is null)
     {
@@ -128,24 +129,28 @@ if (is(T == class))
     }
 
     enum FieldNames = FieldNameTuple!T.only;
-    static if (hasMember!(T, prop))
+    static if (hasMember!(T, prop_))
     {
-        alias PT = typeof(mixin("t."~prop));
+        alias PT = typeof(mixin("t."~prop_));
         enum isPropType(P) = is(P: PropType);
 
         static if (isPropType!PT)
         {
-            ret ~= tuple(t.name, mixin("t."~prop));
+            static assert(hasMember!(T, "name_"));
+            ret ~= tuple(t.name_, mixin("t."~prop_));
         }
         else static if (isSumType!PT && anySatisfy!(isPropType, PT.Types))
         {
-            mixin("t."~prop).match!(
-                (PropType pt) { ret ~= tuple(t.name, pt); },
+            mixin("t."~prop_).match!(
+                (PropType pt) {
+                    static assert(hasMember!(T, "name_"));
+                    ret ~= tuple(t.name_, pt);
+                },
                 (_) {},
             );
         }
     }
-    static foreach(f; FieldNames.filter!(a => a != prop))
+    static foreach(f; FieldNames.filter!(a => a != prop_))
     {
         ret ~= visit!(PropType, prop)(mixin("t."~f));
     }

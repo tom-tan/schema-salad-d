@@ -10,19 +10,19 @@ import std.typecons : Tuple;
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 class SaladRecordSchema
 {
-    string name;
-    enum type = "record";
-    Optional!bool inVocab;
-    Optional!(SaladRecordField[]) fields; // TODO: map<name, type>
-    Optional!(string, string[]) doc;
-    Optional!string docParent;
-    Optional!(string, string[]) docChild;
-    Optional!string docAfter;
-    Optional!(string, JsonldPredicate) jsonldPredicate;
-    Optional!bool documentRoot;
+    string name_;
+    enum type_ = "record";
+    Optional!bool inVocab_;
+    Optional!(SaladRecordField[]) fields_; // TODO: map<name, type>
+    Optional!(string, string[]) doc_;
+    Optional!string docParent_;
+    Optional!(string, string[]) docChild_;
+    Optional!string docAfter_;
+    Optional!(string, JsonldPredicate) jsonldPredicate_;
+    Optional!bool documentRoot_;
     @("abstract") Optional!bool abstract_;
-    Optional!(string, string[]) extends;
-    Optional!(SpecializeDef[]) specialize; // TODO: map<specializeFrom, specializeTo>
+    Optional!(string, string[]) extends_;
+    Optional!(SpecializeDef[]) specialize_; // TODO: map<specializeFrom, specializeTo>
 
     mixin genCtor;
 }
@@ -30,7 +30,7 @@ class SaladRecordSchema
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
 class SaladRecordField
 {
-    string name;
+    string name_;
     Either!(
         PrimitiveType,
         RecordSchema,
@@ -43,10 +43,11 @@ class SaladRecordField
             EnumSchema,
             ArraySchema,
             string)[]
-    ) type;
-    Optional!(string, string[]) doc;
-    Optional!(string, JsonldPredicate) jsonldPredicate;
+    ) type_;
+    Optional!(string, string[]) doc_;
+    Optional!(string, JsonldPredicate) jsonldPredicate_;
     @("default") Optional!Any default_;
+
 
     mixin genCtor;
 }
@@ -58,19 +59,19 @@ class PrimitiveType
 
     enum Types{
         null_ = "null",
-        boolean = "boolean",
+        boolean_ = "boolean",
         int_ = "int",
         long_ = "long",
         float_ = "float",
         double_ = "double",
-        string = "string",
+        string_ = "string",
     }
 
-    string type;
+    string type_;
 
     this(in Node node) @safe
     {
-        type = node.as!string;
+        type_ = node.as!string;
         // enforce
     }
 }
@@ -84,11 +85,11 @@ class Any
         Any = "Any",
     }
 
-    string type;
+    string type_;
 
     this(in Node node) @safe
     {
-        type = node.as!string;
+        type_ = node.as!string;
         // enforce
     }
 }
@@ -96,8 +97,8 @@ class Any
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
 class RecordSchema
 {
-    enum type = "record";
-    Optional!(RecordField[]) fields; // TODO: map<name, type>
+    enum type_ = "record";
+    Optional!(RecordField[]) fields_; // TODO: map<name, type>
 
     mixin genCtor;
 }
@@ -105,7 +106,7 @@ class RecordSchema
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
 class RecordField
 {
-    string name;
+    string name_;
     Either!(
         PrimitiveType,
         RecordSchema,
@@ -118,8 +119,8 @@ class RecordField
             EnumSchema,
             ArraySchema,
             string)[]
-    ) type;
-    Optional!(string, string[]) doc;
+    ) type_;
+    Optional!(string, string[]) doc_;
 
     mixin genCtor;
 }
@@ -127,8 +128,8 @@ class RecordField
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
 class EnumSchema
 {
-    string[] symbols;
-    enum type = "enum";
+    string[] symbols_;
+    enum type_ = "enum";
 
     mixin genCtor;
 }
@@ -148,8 +149,8 @@ class ArraySchema
             EnumSchema,
             ArraySchema,
             string)[]
-    ) items;
-    enum type = "array";
+    ) items_;
+    enum type_ = "array";
 
     mixin genCtor;
 }
@@ -157,17 +158,17 @@ class ArraySchema
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
 class JsonldPredicate
 {
-    Optional!string _id;
-    Optional!string _type;
-    Optional!string _container;
-    Optional!bool identity;
-    Optional!bool noLinkCheck;
-    Optional!string mapSubject;
-    Optional!string mapPredicate;
-    Optional!int refScope;
-    Optional!bool typeDSL;
-    Optional!bool secondaryFilesDSL;
-    Optional!string subscope;
+    Optional!string _id_;
+    Optional!string _type_;
+    Optional!string _container_;
+    Optional!bool identity_;
+    Optional!bool noLinkCheck_;
+    Optional!string mapSubject_;
+    Optional!string mapPredicate_;
+    Optional!int refScope_;
+    Optional!bool typeDSL_;
+    Optional!bool secondaryFilesDSL_;
+    Optional!string subscope_;
 
     mixin genCtor;
     mixin genToString;
@@ -176,8 +177,8 @@ class JsonldPredicate
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
 class SpecializeDef
 {
-    string specializeFrom;
-    string specializeTo;
+    string specializeFrom_;
+    string specializeTo_;
 
     mixin genCtor;
     mixin genToString;
@@ -186,17 +187,17 @@ class SpecializeDef
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
 class SaladEnumSchema
 {
-    string name;
-    string[] symbols;
-    enum type = "enum";
-    Optional!bool inVocab;
-    Optional!(string, string[]) doc;
-    Optional!string docParent;
-    Optional!(string, string[]) docChild;
-    Optional!string docAfter;
-    Optional!(string, JsonldPredicate) jsonldPredicate;
-    Optional!bool documentRoot;
-    Optional!(string, string[]) extends;
+    string name_;
+    string[] symbols_;
+    enum type_ = "enum";
+    Optional!bool inVocab_;
+    Optional!(string, string[]) doc_;
+    Optional!string docParent_;
+    Optional!(string, string[]) docChild_;
+    Optional!string docAfter_;
+    Optional!(string, JsonldPredicate) jsonldPredicate_;
+    Optional!bool documentRoot_;
+    Optional!(string, string[]) extends_;
 
     mixin genCtor;
 }
@@ -204,13 +205,13 @@ class SaladEnumSchema
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
 class Documentation
 {
-    string name;
-    enum type = "documentation";
-    Optional!bool inVocab;
-    Optional!(string, string[]) doc;
-    Optional!string docParent;
-    Optional!(string, string[]) docChild;
-    Optional!string docAfter;
+    string name_;
+    enum type_ = "documentation";
+    Optional!bool inVocab_;
+    Optional!(string, string[]) doc_;
+    Optional!string docParent_;
+    Optional!(string, string[]) docChild_;
+    Optional!string docAfter_;
 
     mixin genCtor;
     mixin genToString;

@@ -13,14 +13,17 @@ mixin template genCtor()
     this(in Node node) @trusted
     {
         import salad.util : edig;
-        import std.algorithm : map;
+        import std.algorithm : endsWith, map;
         import std.array : array;
+        import std.format : format;
         import std.traits : FieldNameTuple;
 
         alias This = typeof(this);
 
         static foreach(field; FieldNameTuple!This)
         {
+            static assert(field.endsWith("_"),
+                          format!"Field name should end with `_` (%s.%s)"(This.stringof, field));
             mixin("mixin(Assign!(node, "~field~"));");
         }
     }
@@ -85,14 +88,7 @@ template Assign(alias node, alias field)
     alias Attrs = __traits(getAttributes, field);
     alias T = typeof(field);
 
-    static if (Attrs.length == 0)
-    {
-        enum param = field.stringof;
-    }
-    else
-    {
-        enum param = Attrs[0];
-    }
+    enum param = field.stringof[0..$-1];
 
     static if (isOptional!T)
     {
@@ -129,14 +125,14 @@ version(unittest)
 {
     import salad.util : edig;
 
-    enum fieldName = "fieldName";
+    enum fieldName = "strVariable";
     Node n = [ fieldName: "string value" ];
-    @(fieldName) string strVariable;
-    enum exp = Assign!(n, strVariable);
-    static assert(exp == `strVariable = n.edig("fieldName").as!string;`, exp);
+    string strVariable_;
+    enum exp = Assign!(n, strVariable_);
+    static assert(exp == `strVariable_ = n.edig("strVariable").as!string;`, exp);
 
     mixin(exp);
-    assert(strVariable == "string value");
+    assert(strVariable_ == "string value");
 }
 
 /// optional of non-array type
@@ -144,19 +140,19 @@ version(unittest)
 {
     import std.exception : assertNotThrown;
 
-    enum fieldName = "fieldName";
+    enum fieldName = "param";
     Node n = [ fieldName: true ];
-    @(fieldName) Optional!bool param;
-    enum exp = Assign!(n, param).stripLeftAll;
+    Optional!bool param_;
+    enum exp = Assign!(n, param_).stripLeftAll;
     static assert(exp == q"EOS
-        if (auto f = "fieldName" in n)
+        if (auto f = "param" in n)
         {
-            param = (*f).as!bool;
+            param_ = (*f).as!bool;
         }
 EOS".stripLeftAll, exp);
 
     mixin(exp);
-    assertNotThrown(param.tryMatch!((bool b) => assert(b)));
+    assertNotThrown(param_.tryMatch!((bool b) => assert(b)));
 }
 
 /// optional of array type
@@ -166,19 +162,19 @@ unittest
     import std.array : array;
     import std.exception : assertNotThrown;
 
-    enum fieldName = "fieldName";
+    enum fieldName = "params";
     Node n = [ fieldName: [1, 2, 3] ];
-    @(fieldName) Optional!(int[]) params;
-    enum exp = Assign!(n, params).stripLeftAll;
+    Optional!(int[]) params_;
+    enum exp = Assign!(n, params_).stripLeftAll;
     static assert(exp == q"EOS
-        if (auto f = "fieldName" in n)
+        if (auto f = "params" in n)
         {
-            params = (*f).sequence.map!(a => a.as!int).array;
+            params_ = (*f).sequence.map!(a => a.as!int).array;
         }
 EOS".stripLeftAll, exp);
 
     mixin(exp);
-    assertNotThrown(params.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
+    assertNotThrown(params_.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
 }
 
 template Assign_(string node, string field, T)
@@ -250,7 +246,7 @@ template DispatchFun(RetType, Types...)
     }
 
     // TODO: field name `type` can be changed
-    enum isRecord(T) = is(T == class) && !__traits(compiles, T.init.type = "");
+    enum isRecord(T) = is(T == class) && !__traits(compiles, T.init.type_ = "");
     alias RecordTypes = Filter!(isRecord, Types);
     static if (RecordTypes.length == 0)
     {
@@ -364,7 +360,7 @@ EOS"(RetType.stringof, ctorStr!(RecordTypes[0])("a"));
 
         enum RecordCaseStr(T) = format!q"EOS
             case "%s": return %s(%s);
-EOS"(T.type, RetType.stringof, ctorStr!T("a"));
+EOS"(T.type_, RetType.stringof, ctorStr!T("a"));
 
         enum RecordDispatchStatement = format!q"EOS
             if (a.type == NodeType.mapping)

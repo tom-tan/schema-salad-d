@@ -5,6 +5,7 @@ mixin template Canonicalize(Base, FieldCanonicalizer...)
 {
     import dyaml : Node;
 
+    import std.algorithm : endsWith;
     import std.format : format;
     import std.meta : AliasSeq, Stride;
     import std.traits : isCallable, FieldNameTuple, Fields, Parameters, ReturnType, fullyQualifiedName;
@@ -27,12 +28,14 @@ mixin template Canonicalize(Base, FieldCanonicalizer...)
         import std.algorithm : find;
         import std.range : enumerate;
 
-        auto rng = (cast(string[])[Stride!(2, FieldCanonicalizer)]).enumerate.find!(e => e.value == name);
+        auto rng = (cast(string[])[Stride!(2, FieldCanonicalizer)]).enumerate.find!(e => e.value~"_" == name);
         return rng.empty ? -1 : rng.front.index;
     }
 
     static foreach(idx, fname; FNames)
     {
+        static assert(fname.endsWith("_"),
+                      format!"Field name should end with `_` (%s.%s)"(Base.stringof, fname));
         static if (findIndex(fname) != -1)
         {
             static assert(isCallable!(ConvFuns[findIndex(fname)]),
@@ -90,13 +93,13 @@ unittest
 
     static class C
     {
-        int foo;
-        string str;
+        int foo_;
+        string str_;
 
         this(Node node)
         {
-            foo = node["foo"].as!int;
-            str = node["str"].as!string;
+            foo_ = node["foo"].as!int;
+            str_ = node["str"].as!string;
         }
     }
 
@@ -113,6 +116,6 @@ str: "string"
 EOS";
 
     auto foo = Loader.fromString(ymlStr).load.as!Foo;
-    assert(foo.foo == "10");
-    assert(foo.str == 0);
+    assert(foo.foo_ == "10");
+    assert(foo.str_ == 0);
 }
