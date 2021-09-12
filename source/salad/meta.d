@@ -4,6 +4,9 @@ import salad.type;
 
 import dyaml;
 
+import std.meta : Filter;
+import std.traits : isInstanceOf;
+
 ///
 mixin template genCtor()
 {
@@ -68,21 +71,25 @@ UDA for identifier maps
 See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
 */
 struct idMap(string subject, string predicate = "") {}
+struct IDMap { string subject; string predicate; }
 enum bool isIDMap(alias uda) = isInstanceOf!(idMap, uda);
 enum bool hasIDMap(alias symbol) = Filter!(isIDMap, __traits(getAttributes, symbol)).length > 0;
 template getIDMap(alias value)
 {
-    import std.typecons : Tuple;
-    alias RetType = Tuple!(string, "subject", string, "predicate");
+    import std.traits : TemplateArgsOf;
 
     static if (isIDMap!value)
     {
-        enum getIDMap = RetType(TemplateArgsOf!value);
+        enum getIDMap = IDMap(TemplateArgsOf!value);
+    }
+    else static if (hasIDMap!value)
+    {
+        alias uda = Filter!(isIDMap, __traits(getAttributes, value))[0];
+        enum getIDMap = IDMap(TemplateArgsOf!uda);
     }
     else
     {
-        alias uda = Filter!(isIDMap, __traits(getAttributes, value))[0];
-        enum getIDMap = RetType(TemplateArgsOf!uda);
+        enum getIDMap = IDMap.init;
     }
 }
 
@@ -116,7 +123,9 @@ template Assign(alias node, alias field)
 {
     import std.format : format;
 
-    alias Attrs = __traits(getAttributes, field);
+    enum typeDSL = hasTypeDSL!field;
+    enum idMap = getIDMap!field;
+
     alias T = typeof(field);
 
     enum param = field.stringof[0..$-1];
@@ -128,15 +137,15 @@ template Assign(alias node, alias field)
             {
                 %s
             }
-EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T));
+EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T, typeDSL, idMap));
     }
     else static if (isEither!T)
     {
-        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T);
+        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
     }
     else
     {
-        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T);
+        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
     }
 }
 
@@ -208,7 +217,7 @@ EOS".stripLeftAll, exp);
     assertNotThrown(params_.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
 }
 
-template Assign_(string node, string field, T)
+template Assign_(string node, string field, T, bool typeDSL = false, IDMap idMap = IDMap.init)
 if (!isSumType!T)
 {
     import std.format : format;
@@ -216,30 +225,69 @@ if (!isSumType!T)
 
     static if (!isSomeString!T && isArray!T)
     {
-        import std.range : ElementType;
+        import std.range : ElementType, empty;
         import std.string : chomp;
 
-        enum Assign_ = format!q"EOS
+        enum AssignBase = format!q"EOS
             %s = %s.sequence.map!(a => %s).array;
 EOS"(field, node, ctorStr!(ElementType!T)("a")).chomp;
+
+        static if (idMap.subject.empty)
+        {
+            enum Assign_ = AssignBase;
+        }
+        else
+        {
+            static if (idMap.predicate.empty)
+            {
+                enum Trans = format!q"EOS
+                    Node a_ = a.value;
+                    a_.add("%s", a.key);
+                    return %s;
+EOS"(idMap.subject, ctorStr!(ElementType!T)("a_"));
+            }
+            else
+            {
+                enum Trans = format!q"EOS
+                    Node a_;
+                    a_.add("%s", a.key);
+                    a_.add("%s", a.value);
+                    return %s;
+EOS"(idMap.subject, idMap.predicate, ctorStr!(ElementType!T)("a_"));
+            }
+
+            enum Assign_ = format!q"EOS
+                if (%2$s.type == NodeType.sequence)
+                {
+                    %3$s
+                }
+                else
+                {
+                    %1$s = %2$s.mapping.map!((a) {
+                        %4$s
+                    }).array;
+                }
+EOS"(field, node, AssignBase, Trans);
+        }
     }
     else
     {
+        static assert(idMap == IDMap.init);
         enum Assign_ = format!"%s = %s;"(field, ctorStr!T(node));
     }
 }
 
-template Assign_(string node, string field, T)
+template Assign_(string node, string field, T, bool typeDSL = false, IDMap idMap = IDMap.init)
 if (isSumType!T)
 {
     import std.format : format;
     static if (isOptional!T && T.Types.length == 2)
     {
-        enum Assign_ = Assign_!(node, field, T.Types[1]);
+        enum Assign_ = Assign_!(node, field, T.Types[1], typeDSL, idMap);
     }
     else static if (isEither!T && T.Types.length == 1)
     {
-        enum Assign_ = Assign_!(node, field, T[0]);
+        enum Assign_ = Assign_!(node, field, T[0], typeDSL, idMap);
     }
     else
     {
@@ -251,11 +299,57 @@ if (isSumType!T)
         {
             alias Types = T.Types;
         }
+        static if (typeDSL && Filter!(isSomeString, Types).length > 0)
+        {
+            enum Pre = format!q"EOS
+                Node n;
+                if (%1$s.type == NodeType.string)
+                {
+                    auto s = %1$s.as!string;
+                    Node n;
+                    if (s.endsWith("[]?"))
+                    {
+                        n.add("null");
+                        n.add([
+                            "type": "array",
+                            "items": s[0..$-3],
+                        ]);
+                    }
+                    else if (s.endsWith("[]"))
+                    {
+                        n.add([
+                            "type": "array",
+                            "items": s[0..$-2],
+                        ]);
+                    }
+                    else if (s.endsWith("?"))
+                    {
+                        n.add("null");
+                        n.add(s[0..$-1]);
+                    }
+                    else
+                    {
+                        n = s;
+                    }
+                }
+                else
+                {
+                    n = %1$s;
+                }
+EOS"(node);
+        }
+        else
+        {
+            enum Pre = format!q"EOS
+                Node n = %s;
+EOS"(node);
+        }
         enum Assign_ = format!q"EOS
             {
-                %s = (%s)(%s);
+                %s
+                %s = (%s)(n);
             }
-EOS"(field, DispatchFun!(T, Types), node);
+EOS"(Pre, field, DispatchFun!(T, Types));
     }
 }
 
