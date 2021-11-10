@@ -436,11 +436,11 @@ EOS"(RetType.stringof);
         ArrayStatement,
         RecordStatement,
         EnumStatement,
-        `throw new Exception("Unknown node type in DispatchFun: "~a.type.to!string);`
+        `throw new DocumentException("Unknown node type in DispatchFun", a);`
     ].filter!(not!empty).joiner("else ").array;
 
     enum DispatchFun = format!q"EOS
-        (a) { import std.conv : to; %s }
+        (a) { %s }
 EOS"(FunBody);
 }
 
@@ -512,7 +512,7 @@ EOS"(mixin("(new T)."~RecordTypeName), RetType.stringof, ctorStr!T("a"));
                 switch(a.edig("%1$s").as!string)
                 {
                 %2$s
-                default: throw new Exception("Unknown record type: "~a.edig("%1$s").as!string);
+                default: throw new DocumentException("Unknown record type: "~a.edig("%1$s").as!string, a.edig("%1$s"));
                 }
             }
 EOS"(RecordTypeName[0..$-1], [staticMap!(RecordCaseStr, RecordTypes)].joiner("").array);
@@ -541,7 +541,7 @@ EOS"(RetType.stringof);
     }
     else
     {
-        enum DefaultStr = `throw new Exception("Unknown symbol value: "~a.as!string);`;
+        enum DefaultStr = `throw new DocumentException("Unknown symbol value: "~a.as!string, a);`;
     }
     enum EnumDispatchStatement = format!q"EOS
         if (a.type == NodeType.string)
