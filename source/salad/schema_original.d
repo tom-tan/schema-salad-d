@@ -11,7 +11,7 @@ import std.typecons : Tuple;
 class SaladRecordSchema
 {
     string name_;
-    enum type_ = "record";
+    immutable type_ = "record";
     Optional!bool inVocab_;
     @idMap!("name", "type") Optional!(SaladRecordField[]) fields_;
     Optional!(string, string[]) doc_;
@@ -98,7 +98,7 @@ class Any
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
 class RecordSchema
 {
-    enum type_ = "record";
+    immutable type_ = "record";
     @idMap!("name", "type") Optional!(RecordField[]) fields_;
 
     mixin genCtor;
@@ -131,7 +131,7 @@ class RecordField
 class EnumSchema
 {
     string[] symbols_;
-    enum type_ = "enum";
+    immutable type_ = "enum";
 
     mixin genCtor;
 }
@@ -152,7 +152,7 @@ class ArraySchema
             ArraySchema,
             string)[]
     ) items_;
-    enum type_ = "array";
+    immutable type_ = "array";
 
     mixin genCtor;
 }
@@ -191,7 +191,7 @@ class SaladEnumSchema
 {
     string name_;
     string[] symbols_;
-    enum type_ = "enum";
+    immutable type_ = "enum";
     Optional!bool inVocab_;
     Optional!(string, string[]) doc_;
     Optional!string docParent_;
@@ -208,7 +208,7 @@ class SaladEnumSchema
 class Documentation
 {
     string name_;
-    enum type_ = "documentation";
+    immutable type_ = "documentation";
     Optional!bool inVocab_;
     Optional!(string, string[]) doc_;
     Optional!string docParent_;

@@ -5,6 +5,8 @@ mixin template Canonicalize(Base, FieldCanonicalizer...)
 {
     import dyaml : Node;
 
+    import salad.meta : isConstantMember;
+
     import std.algorithm : endsWith;
     import std.format : format;
     import std.meta : AliasSeq, Stride;
@@ -36,7 +38,11 @@ mixin template Canonicalize(Base, FieldCanonicalizer...)
     {
         static assert(fname.endsWith("_"),
                       format!"Field name should end with `_` (%s.%s)"(Base.stringof, fname));
-        static if (findIndex(fname) != -1)
+        static if (isConstantMember!(Base, fname))
+        {
+            mixin("immutable string "~fname~" = \""~mixin("(new Base)."~fname)~"\";");
+        }
+        else static if (findIndex(fname) != -1)
         {
             static assert(isCallable!(ConvFuns[findIndex(fname)]),
                           format!"Convert function for `%s` is not callable"(fname));
@@ -78,7 +84,7 @@ mixin template Canonicalize(Base, FieldCanonicalizer...)
                     mixin("this."~fname~"= conv(base."~fname~");");
                 }
             }
-            else
+            else static if (!isConstantMember!(Base, fname))
             {
                 mixin("this."~fname~" = base."~fname~";");
             }
@@ -118,4 +124,35 @@ EOS";
     auto foo = Loader.fromString(ymlStr).load.as!Foo;
     assert(foo.foo_ == "10");
     assert(foo.str_ == 0);
+}
+
+unittest
+{
+    import std.conv : to;
+    import dyaml : Node, Loader;
+
+    static class C
+    {
+        immutable class_ = "File";
+        int foo_;
+
+        this() {}
+        this(Node node)
+        {
+            foo_ = node["foo"].as!int;
+        }
+    }
+
+    static class Foo
+    {
+        mixin Canonicalize!(C, "foo", (int i) => i.to!string);
+    }
+
+    enum ymlStr = q"EOS
+foo: 10
+EOS";
+
+    auto foo = Loader.fromString(ymlStr).load.as!Foo;
+    assert(foo.foo_ == "10");
+    assert(foo.class_ == "File");
 }

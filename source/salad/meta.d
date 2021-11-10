@@ -27,7 +27,11 @@ mixin template genCtor()
         {
             static assert(field.endsWith("_"),
                           format!"Field name should end with `_` (%s.%s)"(This.stringof, field));
-            mixin("mixin(Assign!(node, "~field~"));");
+            static if (!isConstantMember!(This, field))
+            {
+                // pragma(msg, Assign!(node, mixin(field)));
+                mixin("mixin(Assign!(node, "~field~"));");
+            }
         }
     }
 }
@@ -117,6 +121,8 @@ string ctorStr(T)(string param)
         return format!"%2$s.as!%1$s"(T.stringof, param);
     }
 }
+
+enum isConstantMember(T, string M) = is(typeof(mixin("T.init."~M)) == immutable string);
 
 ///
 template Assign(alias node, alias field)
@@ -209,7 +215,12 @@ unittest
     static assert(exp == q"EOS
         if (auto f = "params" in n)
         {
-            params_ = (*f).sequence.map!(a => a.as!int).array;
+            params_ = (*f).sequence.map!((a)
+            {
+                int ret;
+                ret = a.as!int;
+                return ret;
+            }).array;
         }
 EOS".stripLeftAll, exp);
 
@@ -229,8 +240,12 @@ if (!isSumType!T)
         import std.string : chomp;
 
         enum AssignBase = format!q"EOS
-            %s = %s.sequence.map!(a => %s).array;
-EOS"(field, node, ctorStr!(ElementType!T)("a")).chomp;
+            %s = %s.sequence.map!((a) {
+                %s ret;
+                %s
+                return ret;
+            }).array;
+EOS"(field, node, (ElementType!T).stringof, Assign_!("a", "ret", ElementType!T)).chomp;
 
         static if (idMap.subject.empty)
         {
@@ -370,8 +385,7 @@ template DispatchFun(RetType, Types...)
         enum ArrayStatement = ArrayDispatchStatement!(RetType, ArrayTypes);
     }
 
-    // TODO: field name `type` can be changed
-    enum isRecord(T) = is(T == class) && !__traits(compiles, T.init.type_ = "");
+    enum isRecord(T) = is(T == class) && !__traits(compiles, T.Types);
     alias RecordTypes = Filter!(isRecord, Types);
     static if (RecordTypes.length == 0)
     {
@@ -379,6 +393,7 @@ template DispatchFun(RetType, Types...)
     }
     else
     {
+        // assumption: all record types has the same constant field
         enum RecordStatement = RecordDispatchStatement!(RetType, RecordTypes);
     }
 
@@ -481,22 +496,26 @@ EOS"(RetType.stringof, ctorStr!(RecordTypes[0])("a"));
     {
         import std.algorithm : joiner;
         import std.array : array;
-        import std.meta : staticMap;
+        import std.meta : ApplyLeft, staticMap;
+        import std.traits : FieldNameTuple;
+
+        enum ConstantMembersOf(T) = Filter!(ApplyLeft!(isConstantMember, T), FieldNameTuple!T);
+        enum RecordTypeName = ConstantMembersOf!(RecordTypes[0])[0];
 
         enum RecordCaseStr(T) = format!q"EOS
             case "%s": return %s(%s);
-EOS"(T.type_, RetType.stringof, ctorStr!T("a"));
+EOS"(mixin("(new T)."~RecordTypeName), RetType.stringof, ctorStr!T("a"));
 
         enum RecordDispatchStatement = format!q"EOS
             if (a.type == NodeType.mapping)
             {
-                switch(a.edig("type").as!string)
+                switch(a.edig("%1$s").as!string)
                 {
-                %1$s
+                %2$s
                 default: throw new Exception("");
                 }
             }
-EOS"([staticMap!(RecordCaseStr, RecordTypes)].joiner("").array);
+EOS"(RecordTypeName[0..$-1], [staticMap!(RecordCaseStr, RecordTypes)].joiner("").array);
     }
 }
 
