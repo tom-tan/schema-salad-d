@@ -372,7 +372,7 @@ template DispatchFun(RetType, Types...)
 {
     import std.format : format;
     import std.meta : anySatisfy, Filter, staticMap;
-    import std.traits : isArray, isSomeString;
+    import std.traits : isArray, isIntegral, isSomeString;
 
     enum isNonStringArray(T) = !isSomeString!T && isArray!T;
     alias ArrayTypes = Filter!(isNonStringArray, Types);
@@ -393,7 +393,6 @@ template DispatchFun(RetType, Types...)
     }
     else
     {
-        // assumption: all record types has the same constant field
         enum RecordStatement = RecordDispatchStatement!(RetType, RecordTypes);
     }
 
@@ -421,11 +420,25 @@ EOS"(RetType.stringof);
         enum EnumStatement = EnumDispatchStatement!(RetType, hasString, EnumTypes);
     }
 
+    static if (Filter!(isIntegral, Types).length == 0)
+    {
+        enum NumStatement = "";
+    }
+    else
+    {
+        enum NumStatement = format!q"EOS
+                if (a.type == NodeType.integer)
+                {
+                    return %s(a.as!int);
+                }
+EOS"(RetType.stringof);
+    }
+
     static assert(Types.length == 
-        ArrayTypes.length + RecordTypes.length + EnumTypes.length + (hasString ? 1 : 0),
-        format!"Internal error: Params: %s (%s) but Array: %s, Record: %s, Enum: %s and hasString: %s"(
+        ArrayTypes.length + RecordTypes.length + EnumTypes.length + (hasString ? 1 : 0) + Filter!(isIntegral, Types).length,
+        format!"Internal error: Params: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s"(
             Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
-            hasString
+            hasString, Filter!(isIntegral, Types).stringof
         ));
 
     import std.algorithm : filter, joiner;
@@ -436,6 +449,7 @@ EOS"(RetType.stringof);
         ArrayStatement,
         RecordStatement,
         EnumStatement,
+        NumStatement,
         `throw new DocumentException("Unknown node type in DispatchFun", a);`
     ].filter!(not!empty).joiner("else ").array;
 
@@ -496,11 +510,28 @@ EOS"(RetType.stringof, ctorStr!(RecordTypes[0])("a"));
     {
         import std.algorithm : joiner;
         import std.array : array;
-        import std.meta : ApplyLeft, staticMap;
+        import std.meta : ApplyLeft, staticMap, templateNot;
         import std.traits : FieldNameTuple;
 
         enum ConstantMembersOf(T) = Filter!(ApplyLeft!(isConstantMember, T), FieldNameTuple!T);
         enum RecordTypeName = ConstantMembersOf!(RecordTypes[0])[0];
+        enum isDispatchable(T) = ConstantMembersOf!T.length != 0 && ConstantMembersOf!T[0] == RecordTypeName;
+        alias NonDispatchableRecords = Filter!(templateNot!isDispatchable, RecordTypes);
+        static assert(NonDispatchableRecords.length <= 1,
+                      "There are too many non-dispatchable record candidates: "~NonDispatchableRecords.stringof);
+
+        static if (NonDispatchableRecords.length == 0)
+        {
+            enum DefaultCaseStr = format!q"EOS
+            default: throw new DocumentException("Unknown record type: "~a.edig("%1$s").as!string, a.edig("%1$s"));
+EOS"(RecordTypeName[0..$-1]);
+        }
+        else
+        {
+            enum DefaultCaseStr = format!q"EOS
+            default: return %s(%s);
+EOS"(RetType.stringof, ctorStr!(NonDispatchableRecords[0])("a"));
+        }
 
         enum RecordCaseStr(T) = format!q"EOS
             case "%s": return %s(%s);
@@ -512,10 +543,12 @@ EOS"(mixin("(new T)."~RecordTypeName), RetType.stringof, ctorStr!T("a"));
                 switch(a.edig("%1$s").as!string)
                 {
                 %2$s
-                default: throw new DocumentException("Unknown record type: "~a.edig("%1$s").as!string, a.edig("%1$s"));
+                %3$s
                 }
             }
-EOS"(RecordTypeName[0..$-1], [staticMap!(RecordCaseStr, RecordTypes)].joiner("").array);
+EOS"(RecordTypeName[0..$-1],
+     [staticMap!(RecordCaseStr, Filter!(isDispatchable, RecordTypes))].joiner("").array,
+     DefaultCaseStr);
     }
 }
 
