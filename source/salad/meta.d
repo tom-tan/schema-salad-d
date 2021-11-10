@@ -265,9 +265,19 @@ EOS"(idMap.subject, ctorStr!(ElementType!T)("a_"));
             {
                 enum Trans = format!q"EOS
                     Node a_;
-                    a_.add("%s", a.key);
-                    a_.add("%s", a.value);
-                    return %s;
+                    a_.add("%1$s", a.key);
+                    if (a.value.type == NodeType.mapping && "%2$s" in a.value)
+                    {
+                        foreach(kv; a.value.mapping)
+                        {
+                            a_.add(kv.key, kv.value);
+                        }
+                    }
+                    else
+                    {
+                        a_.add("%2$s", a.value);
+                    }
+                    return %3$s;
 EOS"(idMap.subject, idMap.predicate, ctorStr!(ElementType!T)("a_"));
             }
 
