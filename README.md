@@ -8,4 +8,4 @@ This is a [Salad](https://www.commonwl.org/v1.2/SchemaSalad.html) library to gen
 See [cwl/schema.d](https://github.com/tom-tan/schema-salad-d/blob/master/source/cwl/schema.d) for example.
 
 Future work:
-- Generate CWL parser at compile time
+- Generate CWL parser from a given schema at compile time
