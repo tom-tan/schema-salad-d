@@ -1,3 +1,9 @@
+/**
+ * Hand-written definition of Schema Salad v1.2
+ * Authors: Tomoya Tanjo
+ * Copyright: © 2021 Tomoya Tanjo
+ * License: Apache-2.0
+ */
 module salad.schema_original;
 
 import salad.exception;

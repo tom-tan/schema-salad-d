@@ -1,3 +1,8 @@
+/**
+ * Authors: Tomoya Tanjo
+ * Copyright: © 2021 Tomoya Tanjo
+ * License: Apache-2.0
+ */
 module salad.schema;
 
 import dyaml : Node, NodeType;
@@ -146,8 +151,9 @@ struct SaladSchema
 unittest
 {
     import dyaml;
-    import std.file : dirEntries, SpanMode;
-    foreach(dir; dirEntries("examples", SpanMode.shallow))
+    import std.algorithm : filter;
+    import std.file : dirEntries, isDir, SpanMode;
+    foreach(dir; dirEntries("examples", SpanMode.shallow).filter!(d => d.isDir))
     {
         import std.exception : assertNotThrown;
         Loader.fromFile(dir~"/schema.json")
