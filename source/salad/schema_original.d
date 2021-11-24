@@ -14,7 +14,7 @@ import salad.util;
 import std.typecons : Tuple;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
-class SaladRecordSchema
+@documentRoot class SaladRecordSchema
 {
     string name_;
     immutable type_ = "record";
@@ -193,7 +193,7 @@ class SpecializeDef
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
-class SaladEnumSchema
+@documentRoot class SaladEnumSchema
 {
     string name_;
     string[] symbols_;
@@ -211,7 +211,7 @@ class SaladEnumSchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
-class Documentation
+@documentRoot class Documentation
 {
     string name_;
     immutable type_ = "documentation";
