@@ -110,6 +110,13 @@ struct typeDSL{}
 enum bool isTypeDSL(alias uda) = isInstanceOf!(typeDSL, uda);
 enum bool hasTypeDSL(alias symbol) = Filter!(isTypeDSL, __traits(getAttributes, symbol)).length > 0;
 
+/** 
+ * UDA for documentRoot
+ */
+struct documentRoot{}
+enum bool isDocumentRoot(alias uda) = isInstanceOf!(documentRoot, uda);
+enum bool hasDocumentRoot(alias symbol) = Filter!(isDocumentRoot, __traits(getAttributes, symbol)).length > 0;
+
 /**
 Returns: a string to construct `T` with a parameter whose variable name is `param`
 Note: Use this function instead of `param.as!T` to prevent circular references
@@ -263,8 +270,10 @@ EOS"(field, node, (ElementType!T).stringof, Assign_!("a", "ret", ElementType!T))
                 enum Trans = format!q"EOS
                     Node a_ = a.value;
                     a_.add("%s", a.key);
-                    return %s;
-EOS"(idMap.subject, ctorStr!(ElementType!T)("a_"));
+                    %s ret;
+                    %s
+                    return ret;
+EOS"(idMap.subject, (ElementType!T).stringof, Assign_!("a_", "ret", ElementType!T));
             }
             else
             {

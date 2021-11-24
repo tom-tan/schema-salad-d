@@ -12,9 +12,8 @@ import salad.meta;
 import salad.type;
 import salad.util;
 
-class CommandLineTool
+@documentRoot class CommandLineTool
 {
-    //
     @idMap!("id", "type")
     CommandInputParameter[] inputs_;
     @idMap!("id", "type")
@@ -23,14 +22,17 @@ class CommandLineTool
     Optional!string id_;
     @idMap!"class"
     Optional!(
-        InlineJavascriptRequirement,
-        SchemaDefRequirement,
-        DockerRequirement,
-        SoftwareRequirement,
-        InitialWorkDirRequirement,
-        EnvVarRequirement,
-        ShellCommandRequirement,
-        ResourceRequirement) requirements_;
+        Either!(
+            InlineJavascriptRequirement,
+            SchemaDefRequirement,
+            DockerRequirement,
+            SoftwareRequirement,
+            InitialWorkDirRequirement,
+            EnvVarRequirement,
+            ShellCommandRequirement,
+            ResourceRequirement,
+        )[]
+    ) requirements_;
     @idMap!"class" Optional!(Any[]) hints_;
     Optional!string label_;
     Optional!string doc_;
@@ -612,4 +614,356 @@ unittest
     assert(cmd.dig!("hints", Any[])[0]
               .as!ResourceRequirement
               .dig!("coresMin", long) == 2);
+}
+
+@documentRoot class Workflow
+{
+    @idMap!("id", "type")
+    InputParameter[] inputs_;
+    @idMap!("id", "type")
+    WorkflowOutputParameter[] outputs_;
+    immutable class_ = "Workflow";
+    @idMap!"id" WorkflowStep[] steps_;
+    Optional!string id_;
+    @idMap!"class"
+    Optional!(
+        Either!(
+            InlineJavascriptRequirement,
+            SchemaDefRequirement,
+            DockerRequirement,
+            SoftwareRequirement,
+            InitialWorkDirRequirement,
+            EnvVarRequirement,
+            ShellCommandRequirement,
+            ResourceRequirement,
+            SubworkflowFeatureRequirement,
+            ScatterFeatureRequirement,
+            MultipleInputFeatureRequirement,
+            StepInputExpressionRequirement,
+        )[]
+    ) requirements_;
+    @idMap!"class" Optional!(Any[]) hints_;
+    Optional!string label_;
+    Optional!string doc_;
+    Optional!CWLVersion cwlVersion_;
+
+    mixin genCtor;
+}
+
+class WorkflowOutputParameter
+{
+    string id_;
+    Optional!string label_;
+    Optional!(string, string[]) secondaryFiles_;
+    Optional!bool streamable_;
+    Optional!(string, string[]) doc_;
+    Optional!CommandOutputBinding outputBinding_;
+    Optional!string format_;
+    Optional!(string, string[]) outputSource_;
+    Optional!LinkMergeMethod linkMerge_;
+    Optional!(
+        CWLType,
+        OutputRecordSchema,
+        OutputEnumSchema,
+        OutputArraySchema,
+        string,
+        Either!(
+            CWLType,
+            OutputRecordSchema,
+            OutputEnumSchema,
+            OutputArraySchema,
+            string,
+        )[],
+    ) type_;
+
+    mixin genCtor;
+}
+
+class LinkMergeMethod
+{
+    import dyaml : Node;
+
+    enum Types{
+        merge_nested_ = "merge_nested",
+        merge_flattened_ = "merge_flattened",
+    }
+
+    alias type_ this;
+
+    string type_;
+
+    this(in Node node) @safe
+    {
+        type_ = node.as!string;
+    }
+}
+
+class OutputRecordSchema
+{
+    immutable type_ = "record";
+    @idMap!("name", "type")
+    Optional!(OutputRecordField[]) fields_;
+    Optional!string label_;
+
+    mixin genCtor;
+}
+
+class OutputRecordField
+{
+    string name_;
+    Either!(
+        CWLType,
+        OutputRecordSchema,
+        OutputEnumSchema,
+        OutputArraySchema,
+        string,
+        Either!(
+            CWLType,
+            OutputRecordSchema,
+            OutputEnumSchema,
+            OutputArraySchema,
+            string,
+        )[],
+    ) type_;
+    Optional!string doc_;
+    Optional!CommandOutputBinding outputBinding_;
+
+    mixin genCtor;
+}
+
+class OutputEnumSchema
+{
+    string[] symbols_;
+    immutable type_ = "enum";
+    Optional!string label_;
+    Optional!CommandOutputBinding outputBinding_;
+
+    mixin genCtor;
+}
+
+class OutputArraySchema
+{
+    Either!(
+        CWLType,
+        OutputRecordSchema,
+        OutputEnumSchema,
+        OutputArraySchema,
+        string,
+        Either!(
+            CWLType,
+            OutputRecordSchema,
+            OutputEnumSchema,
+            OutputArraySchema,
+            string,
+        )[],
+    ) items_;
+    immutable type_ = "array";
+    Optional!string label_;
+    Optional!CommandOutputBinding outputBinding_;
+
+    mixin genCtor;
+}
+
+class WorkflowStep
+{
+    string id_;
+    @idMap!("id", "source")
+    WorkflowStepInput[] in_;
+    Either!(string, WorkflowStepOutput)[] out_;
+    Either!(string, CommandLineTool, ExpressionTool, Workflow) run_;
+    @idMap!"class"
+    Optional!(
+        Either!(
+            InlineJavascriptRequirement,
+            SchemaDefRequirement,
+            DockerRequirement,
+            SoftwareRequirement,
+            InitialWorkDirRequirement,
+            EnvVarRequirement,
+            ShellCommandRequirement,
+            ResourceRequirement,
+            SubworkflowFeatureRequirement,
+            ScatterFeatureRequirement,
+            MultipleInputFeatureRequirement,
+            StepInputExpressionRequirement,
+        )[]
+    ) requirements_;
+    @idMap!"class" Optional!(Any[]) hints_;
+    Optional!string label_;
+    Optional!string doc_;
+    Optional!(string, string[]) scatter_;
+    Optional!ScatterMethod scatterMethod_;
+
+    mixin genCtor;
+}
+
+class WorkflowStepInput
+{
+    string id_;
+    Optional!(string, string[]) source_;
+    Optional!LinkMergeMethod linkMerge_;
+    Optional!Any default_;
+    Optional!string valueFrom_;
+
+    mixin genCtor;
+}
+
+class WorkflowStepOutput
+{
+    string id_;
+
+    mixin genCtor;
+}
+
+class ScatterMethod
+{
+    import dyaml : Node;
+
+    enum Types{
+        dotproduct_ = "dotproduct",
+        nested_crossproduct_ = "nested_crossproduct",
+        flat_crossproduct_ = "flat_crossproduct_",
+    }
+
+    alias type_ this;
+
+    string type_;
+
+    this(in Node node) @safe
+    {
+        type_ = node.as!string;
+        // enforce
+    }
+}
+
+class SubworkflowFeatureRequirement
+{
+    immutable class_ = "SubworkflowFeatureRequirement";
+
+    mixin genCtor;
+}
+
+class ScatterFeatureRequirement
+{
+    immutable class_ = "ScatterFeatureRequirement";
+
+    mixin genCtor;
+}
+
+class MultipleInputFeatureRequirement
+{
+    immutable class_ = "MultipleInputFeatureRequirement";
+
+
+    mixin genCtor;
+}
+
+class StepInputExpressionRequirement
+{
+    immutable class_ = "StepInputExpressionRequirement";
+
+    mixin genCtor;
+}
+
+@documentRoot class ExpressionTool
+{
+    @idMap!("id", "type")
+    InputParameter[] inputs_;
+    @idMap!("id", "type")
+    ExpressionToolOutputParameter[] outputs_;
+    immutable class_ = "Expression";
+    string expression_;
+    Optional!string id_;
+    @idMap!"class"
+    Optional!(
+        Either!(
+            InlineJavascriptRequirement,
+            SchemaDefRequirement,
+            DockerRequirement,
+            SoftwareRequirement,
+            InitialWorkDirRequirement,
+            EnvVarRequirement,
+            ShellCommandRequirement,
+            ResourceRequirement,
+            SubworkflowFeatureRequirement,
+            ScatterFeatureRequirement,
+            MultipleInputFeatureRequirement,
+            StepInputExpressionRequirement,
+        )[]
+    ) requirements_;
+    @idMap!"class" Optional!(Any[]) hints_;
+    Optional!string label_;
+    Optional!string doc_;
+    Optional!CWLVersion cwlVersion_;
+
+    mixin genCtor;
+}
+
+class InputParameter
+{
+    string id_;
+    Optional!string label_;
+    Optional!(string, string[]) secondaryFiles_;
+    Optional!bool streamable_;
+    Optional!(string, string[]) doc_;
+    Optional!(string, string[]) format_;
+    Optional!CommandLineBinding inputBinding_;
+    Optional!Any default_;
+    Optional!(
+        CWLType,
+        InputRecordSchema,
+        InputEnumSchema,
+        InputArraySchema,
+        string,
+        Either!(
+            CWLType,
+            InputRecordSchema,
+            InputEnumSchema,
+            InputArraySchema,
+            string,
+        )[],
+    ) type_;
+
+    mixin genCtor;
+}
+
+class ExpressionToolOutputParameter
+{
+    string id_;
+    Optional!string label_;
+    Optional!(string, string[]) secondaryFiles_;
+    Optional!bool streamable_;
+    Optional!(string, string[]) doc_;
+    Optional!CommandOutputBinding outputBinding_;
+    Optional!string format_;
+    Optional!(
+        CWLType,
+        OutputRecordSchema,
+        OutputEnumSchema,
+        OutputArraySchema,
+        string,
+        Either!(
+            CWLType,
+            OutputRecordSchema,
+            OutputEnumSchema,
+            OutputArraySchema,
+            string,
+        )[],
+    ) type_;
+
+    mixin genCtor;
+}
+
+unittest
+{
+    import dyaml;
+
+    enum cwl = "examples/count-lines1-wf.cwl";
+    auto wf = Loader.fromFile(cwl)
+                    .load
+                    .as!Workflow;
+    assert(wf.dig!"class"("Invalid") == "Workflow");
+    assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
+    assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
+    assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
 }
