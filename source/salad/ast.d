@@ -5,6 +5,7 @@
  */
 module salad.ast;
 
+version(none):
 import dyaml : Mark, Node;
 
 import salad.type;

@@ -17,6 +17,7 @@ import std.typecons : Tuple;
 
 import sumtype;
 
+version(none):
 struct Resolver
 {
     this(SaladSchema s)

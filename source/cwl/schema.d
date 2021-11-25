@@ -38,7 +38,7 @@ import salad.util;
     Optional!string doc_;
     Optional!CWLVersion cwlVersion_;
     Optional!(string, string[]) baseCommand_;
-    Optional!(string, CommandLineBinding)[] arguments_;
+    Optional!(Either!(string, CommandLineBinding)[]) arguments_;
     Optional!string stdin_;
     Optional!string stderr_;
     Optional!string stdout_;
@@ -47,6 +47,8 @@ import salad.util;
     Optional!(int[]) permanentFailCodes_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class CommandInputParameter
@@ -648,6 +650,8 @@ unittest
     Optional!CWLVersion cwlVersion_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class WorkflowOutputParameter
@@ -897,6 +901,8 @@ class StepInputExpressionRequirement
     Optional!CWLVersion cwlVersion_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class InputParameter

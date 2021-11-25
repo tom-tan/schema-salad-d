@@ -55,7 +55,6 @@ class SaladRecordField
     Optional!(string, JsonldPredicate) jsonldPredicate_;
     Optional!Any default_;
 
-
     mixin genCtor;
 }
 

@@ -5,6 +5,7 @@
  */
 module salad.schema;
 
+version(none):
 import dyaml : Node, NodeType;
 
 import salad.ast : AST;

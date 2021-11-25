@@ -20,21 +20,17 @@ mixin template genCtor()
     this() {}
     this(in Node node) @trusted
     {
-        import salad.util : edig;
-        import std.algorithm : endsWith, map;
-        import std.array : array;
-        import std.format : format;
+        import std.algorithm : endsWith;
         import std.traits : FieldNameTuple;
 
         alias This = typeof(this);
 
         static foreach(field; FieldNameTuple!This)
         {
-            static assert(field.endsWith("_"),
-                          format!"Field name should end with `_` (%s.%s)"(This.stringof, field));
-            static if (!isConstantMember!(This, field))
+            static if (field.endsWith("_") && !isConstantMember!(This, field))
             {
-                // pragma(msg, Assign!(node, mixin(field)));
+                // static if (This.stringof == "RecordField")
+                //     pragma(msg, Assign!(node, mixin(field)));
                 mixin("mixin(Assign!(node, "~field~"));");
             }
         }
@@ -107,15 +103,59 @@ UDA for DSL for types
 See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
 */
 struct typeDSL{}
-enum bool isTypeDSL(alias uda) = isInstanceOf!(typeDSL, uda);
+enum bool isTypeDSL(alias uda) = is(uda == typeDSL);
 enum bool hasTypeDSL(alias symbol) = Filter!(isTypeDSL, __traits(getAttributes, symbol)).length > 0;
 
 /** 
  * UDA for documentRoot
  */
 struct documentRoot{}
-enum bool isDocumentRoot(alias uda) = isInstanceOf!(documentRoot, uda);
+enum bool isDocumentRoot(alias uda) = is(uda == documentRoot);
 enum bool hasDocumentRoot(alias symbol) = Filter!(isDocumentRoot, __traits(getAttributes, symbol)).length > 0;
+
+enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
+
+///
+template DocumentRootType(alias module_)
+{
+    import std.meta : allSatisfy, staticMap;
+    import std.traits : fullyQualifiedName;
+
+    alias StrToType(string T) = __traits(getMember, module_, T);
+    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
+    alias RootTypes = Filter!(hasDocumentRoot, syms);
+    static if (RootTypes.length > 0)
+    {
+        static assert(allSatisfy!(hasIdentifier, RootTypes));
+        alias DocumentRootType = SumType!RootTypes;
+    }
+    else
+    {
+        import std.format : format;
+        import std.traits : moduleName;
+        static assert(false, format!"No schemas with `documentRoot: true` in module `%s`"(moduleName!module_));
+    }
+}
+
+///
+template IdentifierType(alias module_)
+{
+    import std.meta : allSatisfy, staticMap;
+    import std.traits : fullyQualifiedName;
+
+    alias StrToType(string T) = __traits(getMember, module_, T);
+    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
+    alias IDTypes = Filter!(hasIdentifier, syms);
+
+    static if (IDTypes.length > 0)
+    {
+        alias IdentifierType = SumType!IDTypes;
+    }
+    else
+    {
+        static assert(false, "No schemas with identifier field");
+    }
+}
 
 /**
 Returns: a string to construct `T` with a parameter whose variable name is `param`
@@ -148,9 +188,15 @@ template Assign(alias node, alias field)
 
     enum param = field.stringof[0..$-1];
 
+    enum ImportList = q"EOS
+            import salad.util : edig;
+            import std.algorithm : map;
+            import std.array : array;
+EOS";
+
     static if (isOptional!T)
     {
-        enum Assign = format!q"EOS
+        enum Assign = ImportList~format!q"EOS
             if (auto f = "%s" in %s)
             {
                 %s
@@ -159,11 +205,11 @@ EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T, typeDSL, idMap));
     }
     else static if (isEither!T)
     {
-        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
+        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
     }
     else
     {
-        enum Assign = Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
+        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
     }
 }
 
@@ -186,8 +232,13 @@ version(unittest)
     enum fieldName = "strVariable";
     Node n = [ fieldName: "string value" ];
     string strVariable_;
-    enum exp = Assign!(n, strVariable_);
-    static assert(exp == `strVariable_ = n.edig("strVariable").as!string;`, exp);
+    enum exp = Assign!(n, strVariable_).stripLeftAll;
+    static assert(exp == q"EOS
+        import salad.util : edig;
+        import std.algorithm : map;
+        import std.array : array;
+        strVariable_ = n.edig("strVariable").as!string;
+EOS".stripLeftAll, exp);
 
     mixin(exp);
     assert(strVariable_ == "string value");
@@ -203,6 +254,9 @@ version(unittest)
     Optional!bool param_;
     enum exp = Assign!(n, param_).stripLeftAll;
     static assert(exp == q"EOS
+        import salad.util : edig;
+        import std.algorithm : map;
+        import std.array : array;
         if (auto f = "param" in n)
         {
             param_ = (*f).as!bool;
@@ -225,6 +279,9 @@ unittest
     Optional!(int[]) params_;
     enum exp = Assign!(n, params_).stripLeftAll;
     static assert(exp == q"EOS
+        import salad.util : edig;
+        import std.algorithm : map;
+        import std.array : array;
         if (auto f = "params" in n)
         {
             params_ = (*f).sequence.map!((a)
@@ -330,6 +387,8 @@ if (isSumType!T)
     }
     else
     {
+        import std.traits : isSomeString;
+
         static if (isOptional!T)
         {
             alias Types = T.Types[1..$];
@@ -344,8 +403,8 @@ if (isSumType!T)
                 Node n;
                 if (%1$s.type == NodeType.string)
                 {
+                    import std.algorithm : endsWith;
                     auto s = %1$s.as!string;
-                    Node n;
                     if (s.endsWith("[]?"))
                     {
                         n.add("null");
@@ -368,7 +427,7 @@ if (isSumType!T)
                     }
                     else
                     {
-                        n = s;
+                        n = Node(s);
                     }
                 }
                 else
