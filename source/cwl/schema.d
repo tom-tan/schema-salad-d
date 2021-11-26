@@ -76,6 +76,8 @@ class CommandInputParameter
     ) type_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class CommandLineBinding
@@ -266,6 +268,8 @@ class CommandOutputParameter
     ) type_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class stdout
@@ -324,6 +328,8 @@ class CommandOutputRecordSchema
     Optional!string name_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }
 
 class CommandOutputRecordField
@@ -413,6 +419,8 @@ class InputRecordSchema
     Optional!string name_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }
 
 class InputRecordField
@@ -448,6 +456,8 @@ class InputEnumSchema
     Optional!CommandLineBinding inpuBinding_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }
 
 class InputArraySchema
@@ -681,6 +691,8 @@ class WorkflowOutputParameter
     ) type_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class LinkMergeMethod
@@ -799,6 +811,8 @@ class WorkflowStep
     Optional!ScatterMethod scatterMethod_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class WorkflowStepInput
@@ -810,6 +824,8 @@ class WorkflowStepInput
     Optional!string valueFrom_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class WorkflowStepOutput
@@ -817,6 +833,8 @@ class WorkflowStepOutput
     string id_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class ScatterMethod
@@ -931,6 +949,8 @@ class InputParameter
     ) type_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 class ExpressionToolOutputParameter
@@ -958,6 +978,8 @@ class ExpressionToolOutputParameter
     ) type_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return id_; }
 }
 
 unittest

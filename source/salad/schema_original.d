@@ -31,6 +31,8 @@ import std.typecons : Tuple;
     @idMap!("specializeFrom", "specializeTo") Optional!(SpecializeDef[]) specialize_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
@@ -207,6 +209,8 @@ class SpecializeDef
     Optional!(string, string[]) extends_;
 
     mixin genCtor;
+
+    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
@@ -222,4 +226,6 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genToString;
+
+    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }
