@@ -264,7 +264,8 @@ EOS".stripLeftAll, exp);
 EOS".stripLeftAll, exp);
 
     mixin(exp);
-    assertNotThrown(param_.tryMatch!((bool b) => assert(b)));
+    assert(param_.tryMatch!((bool b) => b)
+                 .assertNotThrown);
 }
 
 /// optional of array type
@@ -294,7 +295,8 @@ unittest
 EOS".stripLeftAll, exp);
 
     mixin(exp);
-    assertNotThrown(params_.tryMatch!((int[] arr) => assert(arr == [1, 2, 3])));
+    assert(params_.tryMatch!((int[] arr) => arr)
+                  .assertNotThrown == [1, 2, 3]);
 }
 
 template Assign_(string node, string field, T, bool typeDSL = false, IDMap idMap = IDMap.init)

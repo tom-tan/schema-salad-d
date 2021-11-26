@@ -25,7 +25,8 @@ enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templa
 {
     import std.exception : assertNotThrown;
     auto op = Optional!int.init;
-    assertNotThrown(op.tryMatch!((None _) {}));
+    op.tryMatch!((None _) {})
+      .assertNotThrown;
 }
 
 // TODO: more appropriate name
