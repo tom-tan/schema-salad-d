@@ -6,11 +6,11 @@
 module salad.canonicalizer;
 
 ///
-mixin template Canonicalize(Base, FieldCanonicalizer...)
+mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
 {
     import dyaml : Node;
 
-    import salad.meta : isConstantMember;
+    import salad.meta : genToString, isConstantMember;
 
     import std.algorithm : endsWith;
     import std.format : format;
@@ -78,6 +78,8 @@ mixin template Canonicalize(Base, FieldCanonicalizer...)
         canonicalize(base);
     }
 
+    mixin genToString;
+
     final void canonicalize(Base base)
     {
         static foreach(fname; FNames)
@@ -116,9 +118,11 @@ unittest
 
     static class Foo
     {
-        mixin Canonicalize!(C,
-                            "foo", (int i) => i.to!string,
-                            "str", (string s) => 0);
+        mixin genCanonicalizeBody!(
+            C,
+            "foo", (int i) => i.to!string,
+            "str", (string s) => 0,
+        );
     }
 
     enum ymlStr = q"EOS
@@ -150,7 +154,7 @@ unittest
 
     static class Foo
     {
-        mixin Canonicalize!(C, "foo", (int i) => i.to!string);
+        mixin genCanonicalizeBody!(C, "foo", (int i) => i.to!string);
     }
 
     enum ymlStr = q"EOS

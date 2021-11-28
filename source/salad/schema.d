@@ -104,7 +104,7 @@ if (isOptional!T && is(T.Types[1] == U))
 
 class SaladRecordSchema
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.SaladRecordSchema,
         "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
         "fields", (Optional!(so.SaladRecordField[]) fields) =>
@@ -122,13 +122,11 @@ class SaladRecordSchema
                             specialize.match!((so.SpecializeDef[] sd) => sd.map!(s => new SpecializeDef(s)).array,
                                               none => (SpecializeDef[]).init),
     );
-
-    mixin genToString;
 }
 
 class SaladRecordField
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.SaladRecordField,
         "type", (Either!(
                     so.PrimitiveType,
@@ -147,37 +145,31 @@ class SaladRecordField
         "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
         "default", (Optional!(so.Any) default_) => default_.match!((so.Any any) => new Any(any), none => null),
     );
-
-    mixin genToString;
 }
 
 class PrimitiveType
 {
-    mixin Canonicalize!(so.PrimitiveType);
-
-    mixin genToString;
+    mixin genCanonicalizeBody!(so.PrimitiveType);
 }
 
 class Any
 {
-    mixin Canonicalize!(so.Any);
+    mixin genCanonicalizeBody!(so.Any);
 }
 
 class RecordSchema
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.RecordSchema,
         "fields", (Optional!(so.RecordField[]) fields) =>
                     fields.match!((so.RecordField[] rf) => rf.map!(r => new RecordField(r)).array,
                                   none => (RecordField[]).init),
     );
-
-    mixin genToString;
 }
 
 class RecordField
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.RecordField,
         "type", (Either!(
                     so.PrimitiveType,
@@ -194,20 +186,16 @@ class RecordField
                     ) type) => type.canonicalize,
         "doc", (Optional!(string, string[]) doc) => doc.concat,
     );
-
-    mixin genToString;
 }
 
 class EnumSchema
 {
-    mixin Canonicalize!(so.EnumSchema);
-
-    mixin genToString;
+    mixin genCanonicalizeBody!(so.EnumSchema);
 }
 
 class ArraySchema
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.ArraySchema,
         "items", (Either!(
                     so.PrimitiveType,
@@ -223,13 +211,11 @@ class ArraySchema
                         string)[]
                     ) items) => items.canonicalize,
     );
-
-    mixin genToString;
 }
 
 class JsonldPredicate
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.JsonldPredicate,
         "_id", (Optional!string _id) => _id.orDefault(""),
         "_type", (Optional!string _type) => _type.orDefault(""),
@@ -247,12 +233,12 @@ class JsonldPredicate
 
 class SpecializeDef
 {
-    mixin Canonicalize!(so.SpecializeDef);
+    mixin genCanonicalizeBody!(so.SpecializeDef);
 }
 
 class SaladEnumSchema
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.SaladEnumSchema,
         "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
@@ -263,13 +249,11 @@ class SaladEnumSchema
                                                                            (string[] ss) => ss,
                                                                            none => (string[]).init),
     );
-
-    mixin genToString;
 }
 
 class Documentation
 {
-    mixin Canonicalize!(
+    mixin genCanonicalizeBody!(
         so.Documentation,
         "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,

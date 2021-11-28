@@ -40,9 +40,9 @@ mixin template genCtor()
 ///
 mixin template genToString()
 {
-    override string toString() @trusted
+    override string toString() const @trusted
     {
-        import std.conv : to;
+        import salad.type : isEither, isOptional, match;
         import std.array : join;
         import std.format : format;
         import std.traits : FieldNameTuple;
@@ -55,8 +55,8 @@ mixin template genToString()
         {
             static if (isOptional!(typeof(mixin(field))))
             {
-                mixin(field).match!((None _) { return; },
-                                    (rest) { fstrs ~= format!"%s: %s"(field, rest); return; });
+                mixin(field).match!((None _) { },
+                                    (rest) { fstrs ~= format!"%s: %s"(field, rest); });
             }
             else static if (isEither!(typeof(mixin(field))))
             {
