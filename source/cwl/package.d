@@ -1,17 +1,22 @@
+/**
+ * Authors: Tomoya Tanjo
+ * Copyright: © 2021 Tomoya Tanjo
+ * License: Apache-2.0
+ */
 module cwl;
 
 import cwl.schema;
 
 import salad.parser : import_ = importFromURI;
 import salad.meta : DocRootType = DocumentRootType;
-import salad.type : match, tryMatch;
-import salad.util : dig;
 
 alias importFromURI = import_!(cwl.schema);
 alias DocumentRootType = DocRootType!(cwl.schema);
 
 unittest
 {
+    import salad.type : tryMatch;
+    import salad.util : dig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
@@ -33,6 +38,8 @@ unittest
 
 unittest
 {
+    import salad.type : tryMatch;
+    import salad.util : dig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
@@ -52,6 +59,8 @@ unittest
 
 unittest
 {
+    import salad.type : tryMatch;
+    import salad.util : dig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
