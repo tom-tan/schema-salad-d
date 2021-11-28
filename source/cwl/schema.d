@@ -14,13 +14,13 @@ import salad.util;
 
 @documentRoot class CommandLineTool
 {
-    @idMap!("id", "type")
+    @idMap("id", "type")
     CommandInputParameter[] inputs_;
-    @idMap!("id", "type")
+    @idMap("id", "type")
     CommandOutputParameter[] outputs_;
     immutable class_ = "CommandLineTool";
     Optional!string id_;
-    @idMap!"class"
+    @idMap("class")
     Optional!(
         Either!(
             InlineJavascriptRequirement,
@@ -33,7 +33,7 @@ import salad.util;
             ResourceRequirement,
         )[]
     ) requirements_;
-    @idMap!"class" Optional!(Any[]) hints_;
+    @idMap("class") Optional!(Any[]) hints_;
     Optional!string label_;
     Optional!string doc_;
     Optional!CWLVersion cwlVersion_;
@@ -175,7 +175,7 @@ class Directory
 class CommandInputRecordSchema
 {
     immutable type_ = "record";
-    @idMap!("name", "type")
+    @idMap("name", "type")
     Optional!(CommandInputRecordField[]) fields_;
     Optional!string label_;
     Optional!string name_;
@@ -322,7 +322,7 @@ class CommandOutputBinding
 class CommandOutputRecordSchema
 {
     immutable type_ = "record";
-    @idMap!("name", "type")
+    @idMap("name", "type")
     Optional!(CommandOutputRecordField[]) fields_;
     Optional!string label_;
     Optional!string name_;
@@ -411,7 +411,7 @@ class SchemaDefRequirement
 class InputRecordSchema
 {
     immutable type_ = "record";
-    @idMap!("name", "type")
+    @idMap("name", "type")
     Optional!(
         InputRecordField[]
     ) fields_;
@@ -499,7 +499,7 @@ class DockerRequirement
 class SoftwareRequirement
 {
     immutable class_ = "SoftwareRequirement";
-    @idMap!("package", "specs")
+    @idMap("package", "specs")
     SoftwarePackage[] packages_;
 
     mixin genCtor;
@@ -542,7 +542,7 @@ class Dirent
 class EnvVarRequirement
 {
     immutable class_ = "EnvVarRequirement";
-    @idMap!("envName", "envValue")
+    @idMap("envName", "envValue")
     EnvironmentDef[] envDef_;
 
     mixin genCtor;
@@ -630,14 +630,14 @@ unittest
 
 @documentRoot class Workflow
 {
-    @idMap!("id", "type")
+    @idMap("id", "type")
     InputParameter[] inputs_;
-    @idMap!("id", "type")
+    @idMap("id", "type")
     WorkflowOutputParameter[] outputs_;
     immutable class_ = "Workflow";
-    @idMap!"id" WorkflowStep[] steps_;
+    @idMap("id") WorkflowStep[] steps_;
     Optional!string id_;
-    @idMap!"class"
+    @idMap("class")
     Optional!(
         Either!(
             InlineJavascriptRequirement,
@@ -654,7 +654,7 @@ unittest
             StepInputExpressionRequirement,
         )[]
     ) requirements_;
-    @idMap!"class" Optional!(Any[]) hints_;
+    @idMap("class") Optional!(Any[]) hints_;
     Optional!string label_;
     Optional!string doc_;
     Optional!CWLVersion cwlVersion_;
@@ -717,7 +717,7 @@ class LinkMergeMethod
 class OutputRecordSchema
 {
     immutable type_ = "record";
-    @idMap!("name", "type")
+    @idMap("name", "type")
     Optional!(OutputRecordField[]) fields_;
     Optional!string label_;
 
@@ -783,11 +783,11 @@ class OutputArraySchema
 class WorkflowStep
 {
     string id_;
-    @idMap!("id", "source")
+    @idMap("id", "source")
     WorkflowStepInput[] in_;
     Either!(string, WorkflowStepOutput)[] out_;
     Either!(string, CommandLineTool, ExpressionTool, Workflow) run_;
-    @idMap!"class"
+    @idMap("class")
     Optional!(
         Either!(
             InlineJavascriptRequirement,
@@ -804,7 +804,7 @@ class WorkflowStep
             StepInputExpressionRequirement,
         )[]
     ) requirements_;
-    @idMap!"class" Optional!(Any[]) hints_;
+    @idMap("class") Optional!(Any[]) hints_;
     Optional!string label_;
     Optional!string doc_;
     Optional!(string, string[]) scatter_;
@@ -889,14 +889,14 @@ class StepInputExpressionRequirement
 
 @documentRoot class ExpressionTool
 {
-    @idMap!("id", "type")
+    @idMap("id", "type")
     InputParameter[] inputs_;
-    @idMap!("id", "type")
+    @idMap("id", "type")
     ExpressionToolOutputParameter[] outputs_;
     immutable class_ = "Expression";
     string expression_;
     Optional!string id_;
-    @idMap!"class"
+    @idMap("class")
     Optional!(
         Either!(
             InlineJavascriptRequirement,
@@ -913,7 +913,7 @@ class StepInputExpressionRequirement
             StepInputExpressionRequirement,
         )[]
     ) requirements_;
-    @idMap!"class" Optional!(Any[]) hints_;
+    @idMap("class") Optional!(Any[]) hints_;
     Optional!string label_;
     Optional!string doc_;
     Optional!CWLVersion cwlVersion_;

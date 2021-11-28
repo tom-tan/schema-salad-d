@@ -19,7 +19,7 @@ import std.typecons : Tuple;
     string name_;
     immutable type_ = "record";
     Optional!bool inVocab_;
-    @idMap!("name", "type") Optional!(SaladRecordField[]) fields_;
+    @idMap("name", "type") Optional!(SaladRecordField[]) fields_;
     Optional!(string, string[]) doc_;
     Optional!string docParent_;
     Optional!(string, string[]) docChild_;
@@ -28,7 +28,7 @@ import std.typecons : Tuple;
     Optional!bool documentRoot_;
     Optional!bool abstract_;
     Optional!(string, string[]) extends_;
-    @idMap!("specializeFrom", "specializeTo") Optional!(SpecializeDef[]) specialize_;
+    @idMap("specializeFrom", "specializeTo") Optional!(SpecializeDef[]) specialize_;
 
     mixin genCtor;
 
@@ -106,7 +106,7 @@ class Any
 class RecordSchema
 {
     immutable type_ = "record";
-    @idMap!("name", "type") Optional!(RecordField[]) fields_;
+    @idMap("name", "type") Optional!(RecordField[]) fields_;
 
     mixin genCtor;
 }

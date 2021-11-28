@@ -9,9 +9,6 @@ import salad.type;
 
 import dyaml;
 
-import std.meta : Filter;
-import std.traits : isInstanceOf;
-
 ///
 mixin template genCtor()
 {
@@ -75,55 +72,30 @@ mixin template genToString()
 UDA for identifier maps
 See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
 */
-struct idMap(string subject, string predicate = "") {}
-struct IDMap { string subject; string predicate; }
-enum bool isIDMap(alias uda) = isInstanceOf!(idMap, uda);
-enum bool hasIDMap(alias symbol) = Filter!(isIDMap, __traits(getAttributes, symbol)).length > 0;
-template getIDMap(alias value)
-{
-    import std.traits : TemplateArgsOf;
-
-    static if (isIDMap!value)
-    {
-        enum getIDMap = IDMap(TemplateArgsOf!value);
-    }
-    else static if (hasIDMap!value)
-    {
-        alias uda = Filter!(isIDMap, __traits(getAttributes, value))[0];
-        enum getIDMap = IDMap(TemplateArgsOf!uda);
-    }
-    else
-    {
-        enum getIDMap = IDMap.init;
-    }
-}
+struct idMap { string subject; string predicate = ""; }
 
 /**
 UDA for DSL for types
 See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
 */
 struct typeDSL{}
-enum bool isTypeDSL(alias uda) = is(uda == typeDSL);
-enum bool hasTypeDSL(alias symbol) = Filter!(isTypeDSL, __traits(getAttributes, symbol)).length > 0;
 
 /** 
  * UDA for documentRoot
  */
 struct documentRoot{}
-enum bool isDocumentRoot(alias uda) = is(uda == documentRoot);
-enum bool hasDocumentRoot(alias symbol) = Filter!(isDocumentRoot, __traits(getAttributes, symbol)).length > 0;
 
 enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
 
 ///
 template DocumentRootType(alias module_)
 {
-    import std.meta : allSatisfy, staticMap;
-    import std.traits : fullyQualifiedName;
+    import std.meta : allSatisfy, ApplyRight, Filter, staticMap;
+    import std.traits : fullyQualifiedName, hasUDA;
 
     alias StrToType(string T) = __traits(getMember, module_, T);
     alias syms = staticMap!(StrToType, __traits(allMembers, module_));
-    alias RootTypes = Filter!(hasDocumentRoot, syms);
+    alias RootTypes = Filter!(ApplyRight!(hasUDA, documentRoot), syms);
     static if (RootTypes.length > 0)
     {
         static assert(allSatisfy!(hasIdentifier, RootTypes));
@@ -140,7 +112,7 @@ template DocumentRootType(alias module_)
 ///
 template IdentifierType(alias module_)
 {
-    import std.meta : allSatisfy, staticMap;
+    import std.meta : allSatisfy, Filter, staticMap;
     import std.traits : fullyQualifiedName;
 
     alias StrToType(string T) = __traits(getMember, module_, T);
@@ -180,9 +152,16 @@ enum isConstantMember(T, string M) = is(typeof(mixin("T.init."~M)) == immutable 
 template Assign(alias node, alias field)
 {
     import std.format : format;
+    import std.traits : getUDAs, hasUDA, select;
 
-    enum typeDSL = hasTypeDSL!field;
-    enum idMap = getIDMap!field;
+    static if (hasUDA!(field, idMap))
+    {
+        enum idMap_ = getUDAs!(field, idMap)[0];
+    }
+    else
+    {
+        enum idMap_ = idMap.init;
+    }
 
     alias T = typeof(field);
 
@@ -201,15 +180,17 @@ EOS";
             {
                 %s
             }
-EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T, typeDSL, idMap));
+EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T, hasUDA!(field, typeDSL), idMap_));
     }
     else static if (isEither!T)
     {
-        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
+        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param),
+                                          field.stringof, T, hasUDA!(field, typeDSL), idMap_);
     }
     else
     {
-        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param), field.stringof, T, typeDSL, idMap);
+        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param),
+                                          field.stringof, T, hasUDA!(field, typeDSL), idMap_);
     }
 }
 
@@ -299,7 +280,7 @@ EOS".stripLeftAll, exp);
                   .assertNotThrown == [1, 2, 3]);
 }
 
-template Assign_(string node, string field, T, bool typeDSL = false, IDMap idMap = IDMap.init)
+template Assign_(string node, string field, T, bool typeDSL = false, idMap idMap_ = idMap.init)
 if (!isSumType!T)
 {
     import std.format : format;
@@ -318,13 +299,13 @@ if (!isSumType!T)
             }).array;
 EOS"(field, node, (ElementType!T).stringof, Assign_!("a", "ret", ElementType!T)).chomp;
 
-        static if (idMap.subject.empty)
+        static if (idMap_.subject.empty)
         {
             enum Assign_ = AssignBase;
         }
         else
         {
-            static if (idMap.predicate.empty)
+            static if (idMap_.predicate.empty)
             {
                 enum Trans = format!q"EOS
                     Node a_ = a.value;
@@ -332,7 +313,7 @@ EOS"(field, node, (ElementType!T).stringof, Assign_!("a", "ret", ElementType!T))
                     %s ret;
                     %s
                     return ret;
-EOS"(idMap.subject, (ElementType!T).stringof, Assign_!("a_", "ret", ElementType!T));
+EOS"(idMap_.subject, (ElementType!T).stringof, Assign_!("a_", "ret", ElementType!T));
             }
             else
             {
@@ -351,7 +332,7 @@ EOS"(idMap.subject, (ElementType!T).stringof, Assign_!("a_", "ret", ElementType!
                         a_.add("%2$s", a.value);
                     }
                     return %3$s;
-EOS"(idMap.subject, idMap.predicate, ctorStr!(ElementType!T)("a_"));
+EOS"(idMap_.subject, idMap_.predicate, ctorStr!(ElementType!T)("a_"));
             }
 
             enum Assign_ = format!q"EOS
@@ -370,26 +351,27 @@ EOS"(field, node, AssignBase, Trans);
     }
     else
     {
-        static assert(idMap == IDMap.init);
+        static assert(idMap_ == idMap.init);
         enum Assign_ = format!"%s = %s;"(field, ctorStr!T(node));
     }
 }
 
-template Assign_(string node, string field, T, bool typeDSL = false, IDMap idMap = IDMap.init)
+template Assign_(string node, string field, T, bool typeDSL = false, idMap idMap_ = idMap.init)
 if (isSumType!T)
 {
     import std.format : format;
     static if (isOptional!T && T.Types.length == 2)
     {
-        enum Assign_ = Assign_!(node, field, T.Types[1], typeDSL, idMap);
+        enum Assign_ = Assign_!(node, field, T.Types[1], typeDSL, idMap_);
     }
     else static if (isEither!T && T.Types.length == 1)
     {
-        enum Assign_ = Assign_!(node, field, T[0], typeDSL, idMap);
+        enum Assign_ = Assign_!(node, field, T[0], typeDSL, idMap_);
     }
     else
     {
         import std.traits : isSomeString;
+        import std.meta : Filter;
 
         static if (isOptional!T)
         {
@@ -595,7 +577,7 @@ EOS"(RetType.stringof, ctorStr!(RecordTypes[0])("a"));
     {
         import std.algorithm : joiner;
         import std.array : array;
-        import std.meta : ApplyLeft, staticMap, templateNot;
+        import std.meta : ApplyLeft, Filter, staticMap, templateNot;
         import std.traits : FieldNameTuple;
 
         enum ConstantMembersOf(T) = Filter!(ApplyLeft!(isConstantMember, T), FieldNameTuple!T);

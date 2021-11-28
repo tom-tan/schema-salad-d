@@ -7,7 +7,7 @@ module salad.util;
 
 import dyaml : Node;
 
-import salad.meta : IDMap;
+import salad.meta : idMap;
 
 /// dig for node
 auto dig(T)(in Node node, string key, T default_)
@@ -41,7 +41,7 @@ auto dig(T)(in Node node, string[] keys, T default_)
 }
 
 // dig for CWL object
-auto dig(alias K, U, T, IDMap idMap = IDMap.init)(T t, U default_ = U.init)
+auto dig(alias K, U, T, idMap idMap_ = idMap.init)(T t, U default_ = U.init)
 if (!is(T: Node))
 {
     static assert(is(typeof(K) == string) || is(typeof(K) == string[]));
@@ -51,8 +51,7 @@ if (!is(T: Node))
     }
     else
     {
-        import std.traits : hasMember, isArray;
-        import salad.meta : getIDMap;
+        import std.traits : getUDAs, hasMember, hasUDA, isArray;
         import salad.type : isSumType, match;
 
         static if (K.length == 0)
@@ -72,14 +71,28 @@ if (!is(T: Node))
         else static if (hasMember!(T, K[0]~"_"))
         {
             auto field = mixin("t."~K[0]~"_");
-            enum idMap = getIDMap!(mixin("t."~K[0]~"_"));
-            return dig!(K[1..$], U, typeof(field), idMap)(field, default_);
+            static if (hasUDA!(mixin("t."~K[0]~"_"), idMap))
+            {
+                enum nextIDMap = getUDAs!(mixin("t."~K[0]~"_"), idMap)[0];
+            }
+            else
+            {
+                enum nextIDMap = idMap.init;
+            }
+            return dig!(K[1..$], U, typeof(field), nextIDMap)(field, default_);
         }
         else static if (isSumType!T)
         {
-            enum idMap = getIDMap!(mixin("t."~K[0]~"_"));
+            static if (hasUDA!(mixin("t."~K[0]~"_"), idMap))
+            {
+                enum nextIDMap = getUDAs!(mixin("t."~K[0]~"_"), idMap)[0];
+            }
+            else
+            {
+                enum nextIDMap = idMap.init;
+            }
             alias TS = Filter!(ApplyRight!(hasMember, K[0]~"_"), T.Types);
-            alias ddig = ApplyRight!(ApplyLeft!(ApplyLeft!(dig, K[1..$]), U), idMap);
+            alias ddig = ApplyRight!(ApplyLeft!(ApplyLeft!(dig, K[1..$]), U), nextIDMap);
             return t.match!(
                 staticMap!(ddig, TS),
                 _ => default_,
@@ -90,10 +103,10 @@ if (!is(T: Node))
             import std.algorithm : map;
             import std.array : assocArray;
 
-            static assert(idMap != IDMap.init, "dig does not support index access");
+            static assert(idMap_ != idMap.init, "dig does not support index access");
             auto aa = t.map!((e) {
                 import std.typecons : tuple;
-                auto f = mixin("e."~idMap.subject~"_");
+                auto f = mixin("e."~idMap_.subject~"_");
                 static if (isSumType!(typeof(f)))
                 {
                     auto k = f.tryMatch!((string s) => s);
