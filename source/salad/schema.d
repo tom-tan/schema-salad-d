@@ -102,7 +102,7 @@ if (isOptional!T && is(T.Types[1] == U))
     return val.match!((U u) => u, none => default_);
 }
 
-class SaladRecordSchema
+@documentRoot class SaladRecordSchema
 {
     mixin genCanonicalizeBody!(
         so.SaladRecordSchema,
@@ -236,7 +236,7 @@ class SpecializeDef
     mixin genCanonicalizeBody!(so.SpecializeDef);
 }
 
-class SaladEnumSchema
+@documentRoot class SaladEnumSchema
 {
     mixin genCanonicalizeBody!(
         so.SaladEnumSchema,
@@ -251,7 +251,7 @@ class SaladEnumSchema
     );
 }
 
-class Documentation
+@documentRoot class Documentation
 {
     mixin genCanonicalizeBody!(
         so.Documentation,

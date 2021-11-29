@@ -10,12 +10,12 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
 {
     import dyaml : Node;
 
-    import salad.meta : genToString, isConstantMember;
+    import salad.meta : genIdentifier, genToString, id, isConstantMember;
 
     import std.algorithm : endsWith;
     import std.format : format;
     import std.meta : AliasSeq, Stride;
-    import std.traits : isCallable, FieldNameTuple, Fields, Parameters, ReturnType, fullyQualifiedName;
+    import std.traits : isCallable, FieldNameTuple, Fields, hasUDA, Parameters, ReturnType;
 
     alias FTypes = Fields!Base;
     alias FNames = FieldNameTuple!Base;
@@ -57,11 +57,25 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
                           format!"A parameter of convert function for `%s` expects %s but actual: %s"(
                                 fname, FTypes[idx], Parameters!(ConvFuns[findIndex(fname)])[0]
                           ));
-            mixin(ReturnType!(ConvFuns[findIndex(fname)]).stringof ~ " " ~ fname ~ ";");
+            static if (hasUDA!(__traits(getMember, Base, fname), id))
+            {
+                mixin("@id "~ReturnType!(ConvFuns[findIndex(fname)]).stringof ~ " " ~ fname ~ ";");
+            }
+            else
+            {
+                mixin(ReturnType!(ConvFuns[findIndex(fname)]).stringof ~ " " ~ fname ~ ";");
+            }
         }
         else
         {
-            mixin(FTypes[idx].stringof~" "~fname~";");
+            static if (hasUDA!(__traits(getMember, Base, fname), id))
+            {
+                mixin("@id "~FTypes[idx].stringof~" "~fname~";");
+            }
+            else
+            {
+                mixin(FTypes[idx].stringof~" "~fname~";");
+            }
         }
     }
 
@@ -79,6 +93,7 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
     }
 
     mixin genToString;
+    mixin genIdentifier;
 
     final void canonicalize(Base base)
     {
@@ -88,12 +103,12 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
             {
                 {
                     alias conv = ConvFuns[findIndex(fname)];
-                    mixin("this."~fname~"= conv(base."~fname~");");
+                    __traits(getMember, this, fname) = conv(__traits(getMember, base, fname));
                 }
             }
             else static if (!isConstantMember!(Base, fname))
             {
-                mixin("this."~fname~" = base."~fname~";");
+                __traits(getMember, this, fname) = __traits(getMember, base, fname);
             }
         }
     }

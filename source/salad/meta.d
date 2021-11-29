@@ -73,12 +73,13 @@ mixin template genToString()
 ///
 mixin template genIdentifier()
 {
-    import std.traits : getSymbolsByUDA, Unqual;
+    import std.traits : getSymbolsByUDA;
 
     static if (getSymbolsByUDA!(typeof(this), id).length == 1)
     {
         auto identifier() const @nogc nothrow pure @safe
         {
+            import std.traits : Unqual;
             auto i = getSymbolsByUDA!(typeof(this), id)[0];
             alias idType = Unqual!(typeof(i));
             static assert(is(idType == string) || is(idType == Optional!string));
@@ -182,7 +183,7 @@ string ctorStr(T)(string param)
     }
 }
 
-enum isConstantMember(T, string M) = is(typeof(mixin("T.init."~M)) == immutable string);
+enum isConstantMember(T, string M) = is(typeof(__traits(getMember, T, M)) == immutable string);
 
 ///
 template Assign(alias node, alias field)
