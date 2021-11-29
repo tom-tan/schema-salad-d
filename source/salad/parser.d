@@ -7,6 +7,7 @@ module salad.parser;
 
 import dyaml : Node;
 
+import salad.context : LoadingContext;
 import salad.exception;
 import salad.meta;
 import salad.schema;
@@ -50,6 +51,8 @@ auto parse(alias module_)(Node node, string uri)
         {
             schemas = s.sequence.map!(a => a.as!string).array;
         }
+
+        auto context = LoadingContext(baseuri, namespaces);
 
         if (auto g = "$graph" in node)
         {

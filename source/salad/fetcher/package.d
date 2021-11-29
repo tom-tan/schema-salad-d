@@ -1,3 +1,8 @@
+/**
+ * Authors: Tomoya Tanjo
+ * Copyright: © 2021 Tomoya Tanjo
+ * License: Apache-2.0
+ */
 module salad.fetcher;
 
 ///
@@ -108,24 +113,24 @@ class Fetcher
     ///
     auto fetchText(string uri)
     {
-        import std.exception : enforce;
+        import salad.fetcher.exception : fetcherEnforce;
         import std.format : format;
 
         auto scheme = uri.scheme;
-        auto fetcher = *enforce(scheme in schemeFetchers,
-                                format!"Scheme `%s` is not supported."(scheme));
+        auto fetcher = *fetcherEnforce(scheme in schemeFetchers,
+                                       format!"Scheme `%s` is not supported."(scheme));
         return fetcher(uri);
     }
 private:
     this()
     {
-        import std.exception : enforce;
-        import std.file : exists, readText;
-
         schemeFetchers["file"] = (uri) {
+            import salad.fetcher.exception : fetcherEnforce;
+            import std.file : exists, readText;
             import std.format : format;
+
             auto path = uri.pathWithAuthority;
-            enforce(path.exists, format!"File not found: `%s`"(path));
+            fetcherEnforce(path.exists, format!"File not found: `%s`"(path));
             return path.readText;
         };
         // schemeFetchers["http"] = schemeFetchers["https"] = (uri) {
