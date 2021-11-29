@@ -16,7 +16,7 @@ import std.typecons : Tuple;
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 @documentRoot class SaladRecordSchema
 {
-    string name_;
+    @id string name_;
     immutable type_ = "record";
     Optional!bool inVocab_;
     @idMap("name", "type") Optional!(SaladRecordField[]) fields_;
@@ -31,14 +31,14 @@ import std.typecons : Tuple;
     @idMap("specializeFrom", "specializeTo") Optional!(SpecializeDef[]) specialize_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return name_; }
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
 class SaladRecordField
 {
-    string name_;
+    @id string name_;
     @typeDSL
     Either!(
         PrimitiveType,
@@ -58,6 +58,8 @@ class SaladRecordField
     Optional!Any default_;
 
     mixin genCtor;
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
@@ -109,12 +111,14 @@ class RecordSchema
     @idMap("name", "type") Optional!(RecordField[]) fields_;
 
     mixin genCtor;
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
 class RecordField
 {
-    string name_;
+    @id string name_;
     @typeDSL 
     Either!(
         PrimitiveType,
@@ -132,6 +136,8 @@ class RecordField
     Optional!(string, string[]) doc_;
 
     mixin genCtor;
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
@@ -141,6 +147,8 @@ class EnumSchema
     immutable type_ = "enum";
 
     mixin genCtor;
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
@@ -162,6 +170,8 @@ class ArraySchema
     immutable type_ = "array";
 
     mixin genCtor;
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
@@ -180,6 +190,7 @@ class JsonldPredicate
     Optional!string subscope_;
 
     mixin genCtor;
+    mixin genIdentifier;
     mixin genToString;
 }
 
@@ -190,13 +201,14 @@ class SpecializeDef
     string specializeTo_;
 
     mixin genCtor;
+    mixin genIdentifier;
     mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
 @documentRoot class SaladEnumSchema
 {
-    string name_;
+    @id string name_;
     string[] symbols_;
     immutable type_ = "enum";
     Optional!bool inVocab_;
@@ -209,14 +221,14 @@ class SpecializeDef
     Optional!(string, string[]) extends_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return name_; }
+    mixin genIdentifier;
+    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
 @documentRoot class Documentation
 {
-    string name_;
+    @id string name_;
     immutable type_ = "documentation";
     Optional!bool inVocab_;
     Optional!(string, string[]) doc_;
@@ -225,7 +237,6 @@ class SpecializeDef
     Optional!string docAfter_;
 
     mixin genCtor;
+    mixin genIdentifier;
     mixin genToString;
-
-    auto identifier() const @nogc nothrow pure @safe { return name_; }
 }

@@ -34,7 +34,9 @@ mixin template genCtor()
     }
 }
 
-///
+/**
+ * Bugs: It does not work with self recursive classes
+ */
 mixin template genToString()
 {
     override string toString() const @trusted
@@ -68,22 +70,56 @@ mixin template genToString()
     }
 }
 
+///
+mixin template genIdentifier()
+{
+    import std.traits : getSymbolsByUDA, Unqual;
+
+    static if (getSymbolsByUDA!(typeof(this), id).length == 1)
+    {
+        auto identifier() const @nogc nothrow pure @safe
+        {
+            auto i = getSymbolsByUDA!(typeof(this), id)[0];
+            alias idType = Unqual!(typeof(i));
+            static assert(is(idType == string) || is(idType == Optional!string));
+            static if (is(idType == string))
+            {
+                return i;
+            }
+            else
+            {
+                return i.match!(
+                    (string s) => s,
+                    none => "",
+                );
+            }
+        }
+    }
+}
+
 /**
-UDA for identifier maps
-See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
+ * UDA for identifier maps
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
 */
 struct idMap { string subject; string predicate = ""; }
 
 /**
-UDA for DSL for types
-See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
+ * UDA for DSL for types
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
 */
 struct typeDSL{}
 
 /** 
  * UDA for documentRoot
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
  */
 struct documentRoot{}
+
+/** 
+ * UDA for identifier
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Record_field_annotations
+ */
+struct id{}
 
 enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
 

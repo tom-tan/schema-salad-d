@@ -94,8 +94,7 @@ auto importFromURI(alias module_)(string uri, string fragment = "")
     alias DocType = DocumentRootType!module_;
     return objs.match!(
         (DocType doc) {
-            // TODO
-            docEnforce(frag.empty || doc.match!(d => d.identifier.tryMatch!((string s) => s)) == frag,
+            docEnforce(frag.empty || doc.match!(d => d.identifier) == frag,
                        "Mismatched fragment", node);
             return objs;
         },
@@ -108,8 +107,7 @@ auto importFromURI(alias module_)(string uri, string fragment = "")
             {
                 import std.algorithm : filter;
                 import std.array : array;
-                // TODO
-                auto elems = docs.filter!(e => e.tryMatch!(d => d.identifier.tryMatch!((string s) => s)) == frag)
+                auto elems = docs.filter!(e => e.tryMatch!(d => d.identifier) == frag)
                                  .array;
                 docEnforce(!elems.empty, format!"No objects for fragment `%s`"(frag), node);
                 docEnforce(elems.length == 1, format!"Duplicated objects for fragment `%s`"(frag), node);

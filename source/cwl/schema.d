@@ -19,7 +19,7 @@ import salad.util;
     @idMap("id", "type")
     CommandOutputParameter[] outputs_;
     immutable class_ = "CommandLineTool";
-    Optional!string id_;
+    @id Optional!string id_;
     @idMap("class")
     Optional!(
         Either!(
@@ -47,13 +47,12 @@ import salad.util;
     Optional!(int[]) permanentFailCodes_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class CommandInputParameter
 {
-    string id_;
+    @id string id_;
     Optional!string label_;
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
@@ -76,8 +75,7 @@ class CommandInputParameter
     ) type_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class CommandLineBinding
@@ -91,6 +89,7 @@ class CommandLineBinding
     Optional!bool shellQuote_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class Any
@@ -157,6 +156,7 @@ class File
     Optional!string contents_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class Directory
@@ -170,6 +170,7 @@ class Directory
     ) listing_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandInputRecordSchema
@@ -181,6 +182,7 @@ class CommandInputRecordSchema
     Optional!string name_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandInputRecordField
@@ -205,6 +207,7 @@ class CommandInputRecordField
     Optional!string label_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandInputEnumSchema
@@ -216,6 +219,7 @@ class CommandInputEnumSchema
     Optional!CommandLineBinding inputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandInputArraySchema
@@ -239,11 +243,12 @@ class CommandInputArraySchema
     Optional!CommandLineBinding inputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandOutputParameter
 {
-    string id_;
+    @id string id_;
     Optional!string label_;
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
@@ -268,8 +273,7 @@ class CommandOutputParameter
     ) type_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class stdout
@@ -317,6 +321,7 @@ class CommandOutputBinding
     Optional!string outputEval_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandOutputRecordSchema
@@ -325,11 +330,10 @@ class CommandOutputRecordSchema
     @idMap("name", "type")
     Optional!(CommandOutputRecordField[]) fields_;
     Optional!string label_;
-    Optional!string name_;
+    @id Optional!string name_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return name_; }
+    mixin genIdentifier;
 }
 
 class CommandOutputRecordField
@@ -353,6 +357,7 @@ class CommandOutputRecordField
     Optional!CommandOutputBinding outputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandOutputEnumSchema
@@ -363,6 +368,7 @@ class CommandOutputEnumSchema
     Optional!CommandOutputBinding outputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CommandOutputArraySchema
@@ -386,6 +392,7 @@ class CommandOutputArraySchema
     Optional!CommandOutputBinding outputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class InlineJavascriptRequirement
@@ -394,6 +401,7 @@ class InlineJavascriptRequirement
     Optional!(string[]) expressionLib_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class SchemaDefRequirement
@@ -406,6 +414,7 @@ class SchemaDefRequirement
     )[] types_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class InputRecordSchema
@@ -416,11 +425,10 @@ class InputRecordSchema
         InputRecordField[]
     ) fields_;
     Optional!string label_;
-    Optional!string name_;
+    @id Optional!string name_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return name_; }
+    mixin genIdentifier;
 }
 
 class InputRecordField
@@ -445,6 +453,7 @@ class InputRecordField
     Optional!string label_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class InputEnumSchema
@@ -452,12 +461,11 @@ class InputEnumSchema
     string[] symbols_;
     immutable type_ = "enum";
     Optional!string label_;
-    Optional!string name_;
+    @id Optional!string name_;
     Optional!CommandLineBinding inpuBinding_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return name_; }
+    mixin genIdentifier;
 }
 
 class InputArraySchema
@@ -481,6 +489,7 @@ class InputArraySchema
     Optional!CommandLineBinding inputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class DockerRequirement
@@ -494,6 +503,7 @@ class DockerRequirement
     Optional!string dockerOutputDirectory_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class SoftwareRequirement
@@ -503,6 +513,7 @@ class SoftwareRequirement
     SoftwarePackage[] packages_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class SoftwarePackage
@@ -512,6 +523,7 @@ class SoftwarePackage
     Optional!(string[]) specs_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class InitialWorkDirRequirement
@@ -528,6 +540,7 @@ class InitialWorkDirRequirement
     ) listing_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class Dirent
@@ -537,6 +550,7 @@ class Dirent
     Optional!bool writable_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class EnvVarRequirement
@@ -546,6 +560,7 @@ class EnvVarRequirement
     EnvironmentDef[] envDef_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class EnvironmentDef
@@ -554,6 +569,7 @@ class EnvironmentDef
     string envValue_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class ShellCommandRequirement
@@ -561,6 +577,7 @@ class ShellCommandRequirement
     immutable class_ = "ShellCommandRequirement";
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class ResourceRequirement
@@ -576,6 +593,7 @@ class ResourceRequirement
     Optional!(long, string) outdirMax_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class CWLVersion
@@ -636,7 +654,7 @@ unittest
     WorkflowOutputParameter[] outputs_;
     immutable class_ = "Workflow";
     @idMap("id") WorkflowStep[] steps_;
-    Optional!string id_;
+    @id Optional!string id_;
     @idMap("class")
     Optional!(
         Either!(
@@ -660,13 +678,12 @@ unittest
     Optional!CWLVersion cwlVersion_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class WorkflowOutputParameter
 {
-    string id_;
+    @id string id_;
     Optional!string label_;
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
@@ -691,8 +708,7 @@ class WorkflowOutputParameter
     ) type_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class LinkMergeMethod
@@ -722,6 +738,7 @@ class OutputRecordSchema
     Optional!string label_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class OutputRecordField
@@ -745,6 +762,7 @@ class OutputRecordField
     Optional!CommandOutputBinding outputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class OutputEnumSchema
@@ -755,6 +773,7 @@ class OutputEnumSchema
     Optional!CommandOutputBinding outputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class OutputArraySchema
@@ -778,11 +797,12 @@ class OutputArraySchema
     Optional!CommandOutputBinding outputBinding_;
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class WorkflowStep
 {
-    string id_;
+    @id string id_;
     @idMap("id", "source")
     WorkflowStepInput[] in_;
     Either!(string, WorkflowStepOutput)[] out_;
@@ -811,30 +831,27 @@ class WorkflowStep
     Optional!ScatterMethod scatterMethod_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class WorkflowStepInput
 {
-    string id_;
+    @id string id_;
     Optional!(string, string[]) source_;
     Optional!LinkMergeMethod linkMerge_;
     Optional!Any default_;
     Optional!string valueFrom_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class WorkflowStepOutput
 {
-    string id_;
+    @id string id_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class ScatterMethod
@@ -863,6 +880,7 @@ class SubworkflowFeatureRequirement
     immutable class_ = "SubworkflowFeatureRequirement";
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class ScatterFeatureRequirement
@@ -870,14 +888,15 @@ class ScatterFeatureRequirement
     immutable class_ = "ScatterFeatureRequirement";
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class MultipleInputFeatureRequirement
 {
     immutable class_ = "MultipleInputFeatureRequirement";
 
-
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 class StepInputExpressionRequirement
@@ -885,6 +904,7 @@ class StepInputExpressionRequirement
     immutable class_ = "StepInputExpressionRequirement";
 
     mixin genCtor;
+    mixin genIdentifier;
 }
 
 @documentRoot class ExpressionTool
@@ -895,7 +915,7 @@ class StepInputExpressionRequirement
     ExpressionToolOutputParameter[] outputs_;
     immutable class_ = "Expression";
     string expression_;
-    Optional!string id_;
+    @id Optional!string id_;
     @idMap("class")
     Optional!(
         Either!(
@@ -919,13 +939,12 @@ class StepInputExpressionRequirement
     Optional!CWLVersion cwlVersion_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class InputParameter
 {
-    string id_;
+    @id string id_;
     Optional!string label_;
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
@@ -949,13 +968,12 @@ class InputParameter
     ) type_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 class ExpressionToolOutputParameter
 {
-    string id_;
+    @id string id_;
     Optional!string label_;
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
@@ -978,8 +996,7 @@ class ExpressionToolOutputParameter
     ) type_;
 
     mixin genCtor;
-
-    auto identifier() const @nogc nothrow pure @safe { return id_; }
+    mixin genIdentifier;
 }
 
 unittest
