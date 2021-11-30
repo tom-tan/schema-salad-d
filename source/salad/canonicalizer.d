@@ -10,6 +10,7 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
 {
     import dyaml : Node;
 
+    import salad.context : LoadingContext;
     import salad.meta : genIdentifier, genToString, id, isConstantMember;
 
     import std.algorithm : endsWith;
@@ -86,9 +87,9 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
         canonicalize(base);
     }
 
-    this(in Node node)
+    this(in Node node, in LoadingContext context = LoadingContext.init)
     {
-        auto base = new Base(node);
+        auto base = new Base(node, context);
         canonicalize(base);
     }
 
@@ -116,6 +117,7 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
 
 unittest
 {
+    import salad.context : LoadingContext;
     import std.conv : to;
     import dyaml : Node, Loader;
 
@@ -124,7 +126,7 @@ unittest
         int foo_;
         string str_;
 
-        this(Node node)
+        this(Node node, in LoadingContext context = LoadingContext.init)
         {
             foo_ = node["foo"].as!int;
             str_ = node["str"].as!string;
@@ -152,6 +154,7 @@ EOS";
 
 unittest
 {
+    import salad.context : LoadingContext;
     import std.conv : to;
     import dyaml : Node, Loader;
 
@@ -161,7 +164,7 @@ unittest
         int foo_;
 
         this() {}
-        this(Node node)
+        this(Node node, in LoadingContext context = LoadingContext.init)
         {
             foo_ = node["foo"].as!int;
         }

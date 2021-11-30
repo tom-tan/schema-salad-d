@@ -13,9 +13,10 @@ import dyaml;
 mixin template genCtor()
 {
     import dyaml : Node, NodeType;
+    import salad.context : LoadingContext;
 
     this() {}
-    this(in Node node) @trusted
+    this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
     {
         import std.algorithm : endsWith;
         import std.traits : FieldNameTuple;
@@ -175,7 +176,7 @@ string ctorStr(T)(string param)
     import std.format : format;
     static if (is(T == class))
     {
-        return format!"new %1$s(%2$s)"(T.stringof, param);
+        return format!"new %1$s(%2$s, context)"(T.stringof, param);
     }
     else
     {

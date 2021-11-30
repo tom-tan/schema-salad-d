@@ -6,6 +6,7 @@
  */
 module salad.schema_original;
 
+import salad.context : LoadingContext;
 import salad.exception;
 import salad.meta;
 import salad.type;
@@ -79,7 +80,7 @@ class PrimitiveType
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce
@@ -97,7 +98,7 @@ class Any
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce

@@ -7,6 +7,7 @@
  */
 module cwl.schema;
 
+import salad.context : LoadingContext;
 import salad.exception;
 import salad.meta;
 import salad.type;
@@ -100,7 +101,7 @@ class Any
 
     alias value_ this;
 
-    this(Node node)
+    this(Node node, in LoadingContext context = LoadingContext.init)
     {
         docEnforce(node.type != NodeType.null_,
                    "Any should be non-null", node);
@@ -128,7 +129,7 @@ class CWLType
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce
@@ -288,7 +289,7 @@ class stdout
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce
@@ -307,7 +308,7 @@ class stderr
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce
@@ -619,7 +620,7 @@ class CWLVersion
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce
@@ -724,7 +725,7 @@ class LinkMergeMethod
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
     }
@@ -868,7 +869,7 @@ class ScatterMethod
 
     string type_;
 
-    this(in Node node) @safe
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         type_ = node.as!string;
         // enforce

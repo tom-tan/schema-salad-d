@@ -56,8 +56,11 @@ auto parse(alias module_)(Node node, string uri)
 
         if (auto g = "$graph" in node)
         {
+            import salad.resolver : preprocess;
+
             return ReturnType(g.sequence.map!((a) {
                 import salad.util : edig;
+                a = a.preprocess(context);
                 T ret;
                 mixin(Assign_!("a", "ret", T));
                 return ret;
