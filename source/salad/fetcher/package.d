@@ -135,7 +135,18 @@ private:
         };
         schemeFetchers["http"] = schemeFetchers["https"] = (uri) @trusted {
             import requests : getContent;
-            return cast(string)(uri.getContent);
+            import std.algorithm : findSplit;
+
+            string path;
+            if (auto split = uri.findSplit("#"))
+            {
+                path = split[0];
+            }
+            else
+            {
+                path = uri;
+            }
+            return cast(string)(path.getContent);
         };
     }
     TextFetcher[string] schemeFetchers;
