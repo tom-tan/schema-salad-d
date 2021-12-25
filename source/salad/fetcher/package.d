@@ -133,9 +133,10 @@ private:
             fetcherEnforce(path.exists, format!"File not found: `%s`"(path));
             return path.readText;
         };
-        // schemeFetchers["http"] = schemeFetchers["https"] = (uri) {
-        //     return "";
-        // };
+        schemeFetchers["http"] = schemeFetchers["https"] = (uri) @trusted {
+            import requests : getContent;
+            return cast(string)(uri.getContent);
+        };
     }
     TextFetcher[string] schemeFetchers;
 }

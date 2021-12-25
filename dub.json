@@ -16,6 +16,7 @@
 	},
 	"copyright": "Copyright © 2021, Tomoya Tanjo",
 	"dependencies": {
+		"requests": "~>2.0.3",
 		"dyaml": "~>0.8.4",
 		"sumtype": "~>1.1.2"
 	},
