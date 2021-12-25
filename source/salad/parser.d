@@ -11,12 +11,17 @@ import salad.context : LoadingContext;
 import salad.exception;
 import salad.meta;
 import salad.schema;
+import std.traits : moduleName;
 import salad.type;
+
+import std.typecons : Tuple;
+
+enum isModule(alias module_) = __traits(compiles, { mixin("import "~moduleName!module_~";"); });
 
 ///
 auto parse(alias module_)(Node node, string uri)
+if (isModule!module_)
 {
-    import std.traits : moduleName;
     mixin("import "~moduleName!module_~";");
     import dyaml : NodeType;
 
@@ -25,53 +30,16 @@ auto parse(alias module_)(Node node, string uri)
 
     if (node.type == NodeType.mapping)
     {
-        import std.algorithm : map;
-        import std.array : array;
+        import salad.meta : splitContext;
+        auto r = splitContext(node, uri);
 
-        string baseuri;
-        if (auto base = "$base" in node)
+        if (r.node.type == NodeType.mapping)
         {
-            baseuri = base.as!string;
+            return ReturnType(r.node.as_!T(r.context));
         }
         else
         {
-            baseuri = uri;
-        }
-        string[string] namespaces;
-        if (auto ns = "$namespaces" in node)
-        {
-            import std.array : assocArray;
-            import std.typecons : tuple;
-            namespaces = ns.mapping
-                           .map!(a => tuple(a.key.as!string, a.value.as!string))
-                           .assocArray;
-        }
-        string[] schemas;
-        if (auto s = "$schemas" in node)
-        {
-            schemas = s.sequence.map!(a => a.as!string).array;
-        }
-
-        auto context = LoadingContext(baseuri, namespaces);
-
-        if (auto g = "$graph" in node)
-        {
-            import salad.resolver : preprocess;
-
-            return ReturnType(g.sequence.map!((a) {
-                import salad.util : edig;
-                a = a.preprocess(context);
-                T ret;
-                mixin(Assign_!("a", "ret", T));
-                return ret;
-            }).array);
-        }
-        else
-        {
-            import salad.util : edig;
-            T ret;
-            mixin(Assign_!("node", "ret", T));
-            return ReturnType(ret);
+            return ReturnType(r.node.as_!(T[])(r.context));
         }
     }
     else

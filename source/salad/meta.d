@@ -29,7 +29,7 @@ mixin template genCtor()
             {
                 // static if (This.stringof == "RecordField")
                 //     pragma(msg, Assign!(node, mixin(field)));
-                mixin("mixin(Assign!(node, "~field~"));");
+                mixin(Assign!(node, mixin(field), context));
             }
         }
     }
@@ -167,27 +167,10 @@ template IdentifierType(alias module_)
     }
 }
 
-/**
-Returns: a string to construct `T` with a parameter whose variable name is `param`
-Note: Use this function instead of `param.as!T` to prevent circular references
-*/
-string ctorStr(T)(string param)
-{
-    import std.format : format;
-    static if (is(T == class))
-    {
-        return format!"new %1$s(%2$s, context)"(T.stringof, param);
-    }
-    else
-    {
-        return format!"%2$s.as!%1$s"(T.stringof, param);
-    }
-}
-
 enum isConstantMember(T, string M) = is(typeof(__traits(getMember, T, M)) == immutable string);
 
 ///
-template Assign(alias node, alias field)
+template Assign(alias node, alias field, alias context)
 {
     import std.format : format;
     import std.traits : getUDAs, hasUDA, select;
@@ -205,30 +188,20 @@ template Assign(alias node, alias field)
 
     enum param = field.stringof[0..$-1];
 
-    enum ImportList = q"EOS
-            import salad.util : edig;
-            import std.algorithm : map;
-            import std.array : array;
-EOS";
-
     static if (isOptional!T)
     {
-        enum Assign = ImportList~format!q"EOS
+        enum Assign = format!q"EOS
             if (auto f = "%s" in %s)
             {
-                %s
+                %s = (*f).as_!(%s, %s, %s)(%s);
             }
-EOS"(param, node.stringof, Assign_!("(*f)", field.stringof, T, hasUDA!(field, typeDSL), idMap_));
-    }
-    else static if (isEither!T)
-    {
-        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param),
-                                          field.stringof, T, hasUDA!(field, typeDSL), idMap_);
+EOS"(param, node.stringof, field.stringof, T.stringof, hasUDA!(field, typeDSL), idMap_, context.stringof);
     }
     else
     {
-        enum Assign = ImportList~Assign_!(format!`%s.edig("%s")`(node.stringof, param),
-                                          field.stringof, T, hasUDA!(field, typeDSL), idMap_);
+        enum Assign = format!q"EOS
+            %s = %s.edig("%s").as_!(%s, %s, %s)(%s);
+EOS"(field.stringof, node.stringof, param, T.stringof, hasUDA!(field, typeDSL), idMap_, context.stringof);
     }
 }
 
@@ -251,12 +224,10 @@ version(unittest)
     enum fieldName = "strVariable";
     Node n = [ fieldName: "string value" ];
     string strVariable_;
-    enum exp = Assign!(n, strVariable_).stripLeftAll;
+    LoadingContext con;
+    enum exp = Assign!(n, strVariable_, con).stripLeftAll;
     static assert(exp == q"EOS
-        import salad.util : edig;
-        import std.algorithm : map;
-        import std.array : array;
-        strVariable_ = n.edig("strVariable").as!string;
+        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""))(con);
 EOS".stripLeftAll, exp);
 
     mixin(exp);
@@ -269,16 +240,14 @@ EOS".stripLeftAll, exp);
     import std.exception : assertNotThrown;
 
     enum fieldName = "param";
-    Node n = [ fieldName: true ];
+    Node n = [fieldName: true];
     Optional!bool param_;
-    enum exp = Assign!(n, param_).stripLeftAll;
+    LoadingContext con;
+    enum exp = Assign!(n, param_, con).stripLeftAll;
     static assert(exp == q"EOS
-        import salad.util : edig;
-        import std.algorithm : map;
-        import std.array : array;
         if (auto f = "param" in n)
         {
-            param_ = (*f).as!bool;
+            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""))(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -295,21 +264,14 @@ unittest
     import std.exception : assertNotThrown;
 
     enum fieldName = "params";
-    Node n = [ fieldName: [1, 2, 3] ];
+    Node n = [fieldName: [1, 2, 3]];
     Optional!(int[]) params_;
-    enum exp = Assign!(n, params_).stripLeftAll;
+    LoadingContext con;
+    enum exp = Assign!(n, params_, con).stripLeftAll;
     static assert(exp == q"EOS
-        import salad.util : edig;
-        import std.algorithm : map;
-        import std.array : array;
         if (auto f = "params" in n)
         {
-            params_ = (*f).sequence.map!((a)
-            {
-                int ret;
-                ret = a.as!int;
-                return ret;
-            }).array;
+            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""))(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -318,379 +280,354 @@ EOS".stripLeftAll, exp);
                   .assertNotThrown == [1, 2, 3]);
 }
 
-template Assign_(string node, string field, T, bool typeDSL = false, idMap idMap_ = idMap.init)
-if (!isSumType!T)
+import salad.context : LoadingContext;
+
+import std.typecons : Tuple;
+
+alias ExplicitContext = Tuple!(Node, "node", LoadingContext, "context");
+
+ExplicitContext splitContext(in Node node, string uri)
 {
-    import std.format : format;
-    import std.traits : isArray, isSomeString;
-
-    static if (!isSomeString!T && isArray!T)
+    if (node.type == NodeType.mapping)
     {
-        import std.range : ElementType, empty;
-        import std.string : chomp;
-
-        enum AssignBase = format!q"EOS
-            %s = %s.sequence.map!((a) {
-                %s ret;
-                %s
-                return ret;
-            }).array;
-EOS"(field, node, (ElementType!T).stringof, Assign_!("a", "ret", ElementType!T)).chomp;
-
-        static if (idMap_.subject.empty)
+        LoadingContext con;
+        if (auto base = "$base" in node)
         {
-            enum Assign_ = AssignBase;
+            con.baseURI = base.as!string;
         }
         else
         {
-            static if (idMap_.predicate.empty)
+            con.baseURI = uri;
+        }
+
+        if (auto ns = "$namespaaces" in node)
+        {
+            import std.algorithm : map;
+            import std.array : assocArray;
+            import std.typecons : tuple;
+
+            con.namespaces = ns.mapping
+                .map!(a => tuple(a.key.as!string, a.value.as!string))
+                .assocArray;
+        }
+
+        if (auto s = "$schemas" in node)
+        {
+            // TODO
+            import std.algorithm : map;
+            import std.array : array;
+            auto schemas = s.sequence.map!(a => a.as!string).array;
+        }
+
+        if (auto g = "$graph" in node)
+        {
+            return typeof(return)(*g, con);
+        }
+        else
+        {
+            return typeof(return)(node, con);
+        }
+    }
+    else
+    {
+        return typeof(return)(node, LoadingContext(uri));
+    }
+}
+
+ExplicitContext resolveDirectives(in Node node, in LoadingContext context)
+{
+    if (node.type == NodeType.mapping)
+    {
+        import salad.resolver : resolveLink;
+
+        if (auto link = "$import" in node)
+        {
+            import salad.fetcher : fetchNode;
+
+            auto uri = resolveLink(link.as!string, context);
+            return splitContext(uri.fetchNode, uri);
+        }
+        else if (auto link = "$include" in node)
+        {
+            import salad.fetcher : fetchText;
+
+            auto uri = resolveLink(link.as!string, context);
+            auto n = Node(uri.fetchText);
+            return typeof(return)(n, cast()context);
+        }
+    }
+    return typeof(return)(cast()node, cast()context);
+}
+
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+        if (is(T == class))
+{
+    auto resolved = resolveDirectives(node, context);
+    return new T(resolved.node, resolved.context);
+}
+
+import std.traits : isScalarType;
+
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+        if (isScalarType!T || isSomeString!T)
+{
+    auto resolved = resolveDirectives(node, context);
+    return resolved.node.as!T;
+}
+
+import std.traits : isArray, isSomeString;
+
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+        if (!isSomeString!T && isArray!T)
+{
+    import std.array : appender;
+    import std.range : empty, ElementType;
+    import salad.exception : docEnforce;
+
+    static if (idMap_.subject.empty)
+    {
+        docEnforce(node.type == NodeType.sequence, "Sequence is expected but it is not", node);
+        auto app = appender!T;
+        foreach (elem; node.sequence)
+        {
+            alias E = ElementType!T;
+            auto r = resolveDirectives(elem, context);
+            if (r.node.type == NodeType.sequence)
             {
-                enum Trans = format!q"EOS
-                    Node a_ = a.value;
-                    a_.add("%s", a.key);
-                    %s ret;
-                    %s
-                    return ret;
-EOS"(idMap_.subject, (ElementType!T).stringof, Assign_!("a_", "ret", ElementType!T));
+                import std.algorithm : map;
+                import std.range : array;
+
+                app.put(r.node.sequence.map!(n => n.as_!E(r.context)).array);
             }
             else
             {
-                enum Trans = format!q"EOS
-                    Node a_;
-                    a_.add("%1$s", a.key);
-                    if (a.value.type == NodeType.mapping && "%2$s" in a.value)
-                    {
-                        foreach(kv; a.value.mapping)
-                        {
-                            a_.add(kv.key, kv.value);
-                        }
-                    }
-                    else
-                    {
-                        a_.add("%2$s", a.value);
-                    }
-                    return %3$s;
-EOS"(idMap_.subject, idMap_.predicate, ctorStr!(ElementType!T)("a_"));
+                app.put(r.node.as_!E(r.context));
             }
+        }
+        return app[];
+    }
+    else
+    {
+        // map notation
+        docEnforce(node.type == NodeType.sequence || node.type == NodeType.mapping,
+            "Sequence or mapping is expected but it is not", node);
+        if (node.type == NodeType.sequence)
+        {
+            return node.as_!(T, typeDSL)(context);
+        }
 
-            enum Assign_ = format!q"EOS
-                if (%2$s.type == NodeType.sequence)
+        auto app = appender!T;
+        foreach (kv; node.mapping)
+        {
+            auto key = kv.key.as!string;
+            auto r = resolveDirectives(kv.value, context);
+            auto value = r.node;
+            auto newContext = r.context;
+            Node elem;
+            static if (idMap_.predicate.empty)
+            {
+                docEnforce(value.type == NodeType.mapping, "It must be a mapping", kv.value);
+                elem = cast()value;
+            }
+            else
+            {
+                if (value.type == NodeType.mapping)
                 {
-                    %3$s
+                    elem = cast()value;
                 }
                 else
                 {
-                    %1$s = %2$s.mapping.map!((a) {
-                        %4$s
-                    }).array;
+                    elem.add(idMap_.predicate, value);
                 }
-EOS"(field, node, AssignBase, Trans);
+            }
+            alias E = ElementType!T;
+            docEnforce(idMap_.subject !in elem, "Duplicated field", kv.key);
+            elem.add(idMap_.subject, key);
+            app.put(elem.as_!E(newContext));
         }
-    }
-    else
-    {
-        static assert(idMap_ == idMap.init);
-        enum Assign_ = format!"%s = %s;"(field, ctorStr!T(node));
+        return app[];
     }
 }
 
-template Assign_(string node, string field, T, bool typeDSL = false, idMap idMap_ = idMap.init)
-if (isSumType!T)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+        if (isSumType!T)
 {
-    import std.format : format;
-    static if (isOptional!T && T.Types.length == 2)
+    static if (isOptional!T)
     {
-        enum Assign_ = Assign_!(node, field, T.Types[1], typeDSL, idMap_);
-    }
-    else static if (isEither!T && T.Types.length == 1)
-    {
-        enum Assign_ = Assign_!(node, field, T[0], typeDSL, idMap_);
+        alias Types = T.Types[1 .. $];
     }
     else
     {
-        import std.traits : isSomeString;
-        import std.meta : Filter;
+        alias Types = T.Types;
+    }
 
-        static if (isOptional!T)
-        {
-            alias Types = T.Types[1..$];
-        }
-        else static if (isEither!T)
-        {
-            alias Types = T.Types;
-        }
+    static if (Types.length == 1)
+    {
+        auto r = resolveDirectives(node, context);
+        return T(r.node.as_!(Types[0], typeDSL, idMap_)(r.context));
+    }
+    else
+    {
+        import std.meta : Filter;
+        import salad.exception : DocumentException;
+
+        auto r = resolveDirectives(node, context);
+        Node expanded;
         static if (typeDSL && Filter!(isSomeString, Types).length > 0)
         {
-            enum Pre = format!q"EOS
-                Node n;
-                if (%1$s.type == NodeType.string)
+            if (r.node.type == NodeType.string)
+            {
+                import std.algorithm : endsWith;
+
+                auto s = r.node.as!string;
+                if (s.endsWith("[]?"))
                 {
-                    import std.algorithm : endsWith;
-                    auto s = %1$s.as!string;
-                    if (s.endsWith("[]?"))
-                    {
-                        n.add("null");
-                        n.add([
+                    expanded.add("null");
+                    expanded.add([
                             "type": "array",
-                            "items": s[0..$-3],
+                            "items": s[0 .. $ - 3],
                         ]);
-                    }
-                    else if (s.endsWith("[]"))
-                    {
-                        n.add([
+                }
+                else if (s.endsWith("[]"))
+                {
+                    expanded.add([
                             "type": "array",
-                            "items": s[0..$-2],
+                            "items": s[0 .. $ - 2],
                         ]);
-                    }
-                    else if (s.endsWith("?"))
-                    {
-                        n.add("null");
-                        n.add(s[0..$-1]);
-                    }
-                    else
-                    {
-                        n = Node(s);
-                    }
+                }
+                else if (s.endsWith("?"))
+                {
+                    expanded.add("null");
+                    expanded.add(s[0 .. $ - 1]);
                 }
                 else
                 {
-                    n = %1$s;
+                    expanded = Node(r.node);
                 }
-EOS"(node);
+            }
+            else
+            {
+                expanded = Node(r.node);
+            }
         }
         else
         {
-            enum Pre = format!q"EOS
-                Node n = %s;
-EOS"(node);
+            expanded = Node(cast()r.node);
         }
-        enum Assign_ = format!q"EOS
+
+        // dispatch
+        enum isNonStringArray(T) = !isSomeString!T && isArray!T;
+        alias ArrayTypes = Filter!(isNonStringArray, Types);
+        static if (ArrayTypes.length > 0)
+        {
+            static assert(ArrayTypes.length == 1, "Type `T[] | U[] | ...` is not supported yet");
+            if (expanded.type == NodeType.sequence)
             {
-                %s
-                %s = (%s)(n);
-            }
-EOS"(Pre, field, DispatchFun!(T, Types));
-    }
-}
-
-template DispatchFun(RetType, Types...)
-{
-    import std.format : format;
-    import std.meta : anySatisfy, Filter, staticMap;
-    import std.traits : isArray, isIntegral, isSomeString;
-
-    enum isNonStringArray(T) = !isSomeString!T && isArray!T;
-    alias ArrayTypes = Filter!(isNonStringArray, Types);
-    static if (ArrayTypes.length == 0)
-    {
-        enum ArrayStatement = "";
-    }
-    else
-    {
-        enum ArrayStatement = ArrayDispatchStatement!(RetType, ArrayTypes);
-    }
-
-    enum isRecord(T) = is(T == class) && !__traits(compiles, T.Types);
-    alias RecordTypes = Filter!(isRecord, Types);
-    static if (RecordTypes.length == 0)
-    {
-        enum RecordStatement = "";
-    }
-    else
-    {
-        enum RecordStatement = RecordDispatchStatement!(RetType, RecordTypes);
-    }
-
-    enum isEnum(T) = is(T == class) && is(T.Types == enum);
-    alias EnumTypes = Filter!(isEnum, Types);
-    enum hasString = anySatisfy!(isSomeString, Types);
-    static if (EnumTypes.length == 0)
-    {
-        static if (hasString)
-        {
-            enum EnumStatement = format!q"EOS
-                if (a.type == NodeType.string)
-                {
-                    return %s(a.as!string);
-                }
-EOS"(RetType.stringof);
-        }
-        else
-        {
-            enum EnumStatement = "";
-        }
-    }
-    else
-    {
-        enum EnumStatement = EnumDispatchStatement!(RetType, hasString, EnumTypes);
-    }
-
-    static if (Filter!(isIntegral, Types).length == 0)
-    {
-        enum NumStatement = "";
-    }
-    else
-    {
-        enum NumStatement = format!q"EOS
-                if (a.type == NodeType.integer)
-                {
-                    return %s(a.as!int);
-                }
-EOS"(RetType.stringof);
-    }
-
-    static assert(Types.length == 
-        ArrayTypes.length + RecordTypes.length + EnumTypes.length + (hasString ? 1 : 0) + Filter!(isIntegral, Types).length,
-        format!"Internal error: Params: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s"(
-            Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
-            hasString, Filter!(isIntegral, Types).stringof
-        ));
-
-    import std.algorithm : filter, joiner;
-    import std.array : array;
-    import std.functional : not;
-    import std.range : empty;
-    enum FunBody = [
-        ArrayStatement,
-        RecordStatement,
-        EnumStatement,
-        NumStatement,
-        `throw new DocumentException("Unknown node type in DispatchFun", a);`
-    ].filter!(not!empty).joiner("else ").array;
-
-    enum DispatchFun = format!q"EOS
-        (a) { %s }
-EOS"(FunBody);
-}
-
-template ArrayDispatchStatement(RetType, ArrayTypes...)
-{
-    static if (ArrayTypes.length == 1)
-    {
-        import std.format : format;
-        import std.range : ElementType;
-        alias T = ElementType!(ArrayTypes[0]);
-        static if (isEither!T)
-        {
-            enum ArrayDispatchStatement = format!q"EOS
-                if (a.type == NodeType.sequence)
-                {
-                    return %s(a.sequence.map!(
-                        %s
-                    ).array);
-                }
-EOS"(RetType.stringof, DispatchFun!(T, T.Types));
-        }
-        else
-        {
-            enum ArrayDispatchStatement = format!q"EOS
-                if (a.type == NodeType.sequence)
-                {
-                    return %s(a.sequence.map!(a => %s).array);
-                }
-EOS"(RetType.stringof, ctorStr!T("a"));
-        }
-    }
-    else
-    {
-        // It is not used in CWL
-        static assert(false, "It is not supported");
-    }
-}
-
-template RecordDispatchStatement(RetType, RecordTypes...)
-{
-    import std.format : format;
-
-    static if (RecordTypes.length == 1)
-    {
-        enum RecordDispatchStatement = format!q"EOS
-            if (a.type == NodeType.mapping)
-            {
-                return %s(%s);
-            }
-EOS"(RetType.stringof, ctorStr!(RecordTypes[0])("a"));
-    }
-    else
-    {
-        import std.algorithm : joiner;
-        import std.array : array;
-        import std.meta : ApplyLeft, Filter, staticMap, templateNot;
-        import std.traits : FieldNameTuple;
-
-        enum ConstantMembersOf(T) = Filter!(ApplyLeft!(isConstantMember, T), FieldNameTuple!T);
-        enum RecordTypeName = ConstantMembersOf!(RecordTypes[0])[0];
-        enum isDispatchable(T) = ConstantMembersOf!T.length != 0 && ConstantMembersOf!T[0] == RecordTypeName;
-        alias NonDispatchableRecords = Filter!(templateNot!isDispatchable, RecordTypes);
-        static assert(NonDispatchableRecords.length <= 1,
-                      "There are too many non-dispatchable record candidates: "~NonDispatchableRecords.stringof);
-
-        static if (NonDispatchableRecords.length == 0)
-        {
-            enum DefaultCaseStr = format!q"EOS
-            default: throw new DocumentException("Unknown record type: "~a.edig("%1$s").as!string, a.edig("%1$s"));
-EOS"(RecordTypeName[0..$-1]);
-        }
-        else
-        {
-            enum DefaultCaseStr = format!q"EOS
-            default: return %s(%s);
-EOS"(RetType.stringof, ctorStr!(NonDispatchableRecords[0])("a"));
-        }
-
-        enum RecordCaseStr(T) = format!q"EOS
-            case "%s": return %s(%s);
-EOS"(mixin("(new T)."~RecordTypeName), RetType.stringof, ctorStr!T("a"));
-
-        enum RecordDispatchStatement = format!q"EOS
-            if (a.type == NodeType.mapping)
-            {
-                switch(a.edig("%1$s").as!string)
-                {
-                %2$s
-                %3$s
-                }
-            }
-EOS"(RecordTypeName[0..$-1],
-     [staticMap!(RecordCaseStr, Filter!(isDispatchable, RecordTypes))].joiner("").array,
-     DefaultCaseStr);
-    }
-}
-
-template EnumDispatchStatement(RetType, bool hasString, EnumTypes...)
-{
-    import std.algorithm : joiner, map;
-    import std.array : array;
-    import std.format : format;
-    import std.meta : staticMap;
-    import std.traits : EnumMembers;
-
-    enum EnumCaseStr(T) = format!q"EOS
-        case %s: return %s(a.as!%s);
-EOS"([EnumMembers!(T.Types)].map!(m => format!`"%s"`(cast(string)m))
-                            .joiner(", ")
-                            .array,
-     RetType.stringof, T.stringof);
-    static if (hasString)
-    {
-        enum DefaultStr = format!q"EOS
-            return %s(value);
-EOS"(RetType.stringof);
-    }
-    else
-    {
-        enum DefaultStr = `throw new DocumentException("Unknown symbol value: "~a.as!string, a);`;
-    }
-    enum EnumDispatchStatement = format!q"EOS
-        if (a.type == NodeType.string)
-        {
-            auto value = a.as!string;
-            switch(value)
-            {
-            %1$s
-            default:
-            %2$s
+                return T(expanded.as_!(ArrayTypes[0])(r.context));
             }
         }
-EOS"([staticMap!(EnumCaseStr, EnumTypes)].joiner("").array, DefaultStr);
+
+        enum isRecord(T) = is(T == class) && !__traits(compiles, T.Types);
+        alias RecordTypes = Filter!(isRecord, Types);
+        static if (RecordTypes.length == 1)
+        {
+            if (expanded.type == NodeType.mapping)
+            {
+                return T(expanded.as_!(RecordTypes[0])(r.context));
+            }
+        }
+        else static if (RecordTypes.length > 0)
+        {
+            if (expanded.type == NodeType.mapping)
+            {
+                import salad.util : edig;
+                import std.algorithm : joiner;
+                import std.array : array;
+                import std.meta : ApplyLeft, Filter, staticMap, templateNot;
+                import std.traits : FieldNameTuple;
+
+                enum ConstantMembersOf(T) = Filter!(ApplyLeft!(isConstantMember, T), FieldNameTuple!T);
+                enum RecordTypeName = ConstantMembersOf!(RecordTypes[0])[0];
+                enum isDispatchable(T) = ConstantMembersOf!T.length != 0 && ConstantMembersOf!T[0] == RecordTypeName;
+                alias NonDispatchableRecords = Filter!(templateNot!isDispatchable, RecordTypes);
+
+                auto id = expanded.edig(RecordTypeName[0 .. $ - 1]).as!string;
+                static foreach (RT; Filter!(isDispatchable, RecordTypes))
+                {
+                    if (id == mixin("(new RT)." ~ RecordTypeName))
+                    {
+                        return T(expanded.as_!RT(r.context));
+                    }
+                }
+
+                static if (NonDispatchableRecords.length == 0)
+                {
+                    throw new DocumentException("Unknown record type: " ~ id, expanded.edig(
+                            RecordTypeName[0 .. $ - 1]));
+                }
+                else static if (NonDispatchableRecords.length == 1)
+                {
+                    return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
+                }
+                else
+                {
+                    static assert(false,
+                        "There are too many non-dispatchable record candidates: " ~
+                            NonDispatchableRecords.stringof);
+                }
+            }
+        }
+
+        import std.meta : anySatisfy, Filter, staticMap;
+
+        enum isEnum(T) = is(T == class) && is(T.Types == enum);
+        alias EnumTypes = Filter!(isEnum, Types);
+        enum hasString = anySatisfy!(isSomeString, Types);
+        static if (EnumTypes.length > 0 || hasString)
+        {                
+            if (expanded.type == NodeType.string)
+            {
+                import std.algorithm : canFind;
+                import std.traits : EnumMembers;
+
+                auto value = expanded.as!string;
+                static foreach(RT; EnumTypes)
+                {
+                    if ([EnumMembers!(RT.Types)].canFind(value))
+                    {
+                        return T(expanded.as_!RT(context));
+                    }
+                }
+                static if (hasString)
+                {
+                    return T(value);
+                }
+                else
+                {
+                    throw new DocumentException("Unknown symbol value: "~value, expanded);
+                }
+            }
+        }
+
+        import std.traits : isIntegral;
+        static if (Filter!(isIntegral, Types).length > 0)
+        {
+            if (expanded.type == NodeType.integer)
+            {
+                // TODO: long
+                return T(expanded.as!int);
+            }
+        }
+
+        // TODO: float, double
+
+        static assert(Types.length ==
+                ArrayTypes.length + RecordTypes.length + EnumTypes.length + (hasString ? 1 : 0) + Filter!(isIntegral, Types)
+                .length,
+                format!"Internal error: Params: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s"(
+                    Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
+                    hasString, Filter!(isIntegral, Types).stringof
+                ));
+        throw new DocumentException("Unknown node type", expanded);
+    }
 }

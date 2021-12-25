@@ -118,7 +118,7 @@ class Fetcher
 
         auto scheme = uri.scheme;
         auto fetcher = *fetcherEnforce(scheme in schemeFetchers,
-                                       format!"Scheme `%s` is not supported."(scheme));
+                                       format!"Scheme `%s` is not supported (uri: `%s`)."(scheme, uri));
         return fetcher(uri);
     }
 private:
