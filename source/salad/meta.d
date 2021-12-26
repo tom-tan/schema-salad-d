@@ -5,6 +5,7 @@
  */
 module salad.meta;
 
+import salad.context : LoadingContext;
 import salad.type;
 
 import dyaml;
@@ -13,7 +14,6 @@ import dyaml;
 mixin template genCtor()
 {
     import dyaml : Node, NodeType;
-    import salad.context : LoadingContext;
 
     this() {}
     this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
@@ -280,88 +280,10 @@ EOS".stripLeftAll, exp);
                   .assertNotThrown == [1, 2, 3]);
 }
 
-import salad.context : LoadingContext;
-
-import std.typecons : Tuple;
-
-alias ExplicitContext = Tuple!(Node, "node", LoadingContext, "context");
-
-ExplicitContext splitContext(in Node node, string uri)
-{
-    if (node.type == NodeType.mapping)
-    {
-        LoadingContext con;
-        if (auto base = "$base" in node)
-        {
-            con.baseURI = base.as!string;
-        }
-        else
-        {
-            con.baseURI = uri;
-        }
-
-        if (auto ns = "$namespaaces" in node)
-        {
-            import std.algorithm : map;
-            import std.array : assocArray;
-            import std.typecons : tuple;
-
-            con.namespaces = ns.mapping
-                .map!(a => tuple(a.key.as!string, a.value.as!string))
-                .assocArray;
-        }
-
-        if (auto s = "$schemas" in node)
-        {
-            // TODO
-            import std.algorithm : map;
-            import std.array : array;
-            auto schemas = s.sequence.map!(a => a.as!string).array;
-        }
-
-        if (auto g = "$graph" in node)
-        {
-            return typeof(return)(*g, con);
-        }
-        else
-        {
-            return typeof(return)(node, con);
-        }
-    }
-    else
-    {
-        return typeof(return)(node, LoadingContext(uri));
-    }
-}
-
-ExplicitContext resolveDirectives(in Node node, in LoadingContext context)
-{
-    if (node.type == NodeType.mapping)
-    {
-        import salad.resolver : resolveLink;
-
-        if (auto link = "$import" in node)
-        {
-            import salad.fetcher : fetchNode;
-
-            auto uri = resolveLink(link.as!string, context);
-            return splitContext(uri.fetchNode, uri);
-        }
-        else if (auto link = "$include" in node)
-        {
-            import salad.fetcher : fetchText;
-
-            auto uri = resolveLink(link.as!string, context);
-            auto n = Node(uri.fetchText);
-            return typeof(return)(n, cast()context);
-        }
-    }
-    return typeof(return)(cast()node, cast()context);
-}
-
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
         if (is(T == class))
 {
+    import salad.resolver : resolveDirectives;
     auto resolved = resolveDirectives(node, context);
     return new T(resolved.node, resolved.context);
 }
@@ -371,6 +293,7 @@ import std.traits : isScalarType;
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
+    import salad.resolver : resolveDirectives;
     auto resolved = resolveDirectives(node, context);
     return resolved.node.as!T;
 }
@@ -383,6 +306,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     import std.array : appender;
     import std.range : empty, ElementType;
     import salad.exception : docEnforce;
+    import salad.resolver : resolveDirectives;
 
     static if (idMap_.subject.empty)
     {
@@ -452,6 +376,8 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
+    import salad.resolver : resolveDirectives;
+
     static if (isOptional!T)
     {
         alias Types = T.Types[1 .. $];

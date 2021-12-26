@@ -9,6 +9,8 @@ import dyaml : Node, NodeType;
 
 import salad.context : LoadingContext;
 
+import std.typecons : Tuple;
+
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Link_resolution
  */
@@ -75,12 +77,12 @@ auto resolveLink(string link, in LoadingContext context) nothrow pure @safe
  */
 unittest
 {
-    auto context = LoadingContext(
-        "http://example.com/base",
-        [
+    LoadingContext context = {
+        baseURI: "http://example.com/base",
+        namespaces: [
             "acid": "http://example.com/acid#",
         ]
-    );
+    };
     
     enum zero = "http://example.com/base/zero";
     assert(zero.resolveLink(context) == zero);
@@ -92,32 +94,100 @@ unittest
     assert("acid:six".resolveLink(context) == "http://example.com/acid#six");
 }
 
+///
+alias ExplicitContext = Tuple!(Node, "node", LoadingContext, "context");
+
+/**
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Document_context
+ */
+ExplicitContext splitContext(in Node node, string uri)
+{
+    if (node.type == NodeType.mapping)
+    {
+        LoadingContext con;
+        if (auto base = "$base" in node)
+        {
+            con.baseURI = base.as!string;
+        }
+        else
+        {
+            con.baseURI = uri;
+        }
+        con.fileURI = uri;
+
+        if (auto ns = "$namespaaces" in node)
+        {
+            import std.algorithm : map;
+            import std.array : assocArray;
+            import std.typecons : tuple;
+
+            con.namespaces = ns.mapping
+                .map!(a => tuple(a.key.as!string, a.value.as!string))
+                .assocArray;
+        }
+
+        if (auto s = "$schemas" in node)
+        {
+            // TODO
+            import std.algorithm : map;
+            import std.array : array;
+            auto schemas = s.sequence.map!(a => a.as!string).array;
+        }
+
+        if (auto g = "$graph" in node)
+        {
+            return typeof(return)(*g, con);
+        }
+        else
+        {
+            return typeof(return)(node, con);
+        }
+    }
+    else
+    {
+        return typeof(return)(node, LoadingContext(uri, uri));
+    }
+}
+
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Import
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Include
  */
-auto preprocess(in Node node, in LoadingContext context)
+ExplicitContext resolveDirectives(in Node node, in LoadingContext context)
 {
-    import salad.fetcher : fetchNode, fetchText;
+    if (node.type == NodeType.mapping)
+    {
+        import salad.resolver : resolveLink;
 
-    if (node.type != NodeType.mapping)
-    {
-        return node;
+        if (auto link = "$import" in node)
+        {
+            import salad.fetcher : fetchNode;
+
+            // workaround for common-workflow-language/schema_salad#495
+            const LoadingContext con = {
+                baseURI: context.fileURI,
+                fileURI: context.fileURI,
+                namespaces: context.namespaces
+            };
+            auto uri = resolveLink(link.as!string, con);
+            return splitContext(uri.fetchNode, uri);
+        }
+        else if (auto link = "$include" in node)
+        {
+            import salad.fetcher : fetchText;
+
+            // workaround for common-workflow-language/schema_salad#495
+            const LoadingContext con = {
+                baseURI: context.fileURI,
+                fileURI: context.fileURI,
+                namespaces: context.namespaces
+            };
+            auto uri = resolveLink(link.as!string, con);
+            auto n = Node(uri.fetchText);
+            return typeof(return)(n, cast()context);
+        }
     }
-    else if (auto link = "$import" in node)
-    {
-        auto resolved = resolveLink(link.as!string, context);
-        return resolved.fetchNode;
-    }
-    else if (auto link = "$include" in node)
-    {
-        auto resolved = resolveLink(link.as!string, context);
-        return Node(resolved.fetchText);
-    }
-    else
-    {
-        return node;
-    }
+    return typeof(return)(cast()node, cast()context);
 }
 
 /**
@@ -128,9 +198,10 @@ unittest
     import dyaml : Loader;
     import std.path : absolutePath;
 
-    auto context = LoadingContext(
-        "file://"~"examples/import/parent.json".absolutePath,
-    );
+    LoadingContext context = {
+        baseURI: "file://"~"examples/import/parent.json".absolutePath,
+        fileURI: "file://"~"examples/import/parent.json".absolutePath,
+    };
 
     enum str = q"EOS
         "bar": {
@@ -139,9 +210,9 @@ unittest
 EOS";
 
     auto node = Loader.fromString(str).load;
-    auto processed = node["bar"].preprocess(context);
-    assert("hello" in processed);
-    assert(processed["hello"] == "world");
+    auto resolved = resolveDirectives(node["bar"], context);
+    assert("hello" in resolved.node);
+    assert(resolved.node["hello"] == "world");
 }
 
 /**
@@ -152,9 +223,9 @@ unittest
     import dyaml : Loader;
     import std.path : absolutePath;
 
-    auto context = LoadingContext(
-        "file://"~"examples/include/parent.json".absolutePath,
-    );
+    LoadingContext context = {
+        fileURI: "file://"~"examples/include/parent.json".absolutePath,
+    };
 
     enum str = q"EOS
         "bar": {
@@ -163,6 +234,6 @@ unittest
 EOS";
 
     auto node = Loader.fromString(str).load;
-    auto processed = node["bar"].preprocess(context);
-    assert(processed == "hello world");
+    auto resolved = resolveDirectives(node["bar"], context);
+    assert(resolved.node == "hello world");
 }

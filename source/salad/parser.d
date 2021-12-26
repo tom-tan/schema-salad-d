@@ -30,7 +30,7 @@ if (isModule!module_)
 
     if (node.type == NodeType.mapping)
     {
-        import salad.meta : splitContext;
+        import salad.resolver : splitContext;
         auto r = splitContext(node, uri);
 
         if (r.node.type == NodeType.mapping)

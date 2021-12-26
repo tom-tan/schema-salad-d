@@ -5,14 +5,17 @@
  */
 module cwl;
 
-import cwl.schema;
+public import cwl.schema;
 
 import salad.parser : import_ = importFromURI;
 import salad.meta : DocRootType = DocumentRootType;
 
+///
 alias importFromURI = import_!(cwl.schema);
+///
 alias DocumentRootType = DocRootType!(cwl.schema);
 
+///
 unittest
 {
     import salad.type : tryMatch;
@@ -36,6 +39,7 @@ unittest
               .dig!("coresMin", long) == 2);
 }
 
+///
 unittest
 {
     import salad.type : tryMatch;

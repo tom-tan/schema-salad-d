@@ -24,7 +24,9 @@ auto fetchText(string uri)
 auto fetchNode(string uri)
 {
     import dyaml : Loader;
-    return Loader.fromString(fetchText(uri)).load;
+    auto loader = Loader.fromString(fetchText(uri));
+    loader.name = uri;
+    return loader.load;
 }
 
 ///
