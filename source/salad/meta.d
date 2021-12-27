@@ -8,6 +8,8 @@ module salad.meta;
 import salad.context : LoadingContext;
 import salad.type;
 
+import std.traits : isArray, isScalarType, isSomeString;
+
 import dyaml;
 
 ///
@@ -27,8 +29,6 @@ mixin template genCtor()
         {
             static if (field.endsWith("_") && !isConstantMember!(This, field))
             {
-                // static if (This.stringof == "RecordField")
-                //     pragma(msg, Assign!(node, mixin(field)));
                 mixin(Assign!(node, mixin(field), context));
             }
         }
@@ -288,8 +288,6 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     return new T(resolved.node, resolved.context);
 }
 
-import std.traits : isScalarType;
-
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
@@ -297,8 +295,6 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     auto resolved = resolveDirectives(node, context);
     return resolved.node.as!T;
 }
-
-import std.traits : isArray, isSomeString;
 
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
         if (!isSomeString!T && isArray!T)
@@ -476,30 +472,26 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                 enum RecordTypeName = ConstantMembersOf!(RecordTypes[0])[0];
                 enum isDispatchable(T) = ConstantMembersOf!T.length != 0 && ConstantMembersOf!T[0] == RecordTypeName;
                 alias NonDispatchableRecords = Filter!(templateNot!isDispatchable, RecordTypes);
+                static assert(NonDispatchableRecords.length < 2,
+                    "There are too many non-dispatchable record candidates: " ~
+                        NonDispatchableRecords.stringof);
 
                 auto id = expanded.edig(RecordTypeName[0 .. $ - 1]).as!string;
-                static foreach (RT; Filter!(isDispatchable, RecordTypes))
+                switch (id)
                 {
-                    if (id == mixin("(new RT)." ~ RecordTypeName))
+                    static foreach (RT; Filter!(isDispatchable, RecordTypes))
                     {
-                        return T(expanded.as_!RT(r.context));
+                        case __traits(getMember, new RT, RecordTypeName): return T(expanded.as_!RT(r.context));
                     }
-                }
-
-                static if (NonDispatchableRecords.length == 0)
-                {
-                    throw new DocumentException("Unknown record type: " ~ id, expanded.edig(
-                            RecordTypeName[0 .. $ - 1]));
-                }
-                else static if (NonDispatchableRecords.length == 1)
-                {
-                    return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
-                }
-                else
-                {
-                    static assert(false,
-                        "There are too many non-dispatchable record candidates: " ~
-                            NonDispatchableRecords.stringof);
+                    static if (NonDispatchableRecords.length == 0)
+                    {
+                        default: throw new DocumentException("Unknown record type: " ~ id, expanded.edig(
+                                RecordTypeName[0 .. $ - 1]));
+                    }
+                    else
+                    {
+                        default: return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
+                    }
                 }
             }
         }
@@ -517,20 +509,23 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                 import std.traits : EnumMembers;
 
                 auto value = expanded.as!string;
-                static foreach(RT; EnumTypes)
+                switch (value)
                 {
-                    if ([EnumMembers!(RT.Types)].canFind(value))
+                    static foreach(RT; EnumTypes)
                     {
-                        return T(expanded.as_!RT(context));
+                        static foreach(m; EnumMembers!(RT.Types))
+                        {
+                            case m: return T(expanded.as_!RT(context));
+                        }
                     }
-                }
-                static if (hasString)
-                {
-                    return T(value);
-                }
-                else
-                {
-                    throw new DocumentException("Unknown symbol value: "~value, expanded);
+                    static if (hasString)
+                    {
+                        default: return T(value);
+                    }
+                    else
+                    {
+                        default: throw new DocumentException("Unknown symbol value: "~value, expanded);
+                    }
                 }
             }
         }
