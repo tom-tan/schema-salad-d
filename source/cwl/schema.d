@@ -113,7 +113,8 @@ class CWLType
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         null_ = "null",
         boolean_ = "boolean",
         int_ = "int",
@@ -281,7 +282,8 @@ class stdout
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         stdout_ = "stdout",
     }
 
@@ -300,7 +302,8 @@ class stderr
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         stderr_ = "stderr",
     }
 
@@ -601,7 +604,8 @@ class CWLVersion
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         draft_2	= "draft-2",
         draft_3_dev1 = "draft-3.dev1",
         draft_3_dev2 = "draft-3.dev2",
@@ -716,7 +720,8 @@ class LinkMergeMethod
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         merge_nested_ = "merge_nested",
         merge_flattened_ = "merge_flattened",
     }
@@ -859,7 +864,8 @@ class ScatterMethod
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         dotproduct_ = "dotproduct",
         nested_crossproduct_ = "nested_crossproduct",
         flat_crossproduct_ = "flat_crossproduct_",

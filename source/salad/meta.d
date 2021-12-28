@@ -449,7 +449,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
             }
         }
 
-        enum isRecord(T) = is(T == class) && !__traits(compiles, T.Types);
+        enum isRecord(T) = is(T == class) && !__traits(compiles, T.Symbols);
         alias RecordTypes = Filter!(isRecord, Types);
         static if (RecordTypes.length == 1)
         {
@@ -498,7 +498,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
 
         import std.meta : anySatisfy, Filter, staticMap;
 
-        enum isEnum(T) = is(T == class) && is(T.Types == enum);
+        enum isEnum(T) = is(T == class) && is(T.Symbols == enum);
         alias EnumTypes = Filter!(isEnum, Types);
         enum hasString = anySatisfy!(isSomeString, Types);
         static if (EnumTypes.length > 0 || hasString)
@@ -513,7 +513,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                 {
                     static foreach(RT; EnumTypes)
                     {
-                        static foreach(m; EnumMembers!(RT.Types))
+                        static foreach(m; EnumMembers!(RT.Symbols))
                         {
                             case m: return T(expanded.as_!RT(context));
                         }

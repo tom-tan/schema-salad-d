@@ -68,7 +68,8 @@ class PrimitiveType
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         null_ = "null",
         boolean_ = "boolean",
         int_ = "int",
@@ -92,7 +93,8 @@ class Any
 {
     import dyaml : Node;
 
-    enum Types{
+    enum Symbols
+    {
         Any = "Any",
     }
 
