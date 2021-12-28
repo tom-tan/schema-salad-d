@@ -75,7 +75,7 @@ auto resolveLink(string link, in LoadingContext context) nothrow pure @safe
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Link_resolution_example
  */
-unittest
+nothrow pure @safe unittest
 {
     LoadingContext context = {
         baseURI: "http://example.com/base",
@@ -100,7 +100,7 @@ alias ExplicitContext = Tuple!(Node, "node", LoadingContext, "context");
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Document_context
  */
-ExplicitContext splitContext(in Node node, string uri)
+ExplicitContext splitContext(in Node node, string uri) @safe
 {
     if (node.type == NodeType.mapping)
     {
@@ -153,7 +153,7 @@ ExplicitContext splitContext(in Node node, string uri)
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Import
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Include
  */
-ExplicitContext resolveDirectives(in Node node, in LoadingContext context)
+ExplicitContext resolveDirectives(in Node node, in LoadingContext context) @trusted
 {
     if (node.type == NodeType.mapping)
     {

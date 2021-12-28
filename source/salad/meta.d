@@ -17,8 +17,8 @@ mixin template genCtor()
 {
     import dyaml : Node, NodeType;
 
-    this() {}
-    this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
+    this() pure @nogc nothrow @safe {}
+    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         import std.algorithm : endsWith;
         import std.traits : FieldNameTuple;
@@ -29,7 +29,7 @@ mixin template genCtor()
         {
             static if (field.endsWith("_") && !isConstantMember!(This, field))
             {
-                mixin(Assign!(node, mixin(field), context));
+                mixin(Assign!(node, __traits(getMember, this, field), context));
             }
         }
     }
@@ -53,18 +53,20 @@ mixin template genToString()
 
         static foreach(field; FieldNameTuple!This)
         {
-            static if (isOptional!(typeof(mixin(field))))
+            static if (isOptional!(typeof(__traits(getMember, this, field))))
             {
-                mixin(field).match!((None _) { },
-                                    (rest) { fstrs ~= format!"%s: %s"(field, rest); });
+                __traits(getMember, this, field).match!(
+                    (None _) { },
+                    (rest) { fstrs ~= format!"%s: %s"(field, rest); }
+                );
             }
-            else static if (isEither!(typeof(mixin(field))))
+            else static if (isEither!(typeof(__traits(getMember, this, field))))
             {
-                mixin(field).match!(f => fstrs ~= format!"%s: %s"(field, f));
+                __traits(getMember, this, field).match!(f => fstrs ~= format!"%s: %s"(field, f));
             }
             else
             {
-                fstrs ~= format!"%s: %s"(field, mixin(field));
+                fstrs ~= format!"%s: %s"(field, __traits(getMember, this, field));
             }
         }
         return format!"%s(%s)"(This.stringof, fstrs.join(", "));

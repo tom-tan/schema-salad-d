@@ -6,7 +6,7 @@
 module salad.fetcher;
 
 ///
-auto fetchText(string uri)
+auto fetchText(string uri) @safe
 {
     if (__ctfe)
     {
@@ -21,7 +21,7 @@ auto fetchText(string uri)
 }
 
 ///
-auto fetchNode(string uri)
+auto fetchNode(string uri) @safe
 {
     import dyaml : Loader;
     auto loader = Loader.fromString(fetchText(uri));
@@ -65,7 +65,7 @@ auto pathWithAuthority(string uri) pure @safe
     }
 }
 
-unittest
+pure @safe unittest
 {
     assert("file:///foo/bar#buzz".pathWithAuthority == "/foo/bar");
     assert("file:///foo/bar/buzz".pathWithAuthority == "/foo/bar/buzz");
@@ -95,7 +95,7 @@ alias TextFetcher = string delegate(string) @safe;
 class Fetcher
 {
     ///
-    static typeof(this) instance()
+    static typeof(this) instance() nothrow @safe
     {
         static Fetcher instance_;
 
@@ -107,13 +107,13 @@ class Fetcher
     }
 
     ///
-    auto addSchemeFetcher(string scheme, TextFetcher fetcher)
+    void addSchemeFetcher(string scheme, TextFetcher fetcher) nothrow pure @safe
     {
         schemeFetchers[scheme] = fetcher;
     }
 
     ///
-    auto fetchText(string uri)
+    auto fetchText(string uri) const @safe
     {
         import salad.fetcher.exception : fetcherEnforce;
         import std.format : format;
@@ -124,7 +124,7 @@ class Fetcher
         return fetcher(uri);
     }
 private:
-    this()
+    this() nothrow pure @safe
     {
         schemeFetchers["file"] = (uri) {
             import salad.fetcher.exception : fetcherEnforce;
