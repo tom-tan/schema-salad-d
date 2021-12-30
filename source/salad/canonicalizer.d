@@ -11,7 +11,7 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
     import dyaml : Node;
 
     import salad.context : LoadingContext;
-    import salad.meta : genIdentifier, genToString, id, isConstantMember;
+    import salad.meta : genIdentifier, genToString, id, StaticMembersOf;
 
     import std.algorithm : endsWith;
     import std.format : format;
@@ -40,15 +40,16 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
         return rng.empty ? -1 : rng.front.index;
     }
 
+    static foreach(name; StaticMembersOf!Base)
+    {
+        mixin("static immutable "~name~" = Base."~name~";");
+    }
+
     static foreach(idx, fname; FNames)
     {
         static assert(fname.endsWith("_"),
                       format!"Field name should end with `_` (%s.%s)"(Base.stringof, fname));
-        static if (isConstantMember!(Base, fname))
-        {
-            mixin("immutable string "~fname~" = \""~mixin("(new Base)."~fname)~"\";");
-        }
-        else static if (findIndex(fname) != -1)
+        static if (findIndex(fname) != -1)
         {
             static assert(isCallable!(ConvFuns[findIndex(fname)]),
                           format!"Convert function for `%s` is not callable"(fname));
@@ -107,7 +108,7 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
                     __traits(getMember, this, fname) = conv(__traits(getMember, base, fname));
                 }
             }
-            else static if (!isConstantMember!(Base, fname))
+            else
             {
                 __traits(getMember, this, fname) = __traits(getMember, base, fname);
             }
@@ -160,7 +161,7 @@ unittest
 
     static class C
     {
-        immutable class_ = "File";
+        static immutable class_ = "File";
         int foo_;
 
         this() {}

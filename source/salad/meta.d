@@ -8,7 +8,8 @@ module salad.meta;
 import salad.context : LoadingContext;
 import salad.type;
 
-import std.traits : isArray, isScalarType, isSomeString;
+import std.meta : ApplyLeft, Filter;
+import std.traits : hasStaticMember, isArray, isScalarType, isSomeString;
 
 import dyaml;
 
@@ -27,7 +28,7 @@ mixin template genCtor()
 
         static foreach(field; FieldNameTuple!This)
         {
-            static if (field.endsWith("_") && !isConstantMember!(This, field))
+            static if (field.endsWith("_"))
             {
                 mixin(Assign!(node, __traits(getMember, this, field), context));
             }
@@ -127,6 +128,9 @@ struct id{}
 
 enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
 
+enum isDefinedField(string F) = F[$-1] == '_';
+enum StaticMembersOf(T) = Filter!(ApplyLeft!(hasStaticMember, T), Filter!(isDefinedField, __traits(derivedMembers, T)));
+
 ///
 template DocumentRootType(alias module_)
 {
@@ -168,8 +172,6 @@ template IdentifierType(alias module_)
         static assert(false, "No schemas with identifier field");
     }
 }
-
-enum isConstantMember(T, string M) = is(typeof(__traits(getMember, T, M)) == immutable string);
 
 ///
 template Assign(alias node, alias field, alias context)
@@ -453,42 +455,45 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
 
         enum isRecord(T) = is(T == class) && !__traits(compiles, T.Symbols);
         alias RecordTypes = Filter!(isRecord, Types);
-        static if (RecordTypes.length == 1)
+        static if (RecordTypes.length == 0)
+        {
+            // nop
+        }
+        else static if (RecordTypes.length == 1)
         {
             if (expanded.type == NodeType.mapping)
             {
                 return T(expanded.as_!(RecordTypes[0])(r.context));
             }
         }
-        else static if (RecordTypes.length > 0)
+        else
         {
             if (expanded.type == NodeType.mapping)
             {
                 import salad.util : edig;
-                import std.algorithm : joiner;
-                import std.array : array;
-                import std.meta : ApplyLeft, Filter, staticMap, templateNot;
-                import std.traits : FieldNameTuple;
+                import std.meta : Filter, templateNot;
 
-                enum ConstantMembersOf(T) = Filter!(ApplyLeft!(isConstantMember, T), FieldNameTuple!T);
-                enum RecordTypeName = ConstantMembersOf!(RecordTypes[0])[0];
-                enum isDispatchable(T) = ConstantMembersOf!T.length != 0 && ConstantMembersOf!T[0] == RecordTypeName;
+                enum isDispatchable(T) = StaticMembersOf!T.length > 0;
+
+                alias DispatchableRecords = Filter!(isDispatchable, RecordTypes);
                 alias NonDispatchableRecords = Filter!(templateNot!isDispatchable, RecordTypes);
                 static assert(NonDispatchableRecords.length < 2,
                     "There are too many non-dispatchable record candidates: " ~
                         NonDispatchableRecords.stringof);
 
-                auto id = expanded.edig(RecordTypeName[0 .. $ - 1]).as!string;
+                enum DispatchFieldName = StaticMembersOf!(DispatchableRecords[0])[0];
+
+                auto id = expanded.edig(DispatchFieldName[0 .. $ - 1]).as!string;
                 switch (id)
                 {
-                    static foreach (RT; Filter!(isDispatchable, RecordTypes))
+                    static foreach (RT; DispatchableRecords)
                     {
-                        case __traits(getMember, new RT, RecordTypeName): return T(expanded.as_!RT(r.context));
+                        case __traits(getMember, RT, DispatchFieldName): return T(expanded.as_!RT(r.context));
                     }
                     static if (NonDispatchableRecords.length == 0)
                     {
                         default: throw new DocumentException("Unknown record type: " ~ id, expanded.edig(
-                                RecordTypeName[0 .. $ - 1]));
+                                DispatchFieldName[0 .. $ - 1]));
                     }
                     else
                     {

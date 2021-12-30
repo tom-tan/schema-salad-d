@@ -51,7 +51,7 @@ if (!is(T: Node))
     }
     else
     {
-        import std.traits : getUDAs, hasMember, hasUDA, isArray;
+        import std.traits : getUDAs, hasMember, hasStaticMember, hasUDA, isArray;
         import salad.type : isSumType, match;
 
         static if (K.length == 0)
@@ -67,6 +67,11 @@ if (!is(T: Node))
             {
                 return t;
             }
+        }
+        else static if (hasStaticMember!(T, K[0]~"_"))
+        {
+            auto field = mixin("t."~K[0]~"_");
+            return dig!(K[1..$], U, typeof(field))(field, default_);
         }
         else static if (hasMember!(T, K[0]~"_"))
         {
@@ -132,6 +137,19 @@ if (!is(T: Node))
             return default_;
         }
     }
+}
+
+unittest
+{
+    class C
+    {
+        static immutable class_ = "foo";
+        int val_ = 10;
+    }
+
+    auto c = new C;
+    assert(c.dig!("val", int) == 10);
+    assert(c.dig!("class", string) == "foo");
 }
 
 /// enforceDig

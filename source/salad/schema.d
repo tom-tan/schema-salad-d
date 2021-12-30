@@ -18,7 +18,7 @@ import std.algorithm : map;
 import std.array : array;
 import std.typecons : Tuple;
 
-private Optional!string concat(Optional!(string, string[]) ss)
+private Optional!string concat(Optional!(string, string[]) ss) nothrow pure @safe
 {
     import std.array : join;
 
@@ -43,10 +43,10 @@ private auto canonicalize(Optional!(string, so.JsonldPredicate) jp)
             {
                 pred._id_ = id;
             }
-            return pred;
+            return Optional!JsonldPredicate(pred);
         },
-        (so.JsonldPredicate pred) => new JsonldPredicate(pred),
-        none => null,
+        (so.JsonldPredicate pred) => Optional!JsonldPredicate(new JsonldPredicate(pred)),
+        none => Optional!JsonldPredicate.init,
     );
 }
 

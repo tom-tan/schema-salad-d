@@ -19,7 +19,7 @@ import salad.util;
     CommandInputParameter[] inputs_;
     @idMap("id", "type")
     CommandOutputParameter[] outputs_;
-    immutable class_ = "CommandLineTool";
+    static immutable class_ = "CommandLineTool";
     @id Optional!string id_;
     @idMap("class")
     Optional!(
@@ -144,7 +144,7 @@ class CWLType
 
 class File
 {
-    immutable class_ = "File";
+    static immutable class_ = "File";
     Optional!string location_;
     Optional!string path_;
     Optional!string basename_;
@@ -163,7 +163,7 @@ class File
 
 class Directory
 {
-    immutable class_ = "Directory";
+    static immutable class_ = "Directory";
     Optional!string location_;
     Optional!string path_;
     Optional!string basename_;
@@ -177,7 +177,7 @@ class Directory
 
 class CommandInputRecordSchema
 {
-    immutable type_ = "record";
+    static immutable type_ = "record";
     @idMap("name", "type")
     Optional!(CommandInputRecordField[]) fields_;
     Optional!string label_;
@@ -215,7 +215,7 @@ class CommandInputRecordField
 class CommandInputEnumSchema
 {
     string[] symbols_;
-    immutable type_ = "enum";
+    static immutable type_ = "enum";
     Optional!string label_;
     Optional!string name_;
     Optional!CommandLineBinding inputBinding_;
@@ -240,7 +240,7 @@ class CommandInputArraySchema
             string,
         )[],
     ) items_;
-    immutable type_ = "array";
+    static immutable type_ = "array";
     Optional!string label_;
     Optional!CommandLineBinding inputBinding_;
 
@@ -330,7 +330,7 @@ class CommandOutputBinding
 
 class CommandOutputRecordSchema
 {
-    immutable type_ = "record";
+    static immutable type_ = "record";
     @idMap("name", "type")
     Optional!(CommandOutputRecordField[]) fields_;
     Optional!string label_;
@@ -367,7 +367,7 @@ class CommandOutputRecordField
 class CommandOutputEnumSchema
 {
     string[] symbols_;
-    immutable type_ = "enum";
+    static immutable type_ = "enum";
     Optional!string label_;
     Optional!CommandOutputBinding outputBinding_;
 
@@ -391,7 +391,7 @@ class CommandOutputArraySchema
             string,
         )[],
     ) items_;
-    immutable type_ = "array";
+    static immutable type_ = "array";
     Optional!string label_;
     Optional!CommandOutputBinding outputBinding_;
 
@@ -401,7 +401,7 @@ class CommandOutputArraySchema
 
 class InlineJavascriptRequirement
 {
-    immutable class_ = "InlineJavascriptRequirement";
+    static immutable class_ = "InlineJavascriptRequirement";
     Optional!(string[]) expressionLib_;
 
     mixin genCtor;
@@ -410,7 +410,7 @@ class InlineJavascriptRequirement
 
 class SchemaDefRequirement
 {
-    immutable class_ = "SchemaDefRequirement";
+    static immutable class_ = "SchemaDefRequirement";
     Either!(
         InputRecordSchema,
         InputEnumSchema,
@@ -423,7 +423,7 @@ class SchemaDefRequirement
 
 class InputRecordSchema
 {
-    immutable type_ = "record";
+    static immutable type_ = "record";
     @idMap("name", "type")
     Optional!(
         InputRecordField[]
@@ -463,7 +463,7 @@ class InputRecordField
 class InputEnumSchema
 {
     string[] symbols_;
-    immutable type_ = "enum";
+    static immutable type_ = "enum";
     Optional!string label_;
     @id Optional!string name_;
     Optional!CommandLineBinding inpuBinding_;
@@ -488,7 +488,7 @@ class InputArraySchema
             string,
         )[],
     ) items_;
-    immutable type_ = "array";
+    static immutable type_ = "array";
     Optional!string label_;
     Optional!CommandLineBinding inputBinding_;
 
@@ -498,7 +498,7 @@ class InputArraySchema
 
 class DockerRequirement
 {
-    immutable class_ = "DockerRequirement";
+    static immutable class_ = "DockerRequirement";
     Optional!string dockerPull_;
     Optional!string dockerLoad_;
     Optional!string dockerFile_;
@@ -512,7 +512,7 @@ class DockerRequirement
 
 class SoftwareRequirement
 {
-    immutable class_ = "SoftwareRequirement";
+    static immutable class_ = "SoftwareRequirement";
     @idMap("package", "specs")
     SoftwarePackage[] packages_;
 
@@ -532,7 +532,7 @@ class SoftwarePackage
 
 class InitialWorkDirRequirement
 {
-    immutable class_ = "InitialWorkDirRequirement";
+    static immutable class_ = "InitialWorkDirRequirement";
     Either!(
         Either!(
             File,
@@ -559,7 +559,7 @@ class Dirent
 
 class EnvVarRequirement
 {
-    immutable class_ = "EnvVarRequirement";
+    static immutable class_ = "EnvVarRequirement";
     @idMap("envName", "envValue")
     EnvironmentDef[] envDef_;
 
@@ -578,7 +578,7 @@ class EnvironmentDef
 
 class ShellCommandRequirement
 {
-    immutable class_ = "ShellCommandRequirement";
+    static immutable class_ = "ShellCommandRequirement";
 
     mixin genCtor;
     mixin genIdentifier;
@@ -586,7 +586,7 @@ class ShellCommandRequirement
 
 class ResourceRequirement
 {
-    immutable class_ = "ResourceRequirement";
+    static immutable class_ = "ResourceRequirement";
     Optional!(long, string) coresMin_;
     Optional!(int, string) coresMax_;
     Optional!(long, string) ramMin_;
@@ -657,7 +657,7 @@ unittest
     InputParameter[] inputs_;
     @idMap("id", "type")
     WorkflowOutputParameter[] outputs_;
-    immutable class_ = "Workflow";
+    static immutable class_ = "Workflow";
     @idMap("id") WorkflowStep[] steps_;
     @id Optional!string id_;
     @idMap("class")
@@ -738,7 +738,7 @@ class LinkMergeMethod
 
 class OutputRecordSchema
 {
-    immutable type_ = "record";
+    static immutable type_ = "record";
     @idMap("name", "type")
     Optional!(OutputRecordField[]) fields_;
     Optional!string label_;
@@ -774,7 +774,7 @@ class OutputRecordField
 class OutputEnumSchema
 {
     string[] symbols_;
-    immutable type_ = "enum";
+    static immutable type_ = "enum";
     Optional!string label_;
     Optional!CommandOutputBinding outputBinding_;
 
@@ -798,7 +798,7 @@ class OutputArraySchema
             string,
         )[],
     ) items_;
-    immutable type_ = "array";
+    static immutable type_ = "array";
     Optional!string label_;
     Optional!CommandOutputBinding outputBinding_;
 
@@ -884,7 +884,7 @@ class ScatterMethod
 
 class SubworkflowFeatureRequirement
 {
-    immutable class_ = "SubworkflowFeatureRequirement";
+    static immutable class_ = "SubworkflowFeatureRequirement";
 
     mixin genCtor;
     mixin genIdentifier;
@@ -892,7 +892,7 @@ class SubworkflowFeatureRequirement
 
 class ScatterFeatureRequirement
 {
-    immutable class_ = "ScatterFeatureRequirement";
+    static immutable class_ = "ScatterFeatureRequirement";
 
     mixin genCtor;
     mixin genIdentifier;
@@ -900,7 +900,7 @@ class ScatterFeatureRequirement
 
 class MultipleInputFeatureRequirement
 {
-    immutable class_ = "MultipleInputFeatureRequirement";
+    static immutable class_ = "MultipleInputFeatureRequirement";
 
     mixin genCtor;
     mixin genIdentifier;
@@ -908,7 +908,7 @@ class MultipleInputFeatureRequirement
 
 class StepInputExpressionRequirement
 {
-    immutable class_ = "StepInputExpressionRequirement";
+    static immutable class_ = "StepInputExpressionRequirement";
 
     mixin genCtor;
     mixin genIdentifier;
@@ -920,7 +920,7 @@ class StepInputExpressionRequirement
     InputParameter[] inputs_;
     @idMap("id", "type")
     ExpressionToolOutputParameter[] outputs_;
-    immutable class_ = "Expression";
+    static immutable class_ = "Expression";
     string expression_;
     @id Optional!string id_;
     @idMap("class")
