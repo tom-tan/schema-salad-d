@@ -8,6 +8,7 @@ module salad.canonicalizer;
 ///
 mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
 {
+private:
     import dyaml : Node;
 
     import salad.context : LoadingContext;
@@ -40,6 +41,25 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
         return rng.empty ? -1 : rng.front.index;
     }
 
+    final void canonicalize(Base base)
+    {
+        static foreach(fname; FNames)
+        {
+            static if (findIndex(fname) != -1)
+            {
+                {
+                    alias conv = ConvFuns[findIndex(fname)];
+                    __traits(getMember, this, fname) = conv(__traits(getMember, base, fname));
+                }
+            }
+            else
+            {
+                __traits(getMember, this, fname) = __traits(getMember, base, fname);
+            }
+        }
+    }
+
+public:
     static foreach(name; StaticMembersOf!Base)
     {
         mixin("static immutable "~name~" = Base."~name~";");
@@ -96,24 +116,6 @@ mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
 
     mixin genToString;
     mixin genIdentifier;
-
-    final void canonicalize(Base base)
-    {
-        static foreach(fname; FNames)
-        {
-            static if (findIndex(fname) != -1)
-            {
-                {
-                    alias conv = ConvFuns[findIndex(fname)];
-                    __traits(getMember, this, fname) = conv(__traits(getMember, base, fname));
-                }
-            }
-            else
-            {
-                __traits(getMember, this, fname) = __traits(getMember, base, fname);
-            }
-        }
-    }
 }
 
 unittest
