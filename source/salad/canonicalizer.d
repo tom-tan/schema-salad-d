@@ -12,12 +12,12 @@ private:
     import dyaml : Node;
 
     import salad.context : LoadingContext;
-    import salad.meta : genIdentifier, genToString, id, StaticMembersOf;
+    import salad.meta : genIdentifier, genToString, id, idMap, StaticMembersOf;
 
     import std.algorithm : endsWith;
     import std.format : format;
     import std.meta : AliasSeq, Stride;
-    import std.traits : isCallable, FieldNameTuple, Fields, hasUDA, Parameters, ReturnType;
+    import std.traits : isCallable, FieldNameTuple, Fields, getUDAs, hasUDA, Parameters, ReturnType;
 
     alias FTypes = Fields!Base;
     alias FNames = FieldNameTuple!Base;
@@ -83,6 +83,11 @@ public:
             {
                 mixin("@id "~ReturnType!(ConvFuns[findIndex(fname)]).stringof ~ " " ~ fname ~ ";");
             }
+            else static if (hasUDA!(__traits(getMember, Base, fname), idMap))
+            {
+                mixin("@"~getUDAs!(__traits(getMember, Base, fname), idMap)[0].stringof ~ " " ~
+                      ReturnType!(ConvFuns[findIndex(fname)]).stringof ~ " " ~ fname ~ ";");
+            }
             else
             {
                 mixin(ReturnType!(ConvFuns[findIndex(fname)]).stringof ~ " " ~ fname ~ ";");
@@ -93,6 +98,11 @@ public:
             static if (hasUDA!(__traits(getMember, Base, fname), id))
             {
                 mixin("@id "~FTypes[idx].stringof~" "~fname~";");
+            }
+            else static if (hasUDA!(__traits(getMember, Base, fname), idMap))
+            {
+                mixin("@"~getUDAs!(__traits(getMember, Base, fname), idMap)[0].stringof ~ " " ~
+                      FTypes[idx].stringof ~ " " ~ fname ~ ";");
             }
             else
             {

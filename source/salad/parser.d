@@ -7,14 +7,7 @@ module salad.parser;
 
 import dyaml : Node;
 
-import salad.context : LoadingContext;
-import salad.exception;
-import salad.meta;
-import salad.schema;
 import std.traits : moduleName;
-import salad.type;
-
-import std.typecons : Tuple;
 
 enum isModule(alias module_) = __traits(compiles, { mixin("import "~moduleName!module_~";"); });
 
@@ -22,8 +15,9 @@ enum isModule(alias module_) = __traits(compiles, { mixin("import "~moduleName!m
 auto parse(alias module_)(Node node, string uri)
 if (isModule!module_)
 {
-    mixin("import "~moduleName!module_~";");
     import dyaml : NodeType;
+    import salad.meta : as_, DocumentRootType;
+    import salad.type : SumType;
 
     alias T = DocumentRootType!module_;
     alias ReturnType = SumType!(T, T[]);
@@ -51,8 +45,10 @@ if (isModule!module_)
 ///
 auto importFromURI(alias module_)(string uri, string fragment = "")
 {
+    import salad.exception : docEnforce;
     import salad.fetcher : fetchNode, fragment_ = fragment;
-    import std.format : format;
+    import salad.meta : DocumentRootType;
+    import salad.type : match, tryMatch;
     import std.range : empty;
 
     auto frag = uri.fragment_;
@@ -81,6 +77,7 @@ auto importFromURI(alias module_)(string uri, string fragment = "")
             {
                 import std.algorithm : filter;
                 import std.array : array;
+                import std.format : format;
                 auto elems = docs.filter!(e => e.tryMatch!(d => d.identifier) == frag)
                                  .array;
                 docEnforce(!elems.empty, format!"No objects for fragment `%s`"(frag), node);
