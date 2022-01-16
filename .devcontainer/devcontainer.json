@@ -1,11 +1,16 @@
 {
-  "dockerFile": "Dockerfile",
+  "image": "ghcr.io/tom-tan/ldc:1.28.1",
   "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
-  "extensions": ["webfreak.code-d", "webfreak.debug"],
+  "extensions": ["webfreak.dlang-bundle"],
   "settings": {
-    "d.dmdPath": "ldmd2",
+    "d.dmdPath": "dmd",
     "d.stdlibPath": [
+      // for dmd
+      "/dlang/dc/src/druntime/import",
+      "/dlang/dc/src/phobos",
+      // for ldc and gdc
       "/dlang/dc/import"
     ]
-  }
+  },
+  "remoteUser": "vscode"
 }

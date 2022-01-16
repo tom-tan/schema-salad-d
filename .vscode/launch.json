@@ -6,7 +6,7 @@
       "request": "launch",
       "preLaunchTask": "${defaultBuildTask}",
       "name": "Launch Program",
-      "target": "${workspaceRoot}/fix-this-to-your-app-name",
+      "target": "${workspaceRoot}/lib/schema-salad-d-test-library",
       "cwd": "${workspaceRoot}",
       "valuesFormatting": "parseText"
     }
