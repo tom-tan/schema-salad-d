@@ -113,6 +113,12 @@ class Fetcher
     }
 
     ///
+    void removeSchemeFetcher(string scheme)
+    {
+        schemeFetchers.remove(scheme);
+    }
+
+    ///
     auto fetchText(string uri) const @safe
     {
         import salad.fetcher.exception : fetcherEnforce;
