@@ -113,7 +113,7 @@ class Fetcher
     }
 
     ///
-    void removeSchemeFetcher(string scheme)
+    void removeSchemeFetcher(string scheme) @nogc nothrow pure @safe
     {
         schemeFetchers.remove(scheme);
     }
