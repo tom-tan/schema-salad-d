@@ -60,6 +60,7 @@ class CommandInputParameter
     Optional!(string, string[]) doc_;
     Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
+    Optional!Any default_;
     Optional!(
         CWLType,
         CommandInputRecordSchema,
