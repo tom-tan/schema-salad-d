@@ -52,7 +52,7 @@ if (!is(T: Node))
     else
     {
         import std.traits : getUDAs, hasMember, hasStaticMember, hasUDA, isArray;
-        import salad.type : isSumType, match;
+        import salad.type : isEither, isOptional, isSumType, match, None;
 
         static if (K.length == 0)
         {
@@ -86,8 +86,16 @@ if (!is(T: Node))
             }
             return dig!(K[1..$], U, typeof(field), nextIDMap)(field, default_);
         }
-        else static if (isSumType!T)
+        else static if (isOptional!T)
         {
+            return t.match!(
+                (None _) => default_,
+                others => others.dig!(K, U)(default_),
+            );
+        }
+        else static if (isEither!T)
+        {
+            import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
             static if (hasUDA!(mixin("t."~K[0]~"_"), idMap))
             {
                 enum nextIDMap = getUDAs!(mixin("t."~K[0]~"_"), idMap)[0];
