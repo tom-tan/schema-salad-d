@@ -30,6 +30,31 @@ auto fetchNode(string uri) @safe
 }
 
 ///
+auto toURI(string pathOrURI) pure @safe
+{
+    import std.range : empty;
+
+    if (pathOrURI.scheme.empty)
+    {
+        import std.algorithm : startsWith;
+
+        if (pathOrURI.startsWith("/"))
+        {
+            return "file://"~pathOrURI;
+        }
+        else
+        {
+            import std.path : absolutePath;
+            return "file://"~pathOrURI.absolutePath;
+        }
+    }
+    else
+    {
+        return pathOrURI;
+    }
+}
+
+///
 auto scheme(string uri) @nogc nothrow pure @safe
 {
     import std.algorithm : findSplit;
