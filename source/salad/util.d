@@ -40,7 +40,7 @@ auto dig(T)(in Node node, string[] keys, T default_)
     return ret;
 }
 
-// dig for CWL object
+// dig for parsed object
 auto dig(alias K, U, T, idMap idMap_ = idMap.init)(T t, U default_ = U.init)
 if (!is(T: Node))
 {
@@ -70,15 +70,15 @@ if (!is(T: Node))
         }
         else static if (hasStaticMember!(T, K[0]~"_"))
         {
-            auto field = mixin("t."~K[0]~"_");
+            auto field = __traits(getMember, t, K[0]~"_");
             return dig!(K[1..$], U, typeof(field))(field, default_);
         }
         else static if (hasMember!(T, K[0]~"_"))
         {
-            auto field = mixin("t."~K[0]~"_");
-            static if (hasUDA!(mixin("t."~K[0]~"_"), idMap))
+            auto field = __traits(getMember, t, K[0]~"_");
+            static if (hasUDA!(__traits(getMember, t, K[0]~"_"), idMap))
             {
-                enum nextIDMap = getUDAs!(mixin("t."~K[0]~"_"), idMap)[0];
+                enum nextIDMap = getUDAs!(__traits(getMember, t, K[0]~"_"), idMap)[0];
             }
             else
             {
@@ -90,15 +90,15 @@ if (!is(T: Node))
         {
             return t.match!(
                 (None _) => default_,
-                others => others.dig!(K, U)(default_),
+                others => others.dig!(K, U, typeof(others), idMap_)(default_),
             );
         }
         else static if (isEither!T)
         {
             import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
-            static if (hasUDA!(mixin("t."~K[0]~"_"), idMap))
+            static if (hasUDA!(__traits(getMember, t, K[0]~"_"), idMap))
             {
-                enum nextIDMap = getUDAs!(mixin("t."~K[0]~"_"), idMap)[0];
+                enum nextIDMap = getUDAs!(__traits(getMember, t, K[0]~"_"), idMap)[0];
             }
             else
             {
@@ -119,7 +119,7 @@ if (!is(T: Node))
             static assert(idMap_ != idMap.init, "dig does not support index access");
             auto aa = t.map!((e) {
                 import std.typecons : tuple;
-                auto f = mixin("e."~idMap_.subject~"_");
+                auto f = __traits(getMember, e, idMap_.subject~"_");
                 static if (isSumType!(typeof(f)))
                 {
                     auto k = f.tryMatch!((string s) => s);
@@ -160,7 +160,37 @@ unittest
     assert(c.dig!("class", string) == "foo");
 }
 
-/// enforceDig
+unittest
+{
+    import salad.type : Optional;
+
+    class E
+    {
+        string id_;
+        int val_;
+        this(string id, int val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    class C
+    {
+        @idMap("id")
+        Optional!(E[]) elems_;
+
+        this(E[] elems) { elems_ = elems; }
+    }
+
+    auto c = new C([
+        new E("foo", 1), new E("bar", 2)
+    ]);
+    assert(c.dig!(["elems", "foo"], E).val_ == 1);
+    assert(c.dig!(["elems", "bar", "val"], int) == 2);
+}
+
+/// enforceDig for Node
 auto edig(Ex = Exception)(in Node node, string key, string msg = "")
 {
     return edig!Ex(node, [key], msg);
