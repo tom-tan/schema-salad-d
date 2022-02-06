@@ -5,7 +5,7 @@
  */
 module salad.type;
 
-public import sumtype;
+public import std.sumtype;
 import std.meta : allSatisfy, anySatisfy, templateNot;
 
 struct None{}

@@ -17,8 +17,7 @@
 	"copyright": "Copyright © 2021, Tomoya Tanjo",
 	"dependencies": {
 		"requests": "~>2.0.3",
-		"dyaml": "~>0.8.4",
-		"sumtype": "~>1.1.2"
+		"dyaml": "~>0.8.4"
 	},
 	"description": "Semantic Annotations for Linked Avro Data in D",
 	"homepage": "https://github.com/tom-tan/schema-salad-d",
