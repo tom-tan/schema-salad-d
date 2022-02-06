@@ -43,7 +43,7 @@ unittest
 unittest
 {
     import salad.type : tryMatch;
-    import salad.util : dig;
+    import salad.util : dig, edig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
@@ -55,7 +55,7 @@ unittest
 
     auto wf = cwl.tryMatch!((Workflow w) => w)
                  .assertNotThrown;
-    assert(wf.dig!"class"("Invalid") == "Workflow");
+    assert(wf.edig!"class" == "Workflow");
     assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
     assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
@@ -64,7 +64,7 @@ unittest
 unittest
 {
     import salad.type : tryMatch;
-    import salad.util : dig;
+    import salad.util : dig, edig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
@@ -79,5 +79,5 @@ unittest
 
     auto wf = cwl.tryMatch!((Workflow w) => w)
                  .assertNotThrown;
-    assert(wf.dig!("doc", string) == "Reverse the lines in a document, then sort those lines.");
+    assert(wf.edig!"doc" == "Reverse the lines in a document, then sort those lines.");
 }

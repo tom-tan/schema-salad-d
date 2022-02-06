@@ -19,16 +19,16 @@ alias DocumentRootType = DocRootType!(salad.schema);
 unittest
 {
     import salad.type : tryMatch;
-    import salad.util : dig;
+    import salad.util : edig;
     import std.exception : assertNotThrown;
 
     auto uri = "https://raw.githubusercontent.com/common-workflow-language/schema_salad/main/schema_salad/metaschema/metaschema.yml";
     auto schemas = importFromURI(uri).tryMatch!((DocumentRootType[] drts) => drts)
                                      .assertNotThrown;
     assert(schemas[0].tryMatch!((Documentation doc) => doc)
-                     .assertNotThrown.dig!("name", string) == "Semantic_Annotations_for_Linked_Avro_Data");
+                     .assertNotThrown.edig!"name" == "Semantic_Annotations_for_Linked_Avro_Data");
     assert(schemas[3].tryMatch!((Documentation doc) => doc)
-                     .assertNotThrown.dig!("name", string) == "Schema");
+                     .assertNotThrown.edig!"name" == "Schema");
 }
 
 version(none):

@@ -217,6 +217,155 @@ auto edig(Ex = Exception)(in Node node, string[] keys, string msg = "")
     return ret;
 }
 
+
+/// enforceDig for parseed object
+auto edig(alias K, T, idMap idMap_ = idMap.init)(T t)
+if (!is(T: Node))
+{
+    static assert(is(typeof(K) == string) || is(typeof(K) == string[]));
+    static if (is(typeof(K) == string))
+    {
+        return edig!([K])(t);
+    }
+    else
+    {
+        import std.traits : getUDAs, hasMember, hasStaticMember, hasUDA, isArray;
+        import salad.type : isEither, isOptional, tryMatch, None;
+
+        static if (K.length == 0)
+        {
+            static if (isOptional!T && T.Types.length == 2)
+            {
+                return t.tryMatch!((T.Types[1] val) => val);
+            }
+            else
+            {
+                return t;
+            }
+        }
+        else static if (hasStaticMember!(T, K[0]~"_"))
+        {
+            auto field = __traits(getMember, t, K[0]~"_");
+            return edig!(K[1..$])(field);
+        }
+        else static if (hasMember!(T, K[0]~"_"))
+        {
+            auto field = __traits(getMember, t, K[0]~"_");
+            static if (hasUDA!(__traits(getMember, t, K[0]~"_"), idMap))
+            {
+                enum nextIDMap = getUDAs!(__traits(getMember, t, K[0]~"_"), idMap)[0];
+            }
+            else
+            {
+                enum nextIDMap = idMap.init;
+            }
+            return edig!(K[1..$], typeof(field), nextIDMap)(field);
+        }
+        else static if (isOptional!T)
+        {
+            import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
+            alias ddig = ApplyRight!(ApplyLeft!(edig, K), idMap_);
+            return t.tryMatch!(
+                staticMap!(ddig, T.Types[1..$])
+            );
+        }
+        else static if (isEither!T)
+        {
+            import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
+            static if (hasUDA!(__traits(getMember, t, K[0]~"_"), idMap))
+            {
+                enum nextIDMap = getUDAs!(__traits(getMember, t, K[0]~"_"), idMap)[0];
+            }
+            else
+            {
+                enum nextIDMap = idMap.init;
+            }
+            alias TS = Filter!(ApplyRight!(hasMember, K[0]~"_"), T.Types);
+            alias ddig = ApplyRight!(ApplyLeft!(edig, K[1..$]), nextIDMap);
+            return t.tryMatch!(
+                staticMap!(ddig, TS)
+            );
+        }
+        else static if (isArray!T)
+        {
+            import std.algorithm : map;
+            import std.array : assocArray;
+
+            static assert(idMap_ != idMap.init, "dig does not support index access");
+            auto aa = t.map!((e) {
+                import salad.type : isSumType;
+                import std.typecons : tuple;
+                auto f = __traits(getMember, e, idMap_.subject~"_");
+                static if (isSumType!(typeof(f)))
+                {
+                    auto k = f.tryMatch!((string s) => s);
+                }
+                else
+                {
+                    auto k = f;
+                }
+                return tuple(k, e);
+            }).assocArray;
+
+            if (auto v = K[0] in aa)
+            {
+                return edig!(K[1..$])(*v);
+            }
+            else
+            {
+                throw new Exception("");
+            }
+        }
+        else
+        {
+            throw new Exception("");
+        }
+    }
+}
+
+unittest
+{
+    class C
+    {
+        static immutable class_ = "foo";
+        int val_ = 10;
+    }
+
+    auto c = new C;
+    assert(c.edig!"val" == 10);
+    assert(c.edig!"class" == "foo");
+}
+
+unittest
+{
+    import salad.type : Optional;
+
+    class E
+    {
+        string id_;
+        int val_;
+        this(string id, int val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    class C
+    {
+        @idMap("id")
+        Optional!(E[]) elems_;
+
+        this(E[] elems) { elems_ = elems; }
+    }
+
+    auto c = new C([
+        new E("foo", 1), new E("bar", 2)
+    ]);
+    assert(c.edig!(["elems", "foo"]).val_ == 1);
+    assert(c.edig!(["elems", "bar", "val"]) == 2);
+}
+
 auto diff(Node lhs, Node rhs)
 {
     import dyaml : NodeType;
