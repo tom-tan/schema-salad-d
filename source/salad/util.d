@@ -47,7 +47,7 @@ if (!is(T: Node))
     static assert(is(typeof(K) == string) || is(typeof(K) == string[]));
     static if (is(typeof(K) == string))
     {
-        return dig!([K])(t, default_);
+        return dig!([K], U, T, idMap_)(t, default_);
     }
     else
     {
@@ -56,7 +56,7 @@ if (!is(T: Node))
 
         static if (K.length == 0)
         {
-            static if (isSumType!T)
+            static if (isSumType!T && !is(T == U))
             {
                 return t.match!(
                     (U u) => u,
@@ -118,8 +118,18 @@ if (!is(T: Node))
 
             static assert(idMap_ != idMap.init, "dig does not support index access");
             auto aa = t.map!((e) {
+                import salad.type : tryMatch;
                 import std.typecons : tuple;
-                auto f = __traits(getMember, e, idMap_.subject~"_");
+
+                static if (isEither!(typeof(e)))
+                {
+                    auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject~"_"));
+                }
+                else
+                {
+                    auto f = __traits(getMember, e, idMap_.subject~"_");
+                }
+
                 static if (isSumType!(typeof(f)))
                 {
                     auto k = f.tryMatch!((string s) => s);
@@ -190,6 +200,48 @@ unittest
     assert(c.dig!(["elems", "bar", "val"], int) == 2);
 }
 
+unittest
+{
+    import salad.type : Optional, SumType;
+
+    class E1
+    {
+        string id_;
+        int val_;
+        this(string id, int val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    class E2
+    {
+        string id_;
+        string val_;
+        this(string id, string val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    alias ElemType = SumType!(E1, E2);
+    class C
+    {
+        @idMap("id")
+        Optional!(ElemType[]) elems_;
+
+        this(ElemType[] elems) { elems_ = elems; }
+    }
+
+    auto c = new C([
+        ElemType(new E1("foo", 1)), ElemType(new E2("bar", "val"))
+    ]);
+    assert(c.dig!(["elems", "foo"], E1).val_ == 1);
+    assert(c.dig!(["elems", "bar"], E2).val_ == "val");
+}
+
 /// enforceDig for Node
 auto edig(Ex = Exception)(in Node node, string key, string msg = "")
 {
@@ -225,7 +277,7 @@ if (!is(T: Node))
     static assert(is(typeof(K) == string) || is(typeof(K) == string[]));
     static if (is(typeof(K) == string))
     {
-        return edig!([K])(t);
+        return edig!([K], T, idMap_)(t);
     }
     else
     {
@@ -293,9 +345,18 @@ if (!is(T: Node))
 
             static assert(idMap_ != idMap.init, "dig does not support index access");
             auto aa = t.map!((e) {
-                import salad.type : isSumType;
+                import salad.type : isSumType, tryMatch;
                 import std.typecons : tuple;
-                auto f = __traits(getMember, e, idMap_.subject~"_");
+
+                static if (isEither!(typeof(e)))
+                {
+                    auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject~"_"));
+                }
+                else
+                {
+                    auto f = __traits(getMember, e, idMap_.subject~"_");
+                }
+
                 static if (isSumType!(typeof(f)))
                 {
                     auto k = f.tryMatch!((string s) => s);
@@ -364,6 +425,48 @@ unittest
     ]);
     assert(c.edig!(["elems", "foo"]).val_ == 1);
     assert(c.edig!(["elems", "bar", "val"]) == 2);
+}
+
+unittest
+{
+    import salad.type : Either, Optional, tryMatch;
+
+    class E1
+    {
+        string id_;
+        int val_;
+        this(string id, int val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    class E2
+    {
+        string id_;
+        string val_;
+        this(string id, string val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    alias ElemType = Either!(E1, E2);
+    class C
+    {
+        @idMap("id")
+        Optional!(ElemType[]) elems_;
+
+        this(ElemType[] elems) { elems_ = elems; }
+    }
+
+    auto c = new C([
+        ElemType(new E1("foo", 1)), ElemType(new E2("bar", "val"))
+    ]);
+    assert(c.edig!(["elems", "foo"]).tryMatch!((E1 e) => e.val_) == 1);
+    assert(c.edig!(["elems", "bar"]).tryMatch!((E2 e) => e.val_) == "val");
 }
 
 auto diff(Node lhs, Node rhs)
