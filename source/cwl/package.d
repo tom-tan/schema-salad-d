@@ -19,7 +19,7 @@ alias DocumentRootType = DocRootType!(cwl.schema);
 unittest
 {
     import salad.type : tryMatch;
-    import salad.util : dig;
+    import salad.util : dig, edig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
@@ -27,8 +27,7 @@ unittest
 
     auto cwl = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
                                  .assertNotThrown;
-    assert(cwl.tryMatch!(p => p.dig!("class", string))
-              .assertNotThrown == "CommandLineTool");
+    assert(cwl.edig!("class", string) == "CommandLineTool");
 
     auto cmd = cwl.tryMatch!((CommandLineTool c) => c)
                   .assertNotThrown;
@@ -50,12 +49,11 @@ unittest
     auto uri = "file://"~"examples/count-lines1-wf.cwl".absolutePath;
     auto cwl = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
                                  .assertNotThrown;
-    assert(cwl.tryMatch!(p => p.dig!("class", string))
-              .assertNotThrown == "Workflow");
+    assert(cwl.edig!("class", string) == "Workflow");
 
     auto wf = cwl.tryMatch!((Workflow w) => w)
                  .assertNotThrown;
-    assert(wf.edig!"class" == "Workflow");
+    assert(wf.edig!("class", string) == "Workflow");
     assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
     assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
@@ -75,9 +73,9 @@ unittest
 
     auto cwl = importFromURI(uri, "#main").tryMatch!((DocumentRootType r) => r)
                                           .assertNotThrown;
-    assert(cwl.tryMatch!(p => p.dig!("class", string)) == "Workflow");
+    assert(cwl.edig!("class", string) == "Workflow");
 
     auto wf = cwl.tryMatch!((Workflow w) => w)
                  .assertNotThrown;
-    assert(wf.edig!"doc" == "Reverse the lines in a document, then sort those lines.");
+    assert(wf.edig!("doc", string) == "Reverse the lines in a document, then sort those lines.");
 }

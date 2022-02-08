@@ -95,17 +95,11 @@ if (!is(T: Node))
         }
         else static if (isEither!T)
         {
-            import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
-            static if (hasUDA!(__traits(getMember, t, K[0]~"_"), idMap))
-            {
-                enum nextIDMap = getUDAs!(__traits(getMember, t, K[0]~"_"), idMap)[0];
-            }
-            else
-            {
-                enum nextIDMap = idMap.init;
-            }
-            alias TS = Filter!(ApplyRight!(hasMember, K[0]~"_"), T.Types);
-            alias ddig = ApplyRight!(ApplyLeft!(ApplyLeft!(dig, K[1..$]), U), nextIDMap);
+            import std.meta : Filter, staticMap;
+
+            enum canDig(T) = __traits(compiles, T.init.dig!(K, U, T, idMap_));
+            alias TS = Filter!(canDig, T.Types);
+            alias ddig(T) = dig!(K, U, T, idMap_);
             return t.match!(
                 staticMap!(ddig, TS),
                 _ => default_,
@@ -271,24 +265,24 @@ auto edig(Ex = Exception)(in Node node, string[] keys, string msg = "")
 
 
 /// enforceDig for parseed object
-auto edig(alias K, T, idMap idMap_ = idMap.init)(T t)
+U edig(alias K, U, T, idMap idMap_ = idMap.init)(T t)
 if (!is(T: Node))
 {
     static assert(is(typeof(K) == string) || is(typeof(K) == string[]));
     static if (is(typeof(K) == string))
     {
-        return edig!([K], T, idMap_)(t);
+        return edig!([K], U, T, idMap_)(t);
     }
     else
     {
         import std.traits : getUDAs, hasMember, hasStaticMember, hasUDA, isArray;
-        import salad.type : isEither, isOptional, tryMatch, None;
+        import salad.type : isEither, isOptional, isSumType, tryMatch, None;
 
         static if (K.length == 0)
         {
-            static if (isOptional!T && T.Types.length == 2)
+            static if (isSumType!T && !is(T == U))
             {
-                return t.tryMatch!((T.Types[1] val) => val);
+                return t.tryMatch!((U u) => u);
             }
             else
             {
@@ -298,7 +292,7 @@ if (!is(T: Node))
         else static if (hasStaticMember!(T, K[0]~"_"))
         {
             auto field = __traits(getMember, t, K[0]~"_");
-            return edig!(K[1..$])(field);
+            return edig!(K[1..$], U)(field);
         }
         else static if (hasMember!(T, K[0]~"_"))
         {
@@ -311,29 +305,26 @@ if (!is(T: Node))
             {
                 enum nextIDMap = idMap.init;
             }
-            return edig!(K[1..$], typeof(field), nextIDMap)(field);
+            return edig!(K[1..$], U, typeof(field), nextIDMap)(field);
         }
         else static if (isOptional!T)
         {
-            import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
-            alias ddig = ApplyRight!(ApplyLeft!(edig, K), idMap_);
+            import std.meta : Filter, staticMap;
+
+            enum canDig(T) = __traits(compiles, T.init.edig!(K, U, T, idMap_));
+            alias TS = Filter!(canDig, T.Types[1..$]);
+            alias ddig(T) = edig!(K, U, T, idMap_);
             return t.tryMatch!(
-                staticMap!(ddig, T.Types[1..$])
+                staticMap!(ddig, TS)
             );
         }
         else static if (isEither!T)
         {
-            import std.meta : ApplyRight, ApplyLeft, Filter, staticMap;
-            static if (hasUDA!(__traits(getMember, t, K[0]~"_"), idMap))
-            {
-                enum nextIDMap = getUDAs!(__traits(getMember, t, K[0]~"_"), idMap)[0];
-            }
-            else
-            {
-                enum nextIDMap = idMap.init;
-            }
-            alias TS = Filter!(ApplyRight!(hasMember, K[0]~"_"), T.Types);
-            alias ddig = ApplyRight!(ApplyLeft!(edig, K[1..$]), nextIDMap);
+            import std.meta : Filter, staticMap;
+
+            enum canDig(T) = __traits(compiles, T.init.edig!(K, U, T, idMap_));
+            alias TS = Filter!(canDig, T.Types);
+            alias ddig(T) = edig!(K, U, T, idMap_);
             return t.tryMatch!(
                 staticMap!(ddig, TS)
             );
@@ -370,7 +361,7 @@ if (!is(T: Node))
 
             if (auto v = K[0] in aa)
             {
-                return edig!(K[1..$])(*v);
+                return edig!(K[1..$], U)(*v);
             }
             else
             {
@@ -393,8 +384,8 @@ unittest
     }
 
     auto c = new C;
-    assert(c.edig!"val" == 10);
-    assert(c.edig!"class" == "foo");
+    assert(c.edig!("val", int) == 10);
+    assert(c.edig!("class", string) == "foo");
 }
 
 unittest
@@ -423,9 +414,11 @@ unittest
     auto c = new C([
         new E("foo", 1), new E("bar", 2)
     ]);
-    assert(c.edig!(["elems", "foo"]).val_ == 1);
-    assert(c.edig!(["elems", "bar", "val"]) == 2);
+    assert(c.edig!(["elems", "foo"], E).val_ == 1);
+    assert(c.edig!(["elems", "bar", "val"], int) == 2);
 }
+
+version(none):
 
 unittest
 {
@@ -465,8 +458,8 @@ unittest
     auto c = new C([
         ElemType(new E1("foo", 1)), ElemType(new E2("bar", "val"))
     ]);
-    assert(c.edig!(["elems", "foo"]).tryMatch!((E1 e) => e.val_) == 1);
-    assert(c.edig!(["elems", "bar"]).tryMatch!((E2 e) => e.val_) == "val");
+    assert(c.edig!(["elems", "foo"], E1).val_ == 1);
+    assert(c.edig!(["elems", "bar"], E2).val_ == "val");
 }
 
 auto diff(Node lhs, Node rhs)

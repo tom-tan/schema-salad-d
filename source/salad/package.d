@@ -25,10 +25,10 @@ unittest
     auto uri = "https://raw.githubusercontent.com/common-workflow-language/schema_salad/main/schema_salad/metaschema/metaschema.yml";
     auto schemas = importFromURI(uri).tryMatch!((DocumentRootType[] drts) => drts)
                                      .assertNotThrown;
-    assert(schemas[0].tryMatch!((Documentation doc) => doc)
-                     .assertNotThrown.edig!"name" == "Semantic_Annotations_for_Linked_Avro_Data");
-    assert(schemas[3].tryMatch!((Documentation doc) => doc)
-                     .assertNotThrown.edig!"name" == "Schema");
+    assert(schemas[0].edig!("name", string) == "Semantic_Annotations_for_Linked_Avro_Data");
+
+    assert(schemas[0].edig!("name", string) == "Semantic_Annotations_for_Linked_Avro_Data");
+    assert(schemas[3].edig!("name", string) == "Schema");
 }
 
 version(none):
