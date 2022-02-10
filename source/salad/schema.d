@@ -143,7 +143,7 @@ class SaladRecordField
                     ) type) => type.canonicalize,
         "doc", (Optional!(string, string[]) doc) => doc.concat,
         "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
-        "default", (Optional!(so.Any) default_) => default_.match!((so.Any any) => new Any(any), none => null),
+        "default", (Optional!(so.Any) default_) => default_.match!((so.Any any) => any, none => null),
     );
 }
 
@@ -152,10 +152,7 @@ class PrimitiveType
     mixin genCanonicalizeBody!(so.PrimitiveType);
 }
 
-class Any
-{
-    mixin genCanonicalizeBody!(so.Any);
-}
+public import salad.schema_original : Any;
 
 class RecordSchema
 {

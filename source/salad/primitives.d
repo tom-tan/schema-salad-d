@@ -17,6 +17,7 @@ class Any
     }
 
     Node value_;
+    const LoadingContext context_;
 
     this(Node node, in LoadingContext context = LoadingContext.init)
     {
@@ -24,5 +25,12 @@ class Any
         docEnforce(node.type != NodeType.null_,
                    "Any should be non-null", node);
         value_ = node;
+        context_ = context;
+    }
+
+    T as(T)()
+    {
+        import salad.meta : as_;
+        return value_.as_!T(context_);
     }
 }

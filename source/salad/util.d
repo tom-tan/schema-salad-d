@@ -70,7 +70,7 @@ if (!is(T: Node))
                 }
                 else static if (is(T == Any))
                 {
-                    return t.value_.as!U(); // TODO
+                    return t.as!U;
                 }
                 else static if (isSumType!T)
                 {
@@ -321,7 +321,7 @@ if (!is(T: Node))
                 }
                 else static if (is(T == Any))
                 {
-                    return t.value_.as!U(); // TODO
+                    return t.as!U;
                 }
                 else static if (isSumType!T)
                 {
