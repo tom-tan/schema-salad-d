@@ -13,25 +13,56 @@ import std.traits : hasStaticMember, isArray, isScalarType, isSomeString;
 
 import dyaml;
 
+enum isSaladRecord(T) = is(T == class) && !__traits(compiles, T.Symbols);
+enum isSaladEnum(T) = is(T == class) && __traits(compiles, T.Symbols);
+
 ///
 mixin template genCtor()
 {
-    import dyaml : Node, NodeType;
+    private import dyaml : Node, NodeType;
+    private import salad.context : LoadingContext;
+    private import salad.meta : isSaladRecord, isSaladEnum;
 
     this() pure @nogc nothrow @safe {}
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
+
+    static if (isSaladRecord!(typeof(this)))
     {
-        import std.algorithm : endsWith;
-        import std.traits : FieldNameTuple;
-
-        alias This = typeof(this);
-
-        static foreach(field; FieldNameTuple!This)
+        this(in Node node, in LoadingContext context = LoadingContext.init) @safe
         {
-            static if (field.endsWith("_"))
+            import salad.meta : Assign, as_;
+            import salad.util : edig;
+            import salad.type : None, SumType;
+            import std.algorithm : endsWith;
+            import std.traits : FieldNameTuple;
+
+            alias This = typeof(this);
+
+            static foreach (field; FieldNameTuple!This)
             {
-                mixin(Assign!(node, __traits(getMember, this, field), context));
+                static if (field.endsWith("_"))
+                {
+                    mixin(Assign!(node, __traits(getMember, this, field), context));
+                }
             }
+        }
+    }
+    else static if (isSaladEnum!(typeof(this)))
+    {
+        this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
+        {
+            import salad.exception : docEnforce;
+            import std.algorithm : canFind;
+            import std.format : format;
+            import std.traits : EnumMembers;
+
+            docEnforce(node.type == NodeType.string,
+                format!"Invalid type for %s: string is expected"(typeof(this).stringof),
+                node);
+            auto val = node.as!string;
+            docEnforce([EnumMembers!Symbols].canFind(val),
+                format!"Invalid value for %s: `%s`"(typeof(this).stringof, val),
+                node);
+            value_ = val;
         }
     }
 }
@@ -39,11 +70,11 @@ mixin template genCtor()
 /**
  * Bugs: It does not work with self recursive classes
  */
-mixin template genToString()
+version(none) mixin template genToString()
 {
     override string toString() const @trusted
     {
-        import salad.type : isEither, isOptional, match;
+        import salad.type : isEither, isOptional, match, None;
         import std.array : join;
         import std.format : format;
         import std.traits : FieldNameTuple;
@@ -93,12 +124,23 @@ mixin template genIdentifier()
             }
             else
             {
+                import salad.type : match;
+
                 return i.match!(
                     (string s) => s,
                     none => "",
                 );
             }
         }
+    }
+}
+
+///
+mixin template genOpEq()
+{
+    bool opEquals(string s) const @nogc nothrow pure
+    {
+        return value_ == s;
     }
 }
 

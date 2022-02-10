@@ -7,11 +7,8 @@
  */
 module cwl.schema;
 
-import salad.context : LoadingContext;
-import salad.exception;
-import salad.meta;
-import salad.type;
-import salad.util;
+import salad.meta : genCtor, genIdentifier, genOpEq, documentRoot, id, idMap, typeDSL;
+import salad.type : Either, Optional;
 
 @documentRoot class CommandLineTool
 {
@@ -94,53 +91,29 @@ class CommandLineBinding
     mixin genIdentifier;
 }
 
-class Any
-{
-    import dyaml : Node, NodeType;
-
-    Node value_;
-
-    alias value_ this;
-
-    this(Node node, in LoadingContext context = LoadingContext.init)
-    {
-        docEnforce(node.type != NodeType.null_,
-                   "Any should be non-null", node);
-        value_ = node;
-    }
-}
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
+public import salad.primitives : Any;
 
 class CWLType
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        null_ = "null",
-        boolean_ = "boolean",
-        int_ = "int",
-        long_ = "long",
-        float_ = "float",
-        double_ = "double",
-        string_ = "string",
-        File_ = "File",
-        Directory_ = "Directory",
+        s1 = "null",
+        s2 = "boolean",
+        s3 = "int",
+        s4 = "long",
+        s5 = "float",
+        s6 = "double",
+        s7 = "string",
+        s8 = "File",
+        s9 = "Directory",
     }
 
-    alias type_ this;
+    string value_;
+    alias value_ this;
 
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
-
-    bool opEquals(string s) const @nogc nothrow pure
-    {
-        return type_ == s;
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 class File
@@ -281,42 +254,30 @@ class CommandOutputParameter
 
 class stdout
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        stdout_ = "stdout",
+        s1 = "stdout",
     }
 
-    alias type_ this;
+    string value_;
+    alias value_ this;
 
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 class stderr
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        stderr_ = "stderr",
+        s2 = "stderr",
     }
 
-    alias type_ this;
+    string value_;
+    alias value_ this;
 
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 class CommandOutputBinding
@@ -603,43 +564,33 @@ class ResourceRequirement
 
 class CWLVersion
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        draft_2	= "draft-2",
-        draft_3_dev1 = "draft-3.dev1",
-        draft_3_dev2 = "draft-3.dev2",
-        draft_3_dev3 = "draft-3.dev3",
-        draft_3_dev4 = "draft-3.dev4",
-        draft_3_dev5 = "draft-3.dev5",
-        draft_3 = "draft-3",
-        draft_4_dev1 = "draft-4.dev1",
-        draft_4_dev2 = "draft-4.dev2",
-        draft_4_dev3 = "draft-4.dev3",
-        v1_0_dev4 = "v1.0.dev4",
-        v1_0 = "v1.0",
+        s1	= "draft-2",
+        s2 = "draft-3.dev1",
+        s3 = "draft-3.dev2",
+        s4 = "draft-3.dev3",
+        s5 = "draft-3.dev4",
+        s6 = "draft-3.dev5",
+        s7 = "draft-3",
+        s8 = "draft-4.dev1",
+        s9 = "draft-4.dev2",
+        s10 = "draft-4.dev3",
+        s11 = "v1.0.dev4",
+        s12 = "v1.0",
     }
 
-    alias type_ this;
+    string value_;
+    alias value_ this;
 
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
-
-    bool opEquals(string s) const @nogc nothrow pure
-    {
-        return type_ == s;
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 unittest
 {
     import dyaml;
+    import salad.util : dig;
 
     enum cwl = "examples/bwa-mem-tool.cwl";
     auto cmd = Loader.fromFile(cwl)
@@ -719,22 +670,17 @@ class WorkflowOutputParameter
 
 class LinkMergeMethod
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        merge_nested_ = "merge_nested",
-        merge_flattened_ = "merge_flattened",
+        s1 = "merge_nested",
+        s2 = "merge_flattened",
     }
 
-    alias type_ this;
+    string value_;
+    alias value_ this;
 
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 class OutputRecordSchema
@@ -863,24 +809,18 @@ class WorkflowStepOutput
 
 class ScatterMethod
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        dotproduct_ = "dotproduct",
-        nested_crossproduct_ = "nested_crossproduct",
-        flat_crossproduct_ = "flat_crossproduct_",
+        s1 = "dotproduct",
+        s2 = "nested_crossproduct",
+        s3 = "flat_crossproduct_",
     }
 
-    alias type_ this;
+    string value_;
+    alias value_ this;
 
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 class SubworkflowFeatureRequirement
@@ -1010,6 +950,7 @@ class ExpressionToolOutputParameter
 unittest
 {
     import dyaml;
+    import salad.util : dig;
 
     enum cwl = "examples/count-lines1-wf.cwl";
     auto wf = Loader.fromFile(cwl)

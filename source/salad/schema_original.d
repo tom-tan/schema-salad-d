@@ -6,13 +6,8 @@
  */
 module salad.schema_original;
 
-import salad.context : LoadingContext;
-import salad.exception;
-import salad.meta;
-import salad.type;
-import salad.util;
-
-import std.typecons : Tuple;
+import salad.meta : genCtor, genIdentifier, genOpEq, documentRoot, id, idMap, typeDSL;
+import salad.type : Either, Optional;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 @documentRoot class SaladRecordSchema
@@ -33,7 +28,6 @@ import std.typecons : Tuple;
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
@@ -60,52 +54,31 @@ class SaladRecordField
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
 class PrimitiveType
 {
-    import dyaml : Node;
-
     enum Symbols
     {
-        null_ = "null",
-        boolean_ = "boolean",
-        int_ = "int",
-        long_ = "long",
-        float_ = "float",
-        double_ = "double",
-        string_ = "string",
+        s1 = "null",
+        s2 = "boolean",
+        s3 = "int",
+        s4 = "long",
+        s5 = "float",
+        s6 = "double",
+        s7 = "string",
     }
 
-    string type_;
+    string value_;
+    alias value_ this;
 
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
+    mixin genCtor;
+    mixin genOpEq;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
-class Any
-{
-    import dyaml : Node;
-
-    enum Symbols
-    {
-        Any = "Any",
-    }
-
-    string type_;
-
-    this(in Node node, in LoadingContext context = LoadingContext.init) @safe
-    {
-        type_ = node.as!string;
-        // enforce
-    }
-}
+public import salad.primitives : Any;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
 class RecordSchema
@@ -115,7 +88,6 @@ class RecordSchema
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
@@ -140,7 +112,6 @@ class RecordField
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
@@ -151,7 +122,6 @@ class EnumSchema
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
@@ -174,7 +144,6 @@ class ArraySchema
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
@@ -194,7 +163,6 @@ class JsonldPredicate
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
@@ -205,7 +173,6 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
@@ -225,7 +192,6 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
@@ -241,5 +207,4 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genIdentifier;
-    mixin genToString;
 }

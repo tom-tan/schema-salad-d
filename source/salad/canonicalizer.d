@@ -12,7 +12,7 @@ private:
     import dyaml : Node;
 
     import salad.context : LoadingContext;
-    import salad.meta : genIdentifier, genToString, id, idMap, StaticMembersOf;
+    import salad.meta : genIdentifier, id, idMap, StaticMembersOf;
 
     import std.algorithm : endsWith;
     import std.format : format;
@@ -124,7 +124,6 @@ public:
         canonicalize(base);
     }
 
-    mixin genToString;
     mixin genIdentifier;
 }
 
