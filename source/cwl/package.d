@@ -18,9 +18,10 @@ alias DocumentRootType = DocRootType!(cwl.schema);
 ///
 unittest
 {
+    import core.exception : AssertError;
     import salad.type : tryMatch;
     import salad.util : dig, edig;
-    import std.exception : assertNotThrown;
+    import std.exception : assertNotThrown, enforce;
     import std.path : absolutePath;
 
     auto uri = "file://"~"examples/bwa-mem-tool.cwl".absolutePath;
@@ -33,8 +34,11 @@ unittest
                   .assertNotThrown;
     assert(cmd.dig!"cwlVersion"("v1.2") == "v1.0");
     assert(cmd.dig!(["inputs", "reference", "type"], CWLType) == "File");
-    assert(cmd.dig!("hints", Any[])[0]
-              .as!ResourceRequirement
+    assert(cmd.dig!(["hints", "ResourceRequirement"], ResourceRequirement)
+              .enforce!AssertError
+              .dig!("coresMin", long) == 2);
+    assert(cmd.edig!(["hints", "ResourceRequirement"], ResourceRequirement)
+              .assertNotThrown
               .dig!("coresMin", long) == 2);
 }
 

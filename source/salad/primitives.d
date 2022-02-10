@@ -18,18 +18,11 @@ class Any
 
     Node value_;
 
-    alias value_ this;
-
     this(Node node, in LoadingContext context = LoadingContext.init)
     {
         import salad.exception : docEnforce;
         docEnforce(node.type != NodeType.null_,
                    "Any should be non-null", node);
         value_ = node;
-    }
-
-    override string toString() const @trusted
-    {
-        return "Any";
     }
 }

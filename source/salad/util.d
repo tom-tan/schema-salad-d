@@ -56,12 +56,33 @@ if (!is(T: Node))
 
         static if (K.length == 0)
         {
-            static if (isSumType!T && !is(T == U))
+            static if (!is(T == U))
             {
-                return t.match!(
-                    (U u) => u,
-                    _ => default_,
-                );
+                import salad.primitives : Any;
+                import salad.type : Optional;
+
+                static if (is(T == Optional!Any) || is(T == Optional!(Any[])))
+                {
+                    return t.match!(
+                        (None _) => default_,
+                        others => others.dig!(K, U, typeof(others), idMap_)(default_),
+                    );
+                }
+                else static if (is(T == Any))
+                {
+                    return t.value_.as!U(); // TODO
+                }
+                else static if (isSumType!T)
+                {
+                    return t.match!(
+                        (U u) => u,
+                        _ => default_,
+                    );
+                }
+                else
+                {
+                    return t;
+                }
             }
             else
             {
@@ -112,12 +133,17 @@ if (!is(T: Node))
 
             static assert(idMap_ != idMap.init, "dig does not support index access");
             auto aa = t.map!((e) {
+                import salad.primitives : Any;
                 import salad.type : tryMatch;
                 import std.typecons : tuple;
 
                 static if (isEither!(typeof(e)))
                 {
                     auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject~"_"));
+                }
+                else static if (is(typeof(e) == Any))
+                {
+                    auto f = e;
                 }
                 else
                 {
@@ -127,6 +153,10 @@ if (!is(T: Node))
                 static if (isSumType!(typeof(f)))
                 {
                     auto k = f.tryMatch!((string s) => s);
+                }
+                else static if (is(typeof(e) == Any))
+                {
+                    auto k = e.value_[idMap_.subject].as!string;
                 }
                 else
                 {
@@ -280,9 +310,27 @@ if (!is(T: Node))
 
         static if (K.length == 0)
         {
-            static if (isSumType!T && !is(T == U))
+            static if (!is(T == U))
             {
-                return t.tryMatch!((U u) => u);
+                import salad.primitives : Any;
+                import salad.type : Optional;
+
+                static if (is(T == Optional!Any) || is(T == Optional!(Any[])))
+                {
+                    return t.tryMatch!((T.Types[0] val) => edig!(K, U)(val));
+                }
+                else static if (is(T == Any))
+                {
+                    return t.value_.as!U(); // TODO
+                }
+                else static if (isSumType!T)
+                {
+                    return t.tryMatch!((U u) => u);
+                }
+                else
+                {
+                    return t;
+                }
             }
             else
             {
@@ -336,12 +384,17 @@ if (!is(T: Node))
 
             static assert(idMap_ != idMap.init, "dig does not support index access");
             auto aa = t.map!((e) {
+                import salad.primitives : Any;
                 import salad.type : isSumType, tryMatch;
                 import std.typecons : tuple;
 
                 static if (isEither!(typeof(e)))
                 {
                     auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject~"_"));
+                }
+                else static if (is(typeof(e) == Any))
+                {
+                    auto f = e;
                 }
                 else
                 {
@@ -351,6 +404,10 @@ if (!is(T: Node))
                 static if (isSumType!(typeof(f)))
                 {
                     auto k = f.tryMatch!((string s) => s);
+                }
+                else static if (is(typeof(e) == Any))
+                {
+                    auto k = e.value_[idMap_.subject].as!string;
                 }
                 else
                 {
@@ -417,8 +474,6 @@ unittest
     assert(c.edig!(["elems", "foo"], E).val_ == 1);
     assert(c.edig!(["elems", "bar", "val"], int) == 2);
 }
-
-version(none):
 
 unittest
 {

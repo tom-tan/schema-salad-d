@@ -589,8 +589,10 @@ class CWLVersion
 
 unittest
 {
+    import core.exception : AssertError;
     import dyaml;
     import salad.util : dig;
+    import std.exception : enforce;
 
     enum cwl = "examples/bwa-mem-tool.cwl";
     auto cmd = Loader.fromFile(cwl)
@@ -598,8 +600,8 @@ unittest
                      .as!CommandLineTool;
     assert(cmd.dig!"cwlVersion"("v1.2") == "v1.0");
     assert(cmd.dig!(["inputs", "reference", "type"], CWLType) == "File");
-    assert(cmd.dig!("hints", Any[])[0]
-              .as!ResourceRequirement
+    assert(cmd.dig!(["hints", "ResourceRequirement"], ResourceRequirement)
+              .enforce!AssertError
               .dig!("coresMin", long) == 2);
 }
 
