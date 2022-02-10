@@ -31,7 +31,6 @@ unittest
     assert(schemas[3].edig!("name", string) == "Schema");
 }
 
-version(none):
 /// Loading CWL v1.0 schema
 unittest
 {
@@ -44,6 +43,7 @@ unittest
 }
 
 /// Loading CWL v1.1 schema
+version(none)
 unittest
 {
     import salad.type : tryMatch;
@@ -55,6 +55,7 @@ unittest
 }
 
 /// Loading CWL v1.2 schema
+version(none)
 unittest
 {
     import salad.type : tryMatch;

@@ -36,15 +36,19 @@ E schemaEnforce(E)(lazy E exp, string msg, Node node)
 class DocumentException : Exception
 {
     ///
-    this(string msg, Node node, Throwable nextInChain = null) nothrow pure
+    this(string msg, Node node, Throwable nextInChain = null) nothrow pure @trusted
     {
         auto mark = node.startMark;
         super(msg, mark.name, mark.line+1, nextInChain);
         column = mark.column+1;
+        this.node = node;
     }
 
     ///
     ulong column;
+
+    ///
+    Node node;
 }
 
 ///

@@ -363,7 +363,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                 import std.algorithm : map;
                 import std.range : array;
 
-                app.put(r.node.sequence.map!(n => n.as_!E(r.context)).array);
+                app.put(r.node.as_!T(r.context));
             }
             else
             {
@@ -495,8 +495,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
             }
         }
 
-        enum isRecord(T) = is(T == class) && !__traits(compiles, T.Symbols);
-        alias RecordTypes = Filter!(isRecord, Types);
+        alias RecordTypes = Filter!(isSaladRecord, Types);
         static if (RecordTypes.length == 0)
         {
             // nop
@@ -547,8 +546,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
 
         import std.meta : anySatisfy, Filter, staticMap;
 
-        enum isEnum(T) = is(T == class) && is(T.Symbols == enum);
-        alias EnumTypes = Filter!(isEnum, Types);
+        alias EnumTypes = Filter!(isSaladEnum, Types);
         enum hasString = anySatisfy!(isSomeString, Types);
         static if (EnumTypes.length > 0 || hasString)
         {                
@@ -590,7 +588,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
         }
 
         // TODO: float, double
-
+        import std.format : format;
         static assert(Types.length ==
                 ArrayTypes.length + RecordTypes.length + EnumTypes.length + (hasString ? 1 : 0) + Filter!(isIntegral, Types)
                 .length,
@@ -598,6 +596,6 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
                     hasString, Filter!(isIntegral, Types).stringof
                 ));
-        throw new DocumentException("Unknown node type", expanded);
+        throw new DocumentException(format!"Unknown node type for type %s: %s"(T.stringof, expanded.type), expanded);
     }
 }
