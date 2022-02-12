@@ -111,6 +111,15 @@ auto fragment(string uri) @nogc nothrow pure @safe
     }
 }
 
+unittest
+{
+    import std.range : empty;
+
+    assert("file:///foo/bar#buzz".fragment == "buzz");
+    assert("#foo".fragment == "foo");
+    assert("bar".fragment.empty);
+}
+
 /++
 A fetcher type that returns a string from absolute URI.
 +/
