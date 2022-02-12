@@ -43,28 +43,33 @@ if (isModule!module_)
 }
 
 ///
-auto importFromURI(alias module_)(string uri, string fragment = "")
+auto importFromURI(alias module_)(string uri, string defaultFragment = "")
 {
     import salad.exception : docEnforce;
-    import salad.fetcher : fetchNode, fragment_ = fragment;
+    import salad.fetcher : fetchNode, fragment;
     import salad.meta : DocumentRootType;
     import salad.type : match, tryMatch;
     import std.range : empty;
 
-    auto frag = uri.fragment_;
+    auto frag = uri.fragment;
     auto baseuri = uri[0..$-frag.length];
     auto node = fetchNode(baseuri);
     auto objs = parse!module_(node, baseuri);
     if (frag.empty)
     {
-        frag = fragment;
+        import std.algorithm : startsWith;
+        frag = defaultFragment.startsWith("#") ? defaultFragment[1..$] : defaultFragment;
     }
 
     alias RetType = typeof(objs);
     alias DocType = DocumentRootType!module_;
     return objs.match!(
         (DocType doc) {
-            docEnforce(frag.empty || doc.match!(d => d.identifier) == frag,
+            import salad.context : LoadingContext;
+            import salad.resolver : resolveIdentifier;
+
+            auto context = LoadingContext(uri);
+            docEnforce(frag.empty || doc.match!(d => d.identifier.resolveIdentifier(context).fragment) == frag,
                        "Mismatched fragment", node);
             return objs;
         },
@@ -75,10 +80,16 @@ auto importFromURI(alias module_)(string uri, string fragment = "")
             }
             else
             {
+                import salad.context : LoadingContext;
+                import salad.resolver : resolveIdentifier;
                 import std.algorithm : filter;
                 import std.array : array;
                 import std.format : format;
-                auto elems = docs.filter!(e => e.tryMatch!(d => d.identifier) == frag)
+    
+                auto context = LoadingContext(uri);
+                auto elems = docs.filter!(e => e.tryMatch!(d => d.identifier
+                                                                 .resolveIdentifier(context)
+                                                                 .fragment) == frag)
                                  .array;
                 docEnforce(!elems.empty, format!"No objects for fragment `%s`"(frag), node);
                 docEnforce(elems.length == 1, format!"Duplicated objects for fragment `%s`"(frag), node);
