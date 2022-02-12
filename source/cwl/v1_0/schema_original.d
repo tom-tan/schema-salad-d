@@ -1,11 +1,11 @@
 /**
- * Hand-written definition of CWL v1.0 CommandLineTool
+ * Hand-written definition of CWL v1.0
  *
  * Authors: Tomoya Tanjo
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module cwl.schema;
+module cwl.v1_0.schema_original;
 
 import salad.meta : genCtor, genIdentifier, genOpEq, documentRoot, id, idMap, typeDSL;
 import salad.type : Either, Optional;
@@ -252,7 +252,7 @@ class CommandOutputParameter
     mixin genIdentifier;
 }
 
-class stdout
+class stdout // @suppress(dscanner.style.phobos_naming_convention)
 {
     enum Symbols
     {
@@ -266,7 +266,7 @@ class stdout
     mixin genOpEq;
 }
 
-class stderr
+class stderr // @suppress(dscanner.style.phobos_naming_convention)
 {
     enum Symbols
     {
