@@ -22,11 +22,9 @@ unittest
     import salad.util : edig;
     import std.exception : assertNotThrown;
 
-    auto uri = "https://raw.githubusercontent.com/common-workflow-language/schema_salad/main/schema_salad/metaschema/metaschema.yml";
+    auto uri = "https://raw.githubusercontent.com/common-workflow-language/schema_salad/main/schema_salad/metaschema/metaschema.yml"; // @suppress(dscanner.style.long_line)
     auto schemas = importFromURI(uri).tryMatch!((DocumentRootType[] drts) => drts)
                                      .assertNotThrown;
-    assert(schemas[0].edig!("name", string) == "Semantic_Annotations_for_Linked_Avro_Data");
-
     assert(schemas[0].edig!("name", string) == "Semantic_Annotations_for_Linked_Avro_Data");
     assert(schemas[3].edig!("name", string) == "Schema");
 }
@@ -37,7 +35,7 @@ unittest
     import salad.type : tryMatch;
     import std.exception : assertNotThrown;
 
-    auto uri = "https://raw.githubusercontent.com/common-workflow-language/common-workflow-language/main/v1.0/CommonWorkflowLanguage.yml";
+    auto uri = "https://raw.githubusercontent.com/common-workflow-language/common-workflow-language/main/v1.0/CommonWorkflowLanguage.yml"; // @suppress(dscanner.style.long_line)
     auto schemas = importFromURI(uri).tryMatch!((DocumentRootType[] drts) => drts)
                                      .assertNotThrown;
 }
