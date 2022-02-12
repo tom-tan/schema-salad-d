@@ -148,25 +148,31 @@ mixin template genOpEq()
  * UDA for identifier maps
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
 */
-struct idMap { string subject; string predicate = ""; }
+struct idMap { string subject; string predicate = ""; } // @suppress(dscanner.style.phobos_naming_convention)
 
 /**
  * UDA for DSL for types
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
 */
-struct typeDSL{}
+struct typeDSL {} // @suppress(dscanner.style.phobos_naming_convention)
 
 /** 
  * UDA for documentRoot
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
  */
-struct documentRoot{}
+struct documentRoot {} // @suppress(dscanner.style.phobos_naming_convention)
 
 /** 
  * UDA for identifier
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Record_field_annotations
  */
-struct id{}
+struct id {} // @suppress(dscanner.style.phobos_naming_convention)
+
+/** 
+ * UDA for subscope
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
+ */
+struct subscope { string subscope; } // @suppress(dscanner.style.phobos_naming_convention)
 
 enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
 
@@ -590,9 +596,10 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
         // TODO: float, double
         import std.format : format;
         static assert(Types.length ==
-                ArrayTypes.length + RecordTypes.length + EnumTypes.length + (hasString ? 1 : 0) + Filter!(isIntegral, Types)
+                ArrayTypes.length + RecordTypes.length + EnumTypes.length +
+                    (hasString ? 1 : 0) + Filter!(isIntegral, Types)
                 .length,
-                format!"Internal error: Params: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s"(
+                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s"(
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
                     hasString, Filter!(isIntegral, Types).stringof
                 ));
