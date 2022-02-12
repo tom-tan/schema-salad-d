@@ -14,5 +14,6 @@ struct LoadingContext
      */
     string fileURI;
     string[string] namespaces;
+    string subscope;
     // TODO: validation with RDF schema
 }

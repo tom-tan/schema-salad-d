@@ -11,6 +11,131 @@ import salad.context : LoadingContext;
 
 import std.typecons : Tuple;
 
+//
+auto pathPortionOf(string uri) nothrow pure @safe
+{
+    import std.algorithm : findSplitBefore;
+
+    if (auto split = uri.findSplitBefore("#"))
+    {
+        return split[0];
+    }
+    else
+    {
+        return uri;
+    }
+}
+
+/// assumption: an absolute URI contains "://"
+auto isAbsoluteURI(string uriOrPath) nothrow pure @safe
+{
+    import std.algorithm : canFind;
+    return uriOrPath.canFind("://");
+}
+
+/**
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
+ */
+auto resolveIdentifier(string id, in LoadingContext context) nothrow pure @safe
+{
+    import salad.fetcher : fragment, scheme;
+    import std.algorithm : canFind, findSplitBefore, startsWith;
+    import std.range : empty;
+
+    if (id.isAbsoluteURI)
+    {
+        return id;
+    }
+    else if (id.startsWith("#"))
+    {
+        // current document fragment identifier
+        return pathPortionOf(context.baseURI)~id;
+    }
+    else if (auto split = id.findSplitBefore(":"))
+    {
+        if (auto ns = split[0] in context.namespaces)
+        {
+            // resolved with namespaces
+            return *ns ~ split[1][1..$];
+        }
+        else
+        {
+            // unresolved identifier
+            return id;
+        }
+    }
+    else if (id.canFind("#"))
+    {
+        // relative URI with fragment identifier
+        import std.path : buildPath, dirName;
+        return context.baseURI.dirName.buildPath(id);
+    }
+    else
+    {
+        // parent relative fragment identifier
+        if (context.baseURI.fragment.empty)
+        {
+            return context.baseURI~"#"~id;
+        }
+
+        string baseURI = context.baseURI;
+        if (!context.subscope.empty)
+        {
+            baseURI = context.baseURI~"/"~context.subscope;
+        }
+
+        if (!baseURI.fragment.empty)
+        {
+            return baseURI~"/"~id;
+        }
+        // unresolved identifier
+        return id;
+    }
+}
+
+/**
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution_example
+ */
+nothrow pure @safe unittest
+{
+    LoadingContext context0 = {
+        baseURI: "",
+        namespaces: [
+            "acid": "http://example.com/acid#",
+        ]
+    };
+    enum base = "http://example.com/base";
+    assert(base.resolveIdentifier(context0) == base);
+
+    LoadingContext context1 = {
+        baseURI: base,
+        namespaces: [
+            "acid": "http://example.com/acid#",
+        ]
+    };
+    assert("one".resolveIdentifier(context1) == "http://example.com/base#one");
+
+    LoadingContext context2 = {
+        baseURI: "http://example.com/base#one",
+        namespaces: [
+            "acid": "http://example.com/acid#",
+        ]
+    };
+    assert("two".resolveIdentifier(context2) == "http://example.com/base#one/two");
+    assert("#three".resolveIdentifier(context2) == "http://example.com/base#three");
+    assert("four#five".resolveIdentifier(context2) == "http://example.com/four#five");
+    assert("acid:six".resolveIdentifier(context2) == "http://example.com/acid#six");
+
+    LoadingContext context3 = {
+        baseURI: "http://example.com/base#one",
+        namespaces: [
+            "acid": "http://example.com/acid#",
+        ],
+        subscope: "thisIsASubscope"
+    };
+    assert("seven".resolveIdentifier(context3) == "http://example.com/base#one/thisIsASubscope/seven");
+}
+
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Link_resolution
  */
@@ -18,36 +143,21 @@ auto resolveLink(string link, in LoadingContext context) nothrow pure @safe
 {
     import std.algorithm : canFind, endsWith, findSplitAfter, findSplitBefore, startsWith;
 
-    auto pathPortionOf(string uri)
+    if (link.isAbsoluteURI)
     {
-        if (auto split = uri.findSplitBefore("#"))
-        {
-            return split[0];
-        }
-        else
-        {
-            return uri;
-        }
+        return link;
     }
-
-    if (link.startsWith("#"))
+    else if (link.startsWith("#"))
     {
         // rerlative fragment identifier
         return pathPortionOf(context.baseURI)~link;
     }
     else if (auto split = link.findSplitBefore(":"))
     {
-        import std.algorithm : canFind;
-
         if (auto ns = split[0] in context.namespaces)
         {
             // resolved with namespaces
             return *ns ~ split[1][1..$];
-        }
-        else if (link.canFind("://"))
-        {
-            // assumption: an absolute URI contains "://"
-            return link;
         }
         else
         {
