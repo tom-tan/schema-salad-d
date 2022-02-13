@@ -11,8 +11,112 @@ import salad.context : LoadingContext;
 
 import std.typecons : Tuple;
 
-//
-auto pathPortionOf(string uri) nothrow pure @safe
+/** 
+ * Returns: an absolute URI
+ *
+ * Note: It assumes that a string with "://" is an absolute URI
+ */
+auto isAbsoluteURI(string uriOrPath) @nogc nothrow pure @safe
+{
+    import std.algorithm : canFind;
+    return uriOrPath.canFind("://");
+}
+
+/**
+ * Params: 
+ *   pathOrURI = a string that is an absolute or relative local path, or a URI
+ */
+auto toURI(string pathOrURI) pure @safe
+{
+    if (pathOrURI.isAbsoluteURI)
+    {
+        return pathOrURI;
+    }
+    else
+    {
+        import std.algorithm : startsWith;
+
+        if (pathOrURI.startsWith("/"))
+        {
+            return "file://"~pathOrURI;
+        }
+        else
+        {
+            import std.path : absolutePath;
+            return "file://"~pathOrURI.absolutePath;
+        }
+    }
+}
+
+///
+auto scheme(string uri) @nogc nothrow pure @safe
+{
+    import std.algorithm : findSplit;
+    if (auto split = uri.findSplit("://"))
+    {
+        return split[0];
+    }
+    else
+    {
+        return "";
+    }
+}
+
+///
+auto path(string uri) pure @safe
+{
+    import std.algorithm : findSplit;
+    if (auto sp1 = uri.findSplit("://"))
+    {
+        auto rest = sp1[2];
+        if (auto sp2 = rest.findSplit("#"))
+        {
+            return sp2[0];
+        }
+        else
+        {
+            return rest;
+        }
+    }
+    else
+    {
+        throw new Exception("Not valid URI");
+    }
+}
+
+///
+pure @safe unittest
+{
+    assert("file:///foo/bar#buzz".path == "/foo/bar");
+    assert("file:///foo/bar/buzz".path == "/foo/bar/buzz");
+    assert("ssh://user@hostname:/fuga/hoge/piyo".path == "user@hostname:/fuga/hoge/piyo");
+}
+
+///
+auto fragment(string uri) @nogc nothrow pure @safe
+{
+    import std.algorithm : findSplit;
+    if (auto split = uri.findSplit("#"))
+    {
+        return split[2];
+    }
+    else
+    {
+        return "";
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert("file:///foo/bar#buzz".fragment == "buzz");
+    assert("#foo".fragment == "foo");
+}
+
+/**
+ * Returns: URI without fragment
+ */
+auto withoutFragment(string uri) @nogc nothrow pure @safe
 {
     import std.algorithm : findSplitBefore;
 
@@ -26,19 +130,11 @@ auto pathPortionOf(string uri) nothrow pure @safe
     }
 }
 
-/// assumption: an absolute URI contains "://"
-auto isAbsoluteURI(string uriOrPath) nothrow pure @safe
-{
-    import std.algorithm : canFind;
-    return uriOrPath.canFind("://");
-}
-
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
  */
 auto resolveIdentifier(string id, in LoadingContext context) nothrow pure @safe
 {
-    import salad.fetcher : fragment, scheme;
     import std.algorithm : canFind, findSplitBefore, startsWith;
     import std.range : empty;
 
@@ -49,7 +145,7 @@ auto resolveIdentifier(string id, in LoadingContext context) nothrow pure @safe
     else if (id.startsWith("#"))
     {
         // current document fragment identifier
-        return pathPortionOf(context.baseURI)~id;
+        return context.baseURI.withoutFragment~id;
     }
     else if (auto split = id.findSplitBefore(":"))
     {
@@ -150,7 +246,7 @@ auto resolveLink(string link, in LoadingContext context) nothrow pure @safe
     else if (link.startsWith("#"))
     {
         // rerlative fragment identifier
-        return pathPortionOf(context.baseURI)~link;
+        return context.baseURI.withoutFragment~link;
     }
     else if (auto split = link.findSplitBefore(":"))
     {
@@ -168,8 +264,8 @@ auto resolveLink(string link, in LoadingContext context) nothrow pure @safe
     else
     {
         // path relative reference
-        string pathPortionOfRefURI = pathPortionOf(link);
-        string pathPortionOfBaseURI = pathPortionOf(context.baseURI);
+        string pathPortionOfRefURI = link.withoutFragment;
+        string pathPortionOfBaseURI = context.baseURI.withoutFragment;
         if (pathPortionOfBaseURI.endsWith("/"))
         {
             return context.baseURI ~ pathPortionOfRefURI;

@@ -46,8 +46,9 @@ if (isModule!module_)
 auto importFromURI(alias module_)(string uri, string defaultFragment = "")
 {
     import salad.exception : docEnforce;
-    import salad.fetcher : fetchNode, fragment;
+    import salad.fetcher : fetchNode;
     import salad.meta : DocumentRootType;
+    import salad.resolver : fragment;
     import salad.type : match, tryMatch;
     import std.range : empty;
 

@@ -29,100 +29,7 @@ auto fetchNode(string uri) @safe
     return loader.load;
 }
 
-///
-auto toURI(string pathOrURI) pure @safe
-{
-    import std.range : empty;
-
-    if (pathOrURI.scheme.empty)
-    {
-        import std.algorithm : startsWith;
-
-        if (pathOrURI.startsWith("/"))
-        {
-            return "file://"~pathOrURI;
-        }
-        else
-        {
-            import std.path : absolutePath;
-            return "file://"~pathOrURI.absolutePath;
-        }
-    }
-    else
-    {
-        return pathOrURI;
-    }
-}
-
-///
-auto scheme(string uri) @nogc nothrow pure @safe
-{
-    import std.algorithm : findSplit;
-    if (auto split = uri.findSplit("://"))
-    {
-        return split[0];
-    }
-    else
-    {
-        return "";
-    }
-}
-
-///
-auto pathWithAuthority(string uri) pure @safe
-{
-    import std.algorithm : findSplit;
-    if (auto sp1 = uri.findSplit("://"))
-    {
-        auto rest = sp1[2];
-        if (auto sp2 = rest.findSplit("#"))
-        {
-            return sp2[0];
-        }
-        else
-        {
-            return rest;
-        }
-    }
-    else
-    {
-        throw new Exception("Not valid URI");
-    }
-}
-
-pure @safe unittest
-{
-    assert("file:///foo/bar#buzz".pathWithAuthority == "/foo/bar");
-    assert("file:///foo/bar/buzz".pathWithAuthority == "/foo/bar/buzz");
-    assert("ssh://user@hostname:/fuga/hoge/piyo".pathWithAuthority == "user@hostname:/fuga/hoge/piyo");
-}
-
-///
-auto fragment(string uri) @nogc nothrow pure @safe
-{
-    import std.algorithm : findSplit;
-    if (auto split = uri.findSplit("#"))
-    {
-        return split[2];
-    }
-    else
-    {
-        return "";
-    }
-}
-
-unittest
-{
-    import std.range : empty;
-
-    assert("file:///foo/bar#buzz".fragment == "buzz");
-    assert("#foo".fragment == "foo");
-    assert("bar".fragment.empty);
-}
-
-/++
-A fetcher type that returns a string from absolute URI.
-+/
+/// A fetcher type that returns a string from absolute URI.
 alias TextFetcher = string delegate(string) @safe;
 
 ///
@@ -156,9 +63,10 @@ class Fetcher
     auto fetchText(string uri) const @safe
     {
         import salad.fetcher.exception : fetcherEnforce;
+        import salad.resolver : scheme_ = scheme;
         import std.format : format;
 
-        auto scheme = uri.scheme;
+        auto scheme = uri.scheme_;
         auto fetcher = *fetcherEnforce(scheme in schemeFetchers,
                                        format!"Scheme `%s` is not supported (uri: `%s`)."(scheme, uri));
         return fetcher(uri);
@@ -168,27 +76,20 @@ private:
     {
         schemeFetchers["file"] = (uri) {
             import salad.fetcher.exception : fetcherEnforce;
+            import salad.resolver : path_ = path;
             import std.file : exists, readText;
             import std.format : format;
 
-            auto path = uri.pathWithAuthority;
+            auto path = uri.path_;
             fetcherEnforce(path.exists, format!"File not found: `%s`"(path));
             return path.readText;
         };
-        schemeFetchers["http"] = schemeFetchers["https"] = (uri) @trusted {
+        schemeFetchers["http"] = schemeFetchers["https"] = (uri) {
             import requests : getContent;
-            import std.algorithm : findSplit;
+            import salad.resolver : withoutFragment;
 
-            string path;
-            if (auto split = uri.findSplit("#"))
-            {
-                path = split[0];
-            }
-            else
-            {
-                path = uri;
-            }
-            return cast(string)(path.getContent);
+            auto path = uri.withoutFragment;
+            return () @trusted { return cast(string)(path.getContent); } ();
         };
     }
     TextFetcher[string] schemeFetchers;
