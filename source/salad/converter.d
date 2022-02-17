@@ -3,10 +3,13 @@
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module salad.canonicalizer;
+module salad.converter;
 
-///
-mixin template genCanonicalizeBody(Base, FieldCanonicalizer...)
+/**
+ * Generate constructors and fields from a given `Base` class in which
+ * It is used to generate a desugered class.
+ */
+mixin template genDesugaredBody(Base, DesugarPairs...)
 {
 private:
     import dyaml : Node;
@@ -22,14 +25,14 @@ private:
     alias FTypes = Fields!Base;
     alias FNames = FieldNameTuple!Base;
 
-    static assert(FieldCanonicalizer.length % 2 == 0);
-    static if (FieldCanonicalizer.length == 0)
+    static assert(DesugarPairs.length % 2 == 0);
+    static if (DesugarPairs.length == 0)
     {
         alias ConvFuns = AliasSeq!();
     }
     else
     {
-        alias ConvFuns = Stride!(2, FieldCanonicalizer[1..$]);
+        alias ConvFuns = Stride!(2, DesugarPairs[1..$]);
     }
 
     static auto findIndex(string name)
@@ -37,11 +40,11 @@ private:
         import std.algorithm : find;
         import std.range : enumerate;
 
-        auto rng = (cast(string[])[Stride!(2, FieldCanonicalizer)]).enumerate.find!(e => e.value~"_" == name);
+        auto rng = (cast(string[])[Stride!(2, DesugarPairs)]).enumerate.find!(e => e.value~"_" == name);
         return rng.empty ? -1 : rng.front.index;
     }
 
-    final void canonicalize(Base base)
+    final void desugar(Base base)
     {
         static foreach(fname; FNames)
         {
@@ -115,13 +118,13 @@ public:
 
     this(Base base)
     {
-        canonicalize(base);
+        desugar(base);
     }
 
     this(in Node node, in LoadingContext context = LoadingContext.init)
     {
         auto base = new Base(node, context);
-        canonicalize(base);
+        desugar(base);
     }
 
     mixin genIdentifier;
@@ -147,7 +150,7 @@ unittest
 
     static class Foo
     {
-        mixin genCanonicalizeBody!(
+        mixin genDesugaredBody!(
             C,
             "foo", (int i) => i.to!string,
             "str", (string s) => 0,
@@ -184,7 +187,7 @@ unittest
 
     static class Foo
     {
-        mixin genCanonicalizeBody!(C, "foo", (int i) => i.to!string);
+        mixin genDesugaredBody!(C, "foo", (int i) => i.to!string);
     }
 
     enum ymlStr = q"EOS

@@ -9,7 +9,7 @@ import dyaml : Node, NodeType;
 
 import salad.exception;
 import salad.meta;
-import salad.canonicalizer;
+import salad.converter;
 import salad.type;
 
 import so = salad.schema_original;
@@ -104,7 +104,7 @@ if (isOptional!T && is(T.Types[1] == U))
 
 @documentRoot class SaladRecordSchema
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.SaladRecordSchema,
         "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
         "fields", (Optional!(so.SaladRecordField[]) fields) =>
@@ -126,7 +126,7 @@ if (isOptional!T && is(T.Types[1] == U))
 
 class SaladRecordField
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.SaladRecordField,
         "type", (Either!(
                     so.PrimitiveType,
@@ -149,14 +149,14 @@ class SaladRecordField
 
 class PrimitiveType
 {
-    mixin genCanonicalizeBody!(so.PrimitiveType);
+    mixin genDesugaredBody!(so.PrimitiveType);
 }
 
 public import salad.schema_original : Any;
 
 class RecordSchema
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.RecordSchema,
         "fields", (Optional!(so.RecordField[]) fields) =>
                     fields.match!((so.RecordField[] rf) => rf.map!(r => new RecordField(r)).array,
@@ -166,7 +166,7 @@ class RecordSchema
 
 class RecordField
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.RecordField,
         "type", (Either!(
                     so.PrimitiveType,
@@ -187,12 +187,12 @@ class RecordField
 
 class EnumSchema
 {
-    mixin genCanonicalizeBody!(so.EnumSchema);
+    mixin genDesugaredBody!(so.EnumSchema);
 }
 
 class ArraySchema
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.ArraySchema,
         "items", (Either!(
                     so.PrimitiveType,
@@ -212,7 +212,7 @@ class ArraySchema
 
 class JsonldPredicate
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.JsonldPredicate,
         "_id", (Optional!string _id) => _id.orDefault(""),
         "_type", (Optional!string _type) => _type.orDefault(""),
@@ -230,12 +230,12 @@ class JsonldPredicate
 
 class SpecializeDef
 {
-    mixin genCanonicalizeBody!(so.SpecializeDef);
+    mixin genDesugaredBody!(so.SpecializeDef);
 }
 
 @documentRoot class SaladEnumSchema
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.SaladEnumSchema,
         "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
@@ -250,7 +250,7 @@ class SpecializeDef
 
 @documentRoot class Documentation
 {
-    mixin genCanonicalizeBody!(
+    mixin genDesugaredBody!(
         so.Documentation,
         "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
