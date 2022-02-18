@@ -7,13 +7,9 @@ module salad.parser;
 
 import dyaml : Node;
 
-import std.traits : moduleName;
-
-enum isModule(alias module_) = __traits(compiles, { mixin("import "~moduleName!module_~";"); });
-
 ///
 auto parse(alias module_)(Node node, string uri)
-if (isModule!module_)
+if (__traits(isModule, module_))
 {
     import dyaml : NodeType;
     import salad.meta : as_, DocumentRootType;
@@ -44,6 +40,7 @@ if (isModule!module_)
 
 ///
 auto importFromURI(alias module_)(string uri, string defaultFragment = "")
+if (__traits(isModule, module_))
 {
     import salad.exception : docEnforce;
     import salad.fetcher : fetchNode;
