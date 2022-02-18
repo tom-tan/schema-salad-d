@@ -29,7 +29,7 @@ private Optional!string concat(Optional!(string, string[]) ss) nothrow pure @saf
     );
 }
 
-private auto canonicalize(Optional!(string, so.JsonldPredicate) jp)
+private auto desugar(Optional!(string, so.JsonldPredicate) jp)
 {
     return jp.match!(
         (string id) {
@@ -55,7 +55,7 @@ private Either!(
             RecordSchema,
             EnumSchema,
             ArraySchema,
-            string)[] canonicalize(Either!(
+            string)[] desugar(Either!(
                                     so.PrimitiveType,
                                     so.RecordSchema,
                                     so.EnumSchema,
@@ -106,7 +106,7 @@ private Either!(
                                       none => (SaladRecordField[]).init),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
         "docChild", (Optional!(string, string[]) doc) => doc.concat,
-        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
+        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.desugar,
         "documentRoot", (Optional!bool documentRoot) => documentRoot.orElse(false),
         "abstract", (Optional!bool abstract_) => abstract_.orElse(false),
         "extends", (Optional!(string, string[]) extends) => extends.match!((string s) => [s],
@@ -134,9 +134,9 @@ class SaladRecordField
                         so.EnumSchema,
                         so.ArraySchema,
                         string)[]
-                    ) type) => type.canonicalize,
+                    ) type) => type.desugar,
         "doc", (Optional!(string, string[]) doc) => doc.concat,
-        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
+        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.desugar,
         "default", (Optional!(so.Any) default_) => default_.match!((so.Any any) => any, none => null),
     );
 }
@@ -174,7 +174,7 @@ class RecordField
                         so.EnumSchema,
                         so.ArraySchema,
                         string)[]
-                    ) type) => type.canonicalize,
+                    ) type) => type.desugar,
         "doc", (Optional!(string, string[]) doc) => doc.concat,
     );
 }
@@ -200,7 +200,7 @@ class ArraySchema
                         so.EnumSchema,
                         so.ArraySchema,
                         string)[]
-                    ) items) => items.canonicalize,
+                    ) items) => items.desugar,
     );
 }
 
@@ -234,7 +234,7 @@ class SpecializeDef
         "inVocab", (Optional!bool inVocab) => inVocab.orElse(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
         "docChild", (Optional!(string, string[]) docChild) => docChild.concat,
-        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
+        "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.desugar,
         "documentRoot", (Optional!bool documentRoot) => documentRoot.orElse(false),
         "extends", (Optional!(string, string[]) extends) => extends.match!((string s) => [s],
                                                                            (string[] ss) => ss,
