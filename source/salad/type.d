@@ -29,6 +29,23 @@ enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templa
       .assertNotThrown;
 }
 
+///
+auto orElse(T, U)(T val, lazy U default_)
+if (is(T == Optional!U))
+{
+    return val.match!((U u) => u, none => default_);
+}
+
+///
+@safe unittest
+{
+    Optional!int num;
+    assert(num.orElse(5) == 5);
+
+    num = 1;
+    assert(num.orElse(5) == 1);
+}
+
 // TODO: more appropriate name
 template Either(TS...)
 if (allSatisfy!(templateNot!isNone, TS))

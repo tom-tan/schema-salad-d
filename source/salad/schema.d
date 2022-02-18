@@ -96,25 +96,19 @@ private Either!(
     );
 }
 
-private auto orDefault(T, U)(T val, U default_)
-if (isOptional!T && is(T.Types[1] == U))
-{
-    return val.match!((U u) => u, none => default_);
-}
-
 @documentRoot class SaladRecordSchema
 {
     mixin genDesugaredBody!(
         so.SaladRecordSchema,
-        "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
+        "inVocab", (Optional!bool inVocab) => inVocab.orElse(true),
         "fields", (Optional!(so.SaladRecordField[]) fields) =>
                         fields.match!((so.SaladRecordField[] fs) => fs.map!(f => new SaladRecordField(f)).array,
                                       none => (SaladRecordField[]).init),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
         "docChild", (Optional!(string, string[]) doc) => doc.concat,
         "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
-        "documentRoot", (Optional!bool documentRoot) => documentRoot.orDefault(false),
-        "abstract", (Optional!bool abstract_) => abstract_.orDefault(false),
+        "documentRoot", (Optional!bool documentRoot) => documentRoot.orElse(false),
+        "abstract", (Optional!bool abstract_) => abstract_.orElse(false),
         "extends", (Optional!(string, string[]) extends) => extends.match!((string s) => [s],
                                                                            (string[] ss) => ss,
                                                                            none => (string[]).init),
@@ -214,17 +208,17 @@ class JsonldPredicate
 {
     mixin genDesugaredBody!(
         so.JsonldPredicate,
-        "_id", (Optional!string _id) => _id.orDefault(""),
-        "_type", (Optional!string _type) => _type.orDefault(""),
-        "_container", (Optional!string _container) => _container.orDefault(""),
-        "identity", (Optional!bool identity) => identity.orDefault(false),
-        "noLinkCheck", (Optional!bool noLinkCheck) => noLinkCheck.orDefault(false),
-        "mapSubject", (Optional!string mapSubject) => mapSubject.orDefault(""),
-        "mapPreidcate", (Optional!string mapPredicate) => mapPredicate.orDefault(""),
-        "refScope", (Optional!int refScope) => refScope.orDefault(0),
-        "typeDSL", (Optional!bool typeDSL) => typeDSL.orDefault(false),
-        "secondaryFilesDSL", (Optional!bool secondaryFilesDSL) => secondaryFilesDSL.orDefault(false),
-        "subscope", (Optional!string subscope) => subscope.orDefault(""),
+        "_id", (Optional!string _id) => _id.orElse(""),
+        "_type", (Optional!string _type) => _type.orElse(""),
+        "_container", (Optional!string _container) => _container.orElse(""),
+        "identity", (Optional!bool identity) => identity.orElse(false),
+        "noLinkCheck", (Optional!bool noLinkCheck) => noLinkCheck.orElse(false),
+        "mapSubject", (Optional!string mapSubject) => mapSubject.orElse(""),
+        "mapPreidcate", (Optional!string mapPredicate) => mapPredicate.orElse(""),
+        "refScope", (Optional!int refScope) => refScope.orElse(0),
+        "typeDSL", (Optional!bool typeDSL) => typeDSL.orElse(false),
+        "secondaryFilesDSL", (Optional!bool secondaryFilesDSL) => secondaryFilesDSL.orElse(false),
+        "subscope", (Optional!string subscope) => subscope.orElse(""),
     );
 }
 
@@ -237,11 +231,11 @@ class SpecializeDef
 {
     mixin genDesugaredBody!(
         so.SaladEnumSchema,
-        "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
+        "inVocab", (Optional!bool inVocab) => inVocab.orElse(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
         "docChild", (Optional!(string, string[]) docChild) => docChild.concat,
         "jsonldPredicate", (Optional!(string, so.JsonldPredicate) jp) => jp.canonicalize,
-        "documentRoot", (Optional!bool documentRoot) => documentRoot.orDefault(false),
+        "documentRoot", (Optional!bool documentRoot) => documentRoot.orElse(false),
         "extends", (Optional!(string, string[]) extends) => extends.match!((string s) => [s],
                                                                            (string[] ss) => ss,
                                                                            none => (string[]).init),
@@ -252,7 +246,7 @@ class SpecializeDef
 {
     mixin genDesugaredBody!(
         so.Documentation,
-        "inVocab", (Optional!bool inVocab) => inVocab.orDefault(true),
+        "inVocab", (Optional!bool inVocab) => inVocab.orElse(true),
         "doc", (Optional!(string, string[]) doc) => doc.concat,
         "docChild", (Optional!(string, string[]) docChild) => docChild.concat,
     );
