@@ -130,8 +130,8 @@ if (__traits(isModule, module_))
     
                 auto context = LoadingContext(uri);
                 auto elems = () @trusted {
-                    // SumType.opAssign used in array is unsafe
-                    // we can mark it trusted because there are no pointers outside an array
+                    // SumType.opAssign used in `array` is unsafe
+                    // we can mark it as trusted because it does not leak any pointers outside an array
                     return docs.filter!(e => e.tryMatch!(d => d.identifier
                                                                .resolveIdentifier(context)
                                                                .fragment) == frag)

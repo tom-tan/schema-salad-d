@@ -20,7 +20,7 @@ class Any
     Node value_;
     const LoadingContext context_;
 
-    this(Node node, in LoadingContext context = LoadingContext.init)
+    this(Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         import salad.exception : docEnforce;
         docEnforce(node.type != NodeType.null_,
@@ -29,7 +29,7 @@ class Any
         context_ = context;
     }
 
-    T as(T)()
+    T as(T)() @safe
     {
         import salad.meta.impl : as_;
         return value_.as_!T(context_);

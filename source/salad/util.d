@@ -40,7 +40,7 @@ auto dig(T)(in Node node, string[] keys, T default_)
     return ret;
 }
 
-// dig for parsed object
+/// dig for parsed object
 auto dig(alias K, U, T, idMap idMap_ = idMap.init)(T t, U default_ = U.init)
 if (!is(T: Node))
 {
@@ -132,38 +132,41 @@ if (!is(T: Node))
             import std.array : assocArray;
 
             static assert(idMap_ != idMap.init, "dig does not support index access");
-            auto aa = t.map!((e) {
-                import salad.primitives : Any;
-                import salad.type : tryMatch;
-                import std.typecons : tuple;
+            auto aa = () @trusted {
+                // use unsafe assocArray but it can be trusted
+                return t.map!((e) @safe {
+                    import salad.primitives : Any;
+                    import salad.type : tryMatch;
+                    import std.typecons : tuple;
 
-                static if (isEither!(typeof(e)))
-                {
-                    auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject~"_"));
-                }
-                else static if (is(typeof(e) == Any))
-                {
-                    auto f = e;
-                }
-                else
-                {
-                    auto f = __traits(getMember, e, idMap_.subject~"_");
-                }
+                    static if (isEither!(typeof(e)))
+                    {
+                        auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject ~ "_"));
+                    }
+                    else static if (is(typeof(e) == Any))
+                    {
+                        auto f = e;
+                    }
+                    else
+                    {
+                        auto f = __traits(getMember, e, idMap_.subject ~ "_");
+                    }
 
-                static if (isSumType!(typeof(f)))
-                {
-                    auto k = f.tryMatch!((string s) => s);
-                }
-                else static if (is(typeof(e) == Any))
-                {
-                    auto k = e.value_[idMap_.subject].as!string;
-                }
-                else
-                {
-                    auto k = f;
-                }
-                return tuple(k, e);
-            }).assocArray;
+                    static if (isSumType!(typeof(f)))
+                    {
+                        auto k = f.tryMatch!((string s) => s);
+                    }
+                    else static if (is(typeof(e) == Any))
+                    {
+                        auto k = e.value_[idMap_.subject].as!string;
+                    }
+                    else
+                    {
+                        auto k = f;
+                    }
+                    return tuple(k, e);
+                }).assocArray;
+            }();
 
             if (auto v = K[0] in aa)
             {
@@ -181,7 +184,7 @@ if (!is(T: Node))
     }
 }
 
-unittest
+@safe unittest
 {
     class C
     {
@@ -194,7 +197,7 @@ unittest
     assert(c.dig!("class", string) == "foo");
 }
 
-unittest
+@safe unittest
 {
     import salad.type : Optional;
 
@@ -224,7 +227,7 @@ unittest
     assert(c.dig!(["elems", "bar", "val"], int) == 2);
 }
 
-unittest
+@safe unittest
 {
     import salad.type : Optional, SumType;
 
@@ -262,6 +265,7 @@ unittest
     auto c = new C([
         ElemType(new E1("foo", 1)), ElemType(new E2("bar", "val"))
     ]);
+
     assert(c.dig!(["elems", "foo"], E1).val_ == 1);
     assert(c.dig!(["elems", "bar"], E2).val_ == "val");
 }
@@ -383,38 +387,41 @@ if (!is(T: Node))
             import std.array : assocArray;
 
             static assert(idMap_ != idMap.init, "dig does not support index access");
-            auto aa = t.map!((e) {
-                import salad.primitives : Any;
-                import salad.type : isSumType, tryMatch;
-                import std.typecons : tuple;
+            auto aa = () @trusted {
+                // use unsafe assocArray but it can be trusted
+                return t.map!((e) @safe {
+                    import salad.primitives : Any;
+                    import salad.type : isSumType, tryMatch;
+                    import std.typecons : tuple;
 
-                static if (isEither!(typeof(e)))
-                {
-                    auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject~"_"));
-                }
-                else static if (is(typeof(e) == Any))
-                {
-                    auto f = e;
-                }
-                else
-                {
-                    auto f = __traits(getMember, e, idMap_.subject~"_");
-                }
+                    static if (isEither!(typeof(e)))
+                    {
+                        auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject ~ "_"));
+                    }
+                    else static if (is(typeof(e) == Any))
+                    {
+                        auto f = e;
+                    }
+                    else
+                    {
+                        auto f = __traits(getMember, e, idMap_.subject ~ "_");
+                    }
 
-                static if (isSumType!(typeof(f)))
-                {
-                    auto k = f.tryMatch!((string s) => s);
-                }
-                else static if (is(typeof(e) == Any))
-                {
-                    auto k = e.value_[idMap_.subject].as!string;
-                }
-                else
-                {
-                    auto k = f;
-                }
-                return tuple(k, e);
-            }).assocArray;
+                    static if (isSumType!(typeof(f)))
+                    {
+                        auto k = f.tryMatch!((string s) => s);
+                    }
+                    else static if (is(typeof(e) == Any))
+                    {
+                        auto k = e.value_[idMap_.subject].as!string;
+                    }
+                    else
+                    {
+                        auto k = f;
+                    }
+                    return tuple(k, e);
+                }).assocArray;
+            }();
 
             if (auto v = K[0] in aa)
             {
@@ -432,7 +439,7 @@ if (!is(T: Node))
     }
 }
 
-unittest
+@safe unittest
 {
     class C
     {
@@ -445,7 +452,7 @@ unittest
     assert(c.edig!("class", string) == "foo");
 }
 
-unittest
+@safe unittest
 {
     import salad.type : Optional;
 
@@ -475,7 +482,7 @@ unittest
     assert(c.edig!(["elems", "bar", "val"], int) == 2);
 }
 
-unittest
+@safe unittest
 {
     import salad.type : Either, Optional, tryMatch;
 
