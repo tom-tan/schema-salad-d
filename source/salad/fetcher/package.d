@@ -62,7 +62,7 @@ class Fetcher
     ///
     bool canSupport(string scheme) const @nogc nothrow pure @safe
     {
-        return scheme in schemeFetchers;
+        return (scheme in schemeFetchers) !is null;
     }
 
     ///
