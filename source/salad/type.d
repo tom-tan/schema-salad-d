@@ -10,7 +10,7 @@ import std.meta : allSatisfy, anySatisfy, templateNot;
 
 struct None{}
 
-private enum isNone(T) = is(T == None);
+enum isNone(T) = is(T == None);
 
 template Optional(TS...)
 if (allSatisfy!(templateNot!isNone, TS))
