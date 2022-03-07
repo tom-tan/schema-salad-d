@@ -5,7 +5,7 @@
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module cwl.v1_0.schema_original;
+module cwl.v1_0.schema;
 
 import salad.meta : genCtor, genIdentifier, genOpEq, documentRoot, id, idMap, typeDSL;
 import salad.type : Either, Optional;

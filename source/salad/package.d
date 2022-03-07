@@ -5,15 +5,15 @@
  */
 module salad;
 
-public import salad.schema_original;
+public import salad.schema;
 
 import salad.parser : import_ = importFromURI;
 import salad.meta : DocRootType = DocumentRootType;
 
 ///
-alias importFromURI = import_!(salad.schema_original);
+alias importFromURI = import_!(salad.schema);
 ///
-alias DocumentRootType = DocRootType!(salad.schema_original);
+alias DocumentRootType = DocRootType!(salad.schema);
 
 /// Loading SALAD metaschema
 @safe unittest

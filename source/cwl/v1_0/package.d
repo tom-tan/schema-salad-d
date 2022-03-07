@@ -5,15 +5,15 @@
  */
 module cwl.v1_0;
 
-public import cwl.v1_0.schema_original;
+public import cwl.v1_0.schema;
 
 import salad.parser : import_ = importFromURI;
 import salad.meta : DocRootType = DocumentRootType;
 
 ///
-alias importFromURI = import_!(cwl.v1_0.schema_original);
+alias importFromURI = import_!(cwl.v1_0.schema);
 ///
-alias DocumentRootType = DocRootType!(cwl.v1_0.schema_original);
+alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
 
 ///
 @safe unittest
