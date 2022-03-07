@@ -138,7 +138,7 @@ mixin template genIdentifier()
 ///
 mixin template genOpEq()
 {
-    bool opEquals(string s) const @nogc nothrow pure
+    bool opEquals(string s) const @nogc nothrow pure @safe
     {
         return value_ == s;
     }

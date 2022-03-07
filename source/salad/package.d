@@ -16,7 +16,7 @@ alias importFromURI = import_!(salad.schema_original);
 alias DocumentRootType = DocRootType!(salad.schema_original);
 
 /// Loading SALAD metaschema
-unittest
+@safe unittest
 {
     import salad.type : tryMatch;
     import salad.util : edig;
@@ -30,7 +30,7 @@ unittest
 }
 
 /// Loading CWL v1.0 schema
-unittest
+@safe unittest
 {
     import salad.type : tryMatch;
     import std.exception : assertNotThrown;
@@ -44,7 +44,7 @@ unittest
 /// Does not work due to `:` in a string
 /// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
 version(none)
-unittest
+@safe unittest
 {
     import salad.type : tryMatch;
     import std.exception : assertNotThrown;
@@ -58,7 +58,7 @@ unittest
 /// Does not work due to `:` in a string
 /// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
 version(none)
-unittest
+@safe unittest
 {
     import salad.type : tryMatch;
     import std.exception : assertNotThrown;

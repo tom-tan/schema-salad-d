@@ -16,7 +16,7 @@ alias importFromURI = import_!(cwl.v1_0.schema_original);
 alias DocumentRootType = DocRootType!(cwl.v1_0.schema_original);
 
 ///
-unittest
+@safe unittest
 {
     import core.exception : AssertError;
     import salad.type : tryMatch;
@@ -43,7 +43,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     import salad.type : tryMatch;
     import salad.util : dig, edig;
@@ -63,7 +63,7 @@ unittest
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
 }
 
-unittest
+@safe unittest
 {
     import salad.type : tryMatch;
     import salad.util : dig, edig;
@@ -75,15 +75,19 @@ unittest
                                   .assertNotThrown;
     assert(cwls.length == 3);
 
-    auto cwl = importFromURI(uri, "#main").tryMatch!((DocumentRootType r) => r)
-                                          .assertNotThrown;
-    assert(cwl.edig!("class", string) == "Workflow");
+    {
+        auto cwl = importFromURI(uri, "#main").tryMatch!((DocumentRootType r) => r)
+                                              .assertNotThrown;
+        assert(cwl.edig!("class", string) == "Workflow");
+    }
 
-    cwl = importFromURI(uri, "main").tryMatch!((DocumentRootType r) => r)
-                                    .assertNotThrown;
-    assert(cwl.edig!("class", string) == "Workflow");
+    {
+        auto cwl = importFromURI(uri, "main").tryMatch!((DocumentRootType r) => r)
+                                             .assertNotThrown;
+        assert(cwl.edig!("class", string) == "Workflow");
 
-    auto wf = cwl.tryMatch!((Workflow w) => w)
-                 .assertNotThrown;
-    assert(wf.edig!("doc", string) == "Reverse the lines in a document, then sort those lines.");
+        auto wf = cwl.tryMatch!((Workflow w) => w)
+                     .assertNotThrown;
+        assert(wf.edig!("doc", string) == "Reverse the lines in a document, then sort those lines.");
+    }
 }
