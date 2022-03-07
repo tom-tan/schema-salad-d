@@ -7,7 +7,8 @@
  */
 module cwl.v1_0.schema;
 
-import salad.meta : genCtor, genIdentifier, genOpEq, documentRoot, id, idMap, typeDSL;
+import salad.meta.impl : genCtor, genIdentifier, genOpEq;
+import salad.meta.uda : documentRoot, id, idMap, typeDSL;
 import salad.type : Either, Optional;
 
 @documentRoot class CommandLineTool

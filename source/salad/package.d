@@ -7,8 +7,7 @@ module salad;
 
 public import salad.schema;
 
-import salad.parser : import_ = importFromURI;
-import salad.meta : DocRootType = DocumentRootType;
+import salad.meta.parser : DocRootType = DocumentRootType, import_ = importFromURI;
 
 ///
 alias importFromURI = import_!(salad.schema);

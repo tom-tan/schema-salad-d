@@ -1,4 +1,5 @@
 /**
+ * This module declares primitive types that need special handling.
  * Authors: Tomoya Tanjo
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
@@ -30,7 +31,7 @@ class Any
 
     T as(T)()
     {
-        import salad.meta : as_;
+        import salad.meta.impl : as_;
         return value_.as_!T(context_);
     }
 }

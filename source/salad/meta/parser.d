@@ -3,16 +3,61 @@
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module salad.parser;
+module salad.meta.parser;
 
 import dyaml : Node;
+
+///
+template DocumentRootType(alias module_)
+{
+    import salad.meta.uda : documentRoot;
+    import std.meta : allSatisfy, ApplyRight, Filter, staticMap;
+    import std.traits : fullyQualifiedName, hasUDA;
+
+    alias StrToType(string T) = __traits(getMember, module_, T);
+    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
+    alias RootTypes = Filter!(ApplyRight!(hasUDA, documentRoot), syms);
+    static if (RootTypes.length > 0)
+    {
+        import salad.meta.impl : hasIdentifier;
+        import salad.type : SumType;
+        static assert(allSatisfy!(hasIdentifier, RootTypes));
+        alias DocumentRootType = SumType!RootTypes;
+    }
+    else
+    {
+        import std.format : format;
+        import std.traits : moduleName;
+        static assert(false, format!"No schemas with `documentRoot: true` in module `%s`"(moduleName!module_));
+    }
+}
+
+///
+template IdentifierType(alias module_)
+{
+    import std.meta : allSatisfy, Filter, staticMap;
+    import std.traits : fullyQualifiedName;
+
+    alias StrToType(string T) = __traits(getMember, module_, T);
+    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
+    alias IDTypes = Filter!(hasIdentifier, syms);
+
+    static if (IDTypes.length > 0)
+    {
+        alias IdentifierType = SumType!IDTypes;
+    }
+    else
+    {
+        static assert(false, "No schemas with identifier field");
+    }
+}
 
 ///
 auto parse(alias module_)(Node node, string uri) @safe
 if (__traits(isModule, module_))
 {
     import dyaml : NodeType;
-    import salad.meta : as_, DocumentRootType;
+    import salad.meta.impl : as_;
     import salad.type : SumType;
 
     alias T = DocumentRootType!module_;
@@ -44,7 +89,6 @@ if (__traits(isModule, module_))
 {
     import salad.exception : docEnforce;
     import salad.fetcher : fetchNode;
-    import salad.meta : DocumentRootType;
     import salad.resolver : fragment;
     import salad.type : match, tryMatch;
     import std.range : empty;

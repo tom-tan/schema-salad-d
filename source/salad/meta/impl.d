@@ -1,11 +1,13 @@
 /**
+ * This module provides mixins and functions to implement parsers for each definition.
  * Authors: Tomoya Tanjo
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module salad.meta;
+module salad.meta.impl;
 
 import salad.context : LoadingContext;
+import salad.meta.uda;
 import salad.type;
 
 import std.meta : ApplyLeft, Filter;
@@ -21,7 +23,7 @@ mixin template genCtor()
 {
     private import dyaml : Node, NodeType;
     private import salad.context : LoadingContext;
-    private import salad.meta : isSaladRecord, isSaladEnum;
+    private import salad.meta.impl : isSaladRecord, isSaladEnum;
 
     this() pure @nogc nothrow @safe {}
 
@@ -29,7 +31,7 @@ mixin template genCtor()
     {
         this(in Node node, in LoadingContext context = LoadingContext.init) @safe
         {
-            import salad.meta : Assign, as_;
+            import salad.meta.impl : Assign, as_;
             import salad.util : edig;
             import salad.type : None, SumType;
             import std.algorithm : endsWith;
@@ -144,82 +146,10 @@ mixin template genOpEq()
     }
 }
 
-/**
- * UDA for identifier maps
- * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_maps
-*/
-struct idMap { string subject; string predicate = ""; } // @suppress(dscanner.style.phobos_naming_convention)
-
-/**
- * UDA for DSL for types
- * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_types
-*/
-struct typeDSL {} // @suppress(dscanner.style.phobos_naming_convention)
-
-/** 
- * UDA for documentRoot
- * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
- */
-struct documentRoot {} // @suppress(dscanner.style.phobos_naming_convention)
-
-/** 
- * UDA for identifier
- * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Record_field_annotations
- */
-struct id {} // @suppress(dscanner.style.phobos_naming_convention)
-
-/** 
- * UDA for subscope
- * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
- */
-struct subscope { string subscope; } // @suppress(dscanner.style.phobos_naming_convention)
-
 enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
 
 enum isDefinedField(string F) = F[$-1] == '_';
 enum StaticMembersOf(T) = Filter!(ApplyLeft!(hasStaticMember, T), Filter!(isDefinedField, __traits(derivedMembers, T)));
-
-///
-template DocumentRootType(alias module_)
-{
-    import std.meta : allSatisfy, ApplyRight, Filter, staticMap;
-    import std.traits : fullyQualifiedName, hasUDA;
-
-    alias StrToType(string T) = __traits(getMember, module_, T);
-    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
-    alias RootTypes = Filter!(ApplyRight!(hasUDA, documentRoot), syms);
-    static if (RootTypes.length > 0)
-    {
-        static assert(allSatisfy!(hasIdentifier, RootTypes));
-        alias DocumentRootType = SumType!RootTypes;
-    }
-    else
-    {
-        import std.format : format;
-        import std.traits : moduleName;
-        static assert(false, format!"No schemas with `documentRoot: true` in module `%s`"(moduleName!module_));
-    }
-}
-
-///
-template IdentifierType(alias module_)
-{
-    import std.meta : allSatisfy, Filter, staticMap;
-    import std.traits : fullyQualifiedName;
-
-    alias StrToType(string T) = __traits(getMember, module_, T);
-    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
-    alias IDTypes = Filter!(hasIdentifier, syms);
-
-    static if (IDTypes.length > 0)
-    {
-        alias IdentifierType = SumType!IDTypes;
-    }
-    else
-    {
-        static assert(false, "No schemas with identifier field");
-    }
-}
 
 ///
 template Assign(alias node, alias field, alias context)

@@ -6,7 +6,8 @@
  */
 module salad.schema;
 
-import salad.meta : genCtor, genIdentifier, genOpEq, documentRoot, id, idMap, typeDSL;
+import salad.meta.impl : genCtor, genIdentifier, genOpEq;
+import salad.meta.uda : documentRoot, id, idMap, typeDSL;
 import salad.type : Either, Optional;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema

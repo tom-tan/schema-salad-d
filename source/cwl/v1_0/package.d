@@ -7,8 +7,7 @@ module cwl.v1_0;
 
 public import cwl.v1_0.schema;
 
-import salad.parser : import_ = importFromURI;
-import salad.meta : DocRootType = DocumentRootType;
+import salad.meta.parser : DocRootType = DocumentRootType, import_ = importFromURI;
 
 ///
 alias importFromURI = import_!(cwl.v1_0.schema);

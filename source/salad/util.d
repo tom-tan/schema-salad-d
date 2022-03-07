@@ -7,7 +7,7 @@ module salad.util;
 
 import dyaml : Node;
 
-import salad.meta : idMap;
+import salad.meta.uda : idMap;
 
 /// dig for node
 auto dig(T)(in Node node, string key, T default_)
