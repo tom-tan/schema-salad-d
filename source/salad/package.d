@@ -5,15 +5,15 @@
  */
 module salad;
 
-public import salad.schema;
+public import salad.schema_original;
 
 import salad.parser : import_ = importFromURI;
 import salad.meta : DocRootType = DocumentRootType;
 
 ///
-alias importFromURI = import_!(salad.schema);
+alias importFromURI = import_!(salad.schema_original);
 ///
-alias DocumentRootType = DocRootType!(salad.schema);
+alias DocumentRootType = DocRootType!(salad.schema_original);
 
 /// Loading SALAD metaschema
 unittest
@@ -41,6 +41,8 @@ unittest
 }
 
 /// Loading CWL v1.1 schema
+/// Does not work due to `:` in a string
+/// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
 version(none)
 unittest
 {
@@ -53,6 +55,8 @@ unittest
 }
 
 /// Loading CWL v1.2 schema
+/// Does not work due to `:` in a string
+/// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
 version(none)
 unittest
 {
