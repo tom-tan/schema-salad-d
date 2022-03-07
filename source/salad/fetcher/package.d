@@ -60,6 +60,12 @@ class Fetcher
     }
 
     ///
+    bool canSupport(string scheme) const @nogc nothrow pure @safe
+    {
+        return scheme in schemeFetchers;
+    }
+
+    ///
     auto fetchText(string uri) const @safe
     {
         import salad.fetcher.exception : fetcherEnforce;
