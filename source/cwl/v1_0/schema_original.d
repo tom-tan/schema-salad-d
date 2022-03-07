@@ -428,7 +428,7 @@ class InputEnumSchema
     static immutable type_ = "enum";
     Optional!string label_;
     @id Optional!string name_;
-    Optional!CommandLineBinding inpuBinding_;
+    Optional!CommandLineBinding inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
