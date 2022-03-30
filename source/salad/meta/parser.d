@@ -111,7 +111,7 @@ if (__traits(isModule, module_))
             import salad.resolver : resolveIdentifier;
 
             auto context = LoadingContext(uri);
-            docEnforce(frag.empty || doc.match!(d => d.identifier.resolveIdentifier(context).fragment) == frag,
+            docEnforce(uri.fragment || doc.match!(d => d.identifier.resolveIdentifier(context).fragment) == frag,
                        "Mismatched fragment", node);
             return objs;
         },
