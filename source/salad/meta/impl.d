@@ -15,8 +15,8 @@ import std.traits : hasStaticMember, isArray, isScalarType, isSomeString;
 
 import dyaml;
 
-enum isSaladRecord(T) = is(T == class) && !__traits(compiles, T.Symbols);
-enum isSaladEnum(T) = is(T == class) && __traits(compiles, T.Symbols);
+enum isSaladRecord(T) = is(T == class) && !__traits(compiles, T.Symbol);
+enum isSaladEnum(T) = is(T == class) && __traits(compiles, T.Symbol);
 
 ///
 mixin template genCtor()
@@ -61,10 +61,15 @@ mixin template genCtor()
                 format!"Invalid type for %s: string is expected"(typeof(this).stringof),
                 node);
             auto val = node.as!string;
-            docEnforce([EnumMembers!Symbols].canFind(val),
+            docEnforce([EnumMembers!Symbol].canFind(val),
                 format!"Invalid value for %s: `%s`"(typeof(this).stringof, val),
                 node);
-            value_ = val;
+            value_ = cast(Symbol)val;
+        }
+
+        this(string value) @safe
+        {
+            this(Node(value));
         }
     }
 }
@@ -496,7 +501,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                 {
                     static foreach(RT; EnumTypes)
                     {
-                        static foreach(m; EnumMembers!(RT.Symbols))
+                        static foreach(m; EnumMembers!(RT.Symbol))
                         {
                             case m: return T(expanded.as_!RT(context));
                         }

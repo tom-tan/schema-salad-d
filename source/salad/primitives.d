@@ -20,6 +20,7 @@ class Any
     Node value_;
     const LoadingContext context_;
 
+    ///
     this(Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         import salad.exception : docEnforce;
@@ -29,9 +30,17 @@ class Any
         context_ = context;
     }
 
+    ///
     T as(T)() @safe
     {
         import salad.meta.impl : as_;
         return value_.as_!T(context_);
+    }
+
+    ///
+    Node opCast(T: Node)() const
+    {
+        // TODO: its style may not be JSON-compatible.
+        return value_;
     }
 }

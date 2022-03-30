@@ -2,8 +2,8 @@
 	"fileVersion": 1,
 	"versions": {
 		"cachetools": "0.3.1",
-		"dyaml": "0.8.5",
-		"requests": "2.0.3",
+		"dyaml": {"version":"20f5ba33444a8acfe1a3737f4477c2fe8730bdba","repository":"git+https://github.com/dlang-community/D-YAML.git"},
+		"requests": "2.0.4",
 		"tinyendian": "0.2.0"
 	}
 }

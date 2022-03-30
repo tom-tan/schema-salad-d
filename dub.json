@@ -17,7 +17,10 @@
 	"copyright": "Copyright © 2021, Tomoya Tanjo",
 	"dependencies": {
 		"requests": "~>2.0.3",
-		"dyaml": "~>0.8.4"
+		"dyaml": {
+			"repository": "git+https://github.com/dlang-community/D-YAML.git",
+			"version": "20f5ba33444a8acfe1a3737f4477c2fe8730bdba"
+		}
 	},
 	"description": "Semantic Annotations for Linked Avro Data in D",
 	"homepage": "https://github.com/tom-tan/schema-salad-d",

@@ -6,6 +6,7 @@
  */
 module salad.schema;
 
+import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
 import salad.type : Either, Optional;
@@ -29,6 +30,7 @@ import salad.type : Either, Optional;
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
@@ -55,12 +57,13 @@ class SaladRecordField
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
 class PrimitiveType
 {
-    enum Symbols
+    enum Symbol
     {
         s1 = "null",
         s2 = "boolean",
@@ -71,11 +74,12 @@ class PrimitiveType
         s7 = "string",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
@@ -89,6 +93,7 @@ class RecordSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
@@ -113,6 +118,7 @@ class RecordField
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
@@ -123,6 +129,7 @@ class EnumSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
@@ -145,6 +152,7 @@ class ArraySchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
@@ -164,6 +172,7 @@ class JsonldPredicate
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
@@ -174,6 +183,7 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
@@ -193,6 +203,7 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
@@ -208,4 +219,5 @@ class SpecializeDef
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }

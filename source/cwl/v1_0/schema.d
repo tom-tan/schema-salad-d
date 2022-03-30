@@ -7,6 +7,7 @@
  */
 module cwl.v1_0.schema;
 
+import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
 import salad.type : Either, Optional;
@@ -47,6 +48,7 @@ import salad.type : Either, Optional;
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandInputParameter
@@ -76,6 +78,7 @@ class CommandInputParameter
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandLineBinding
@@ -90,6 +93,7 @@ class CommandLineBinding
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
@@ -97,7 +101,7 @@ public import salad.primitives : Any;
 
 class CWLType
 {
-    enum Symbols
+    enum Symbol
     {
         s1 = "null",
         s2 = "boolean",
@@ -110,11 +114,12 @@ class CWLType
         s9 = "Directory",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
 class File
@@ -134,6 +139,7 @@ class File
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class Directory
@@ -148,6 +154,7 @@ class Directory
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandInputRecordSchema
@@ -160,6 +167,7 @@ class CommandInputRecordSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandInputRecordField
@@ -185,6 +193,7 @@ class CommandInputRecordField
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandInputEnumSchema
@@ -197,6 +206,7 @@ class CommandInputEnumSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandInputArraySchema
@@ -221,6 +231,7 @@ class CommandInputArraySchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandOutputParameter
@@ -251,34 +262,37 @@ class CommandOutputParameter
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class stdout // @suppress(dscanner.style.phobos_naming_convention)
 {
-    enum Symbols
+    enum Symbol
     {
         s1 = "stdout",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
 class stderr // @suppress(dscanner.style.phobos_naming_convention)
 {
-    enum Symbols
+    enum Symbol
     {
         s2 = "stderr",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
 class CommandOutputBinding
@@ -289,6 +303,7 @@ class CommandOutputBinding
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandOutputRecordSchema
@@ -301,6 +316,7 @@ class CommandOutputRecordSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandOutputRecordField
@@ -325,6 +341,7 @@ class CommandOutputRecordField
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandOutputEnumSchema
@@ -336,6 +353,7 @@ class CommandOutputEnumSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CommandOutputArraySchema
@@ -360,6 +378,7 @@ class CommandOutputArraySchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InlineJavascriptRequirement
@@ -369,6 +388,7 @@ class InlineJavascriptRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class SchemaDefRequirement
@@ -382,6 +402,7 @@ class SchemaDefRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InputRecordSchema
@@ -396,6 +417,7 @@ class InputRecordSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InputRecordField
@@ -421,6 +443,7 @@ class InputRecordField
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InputEnumSchema
@@ -433,6 +456,7 @@ class InputEnumSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InputArraySchema
@@ -457,6 +481,7 @@ class InputArraySchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class DockerRequirement
@@ -471,6 +496,7 @@ class DockerRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class SoftwareRequirement
@@ -481,6 +507,7 @@ class SoftwareRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class SoftwarePackage
@@ -491,6 +518,7 @@ class SoftwarePackage
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InitialWorkDirRequirement
@@ -508,6 +536,7 @@ class InitialWorkDirRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class Dirent
@@ -518,6 +547,7 @@ class Dirent
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class EnvVarRequirement
@@ -528,6 +558,7 @@ class EnvVarRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class EnvironmentDef
@@ -537,6 +568,7 @@ class EnvironmentDef
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class ShellCommandRequirement
@@ -545,6 +577,7 @@ class ShellCommandRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class ResourceRequirement
@@ -561,11 +594,12 @@ class ResourceRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class CWLVersion
 {
-    enum Symbols
+    enum Symbol
     {
         s1	= "draft-2",
         s2 = "draft-3.dev1",
@@ -581,14 +615,15 @@ class CWLVersion
         s12 = "v1.0",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
-unittest
+@safe unittest
 {
     import core.exception : AssertError;
     import dyaml;
@@ -639,6 +674,7 @@ unittest
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class WorkflowOutputParameter
@@ -669,21 +705,23 @@ class WorkflowOutputParameter
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class LinkMergeMethod
 {
-    enum Symbols
+    enum Symbol
     {
         s1 = "merge_nested",
         s2 = "merge_flattened",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
 class OutputRecordSchema
@@ -695,6 +733,7 @@ class OutputRecordSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class OutputRecordField
@@ -719,6 +758,7 @@ class OutputRecordField
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class OutputEnumSchema
@@ -730,6 +770,7 @@ class OutputEnumSchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class OutputArraySchema
@@ -754,6 +795,7 @@ class OutputArraySchema
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class WorkflowStep
@@ -788,6 +830,7 @@ class WorkflowStep
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class WorkflowStepInput
@@ -800,6 +843,7 @@ class WorkflowStepInput
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class WorkflowStepOutput
@@ -808,22 +852,24 @@ class WorkflowStepOutput
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class ScatterMethod
 {
-    enum Symbols
+    enum Symbol
     {
         s1 = "dotproduct",
         s2 = "nested_crossproduct",
         s3 = "flat_crossproduct_",
     }
 
-    string value_;
+    Symbol value_;
     alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
+    mixin genDumper;
 }
 
 class SubworkflowFeatureRequirement
@@ -832,6 +878,7 @@ class SubworkflowFeatureRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class ScatterFeatureRequirement
@@ -840,6 +887,7 @@ class ScatterFeatureRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class MultipleInputFeatureRequirement
@@ -848,6 +896,7 @@ class MultipleInputFeatureRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class StepInputExpressionRequirement
@@ -856,6 +905,7 @@ class StepInputExpressionRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 @documentRoot class ExpressionTool
@@ -891,6 +941,7 @@ class StepInputExpressionRequirement
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class InputParameter
@@ -920,6 +971,7 @@ class InputParameter
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 class ExpressionToolOutputParameter
@@ -948,6 +1000,7 @@ class ExpressionToolOutputParameter
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
 }
 
 unittest
@@ -963,4 +1016,17 @@ unittest
     assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
     assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
+
+    import std.array : appender;
+    import std.regex : ctRegex, replaceAll;
+    import std.stdio: out_ = stdout;
+    import salad.meta.dumper;
+
+    auto app = appender!string;
+    auto n = Node(wf);
+    auto dumper = dumper();
+    dumper.YAMLVersion = null;
+    dumper.dump(app, n);
+    auto str = app[].replaceAll(ctRegex!`\n\s+`, " ");
+    out_.writeln(str);
 }
