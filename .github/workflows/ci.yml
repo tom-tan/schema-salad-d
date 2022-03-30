@@ -30,10 +30,10 @@ jobs:
         experimental: [false]
         include:
           - dc: dmd-2.098.1
+            experimental: false
           - dc: ldc-latest
-          - dc: dmd-latest
-            experimental: true
-          - dc: dmd-beta
+            experimental: false
+          - dc: dmd-master
             experimental: true
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
