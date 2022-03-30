@@ -1016,17 +1016,4 @@ unittest
     assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
     assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
-
-    import std.array : appender;
-    import std.regex : ctRegex, replaceAll;
-    import std.stdio: out_ = stdout;
-    import salad.meta.dumper;
-
-    auto app = appender!string;
-    auto n = Node(wf);
-    auto dumper = dumper();
-    dumper.YAMLVersion = null;
-    dumper.dump(app, n);
-    auto str = app[].replaceAll(ctRegex!`\n\s+`, " ");
-    out_.writeln(str);
 }

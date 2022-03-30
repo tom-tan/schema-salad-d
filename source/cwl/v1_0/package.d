@@ -90,3 +90,32 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
         assert(wf.edig!("doc", string) == "Reverse the lines in a document, then sort those lines.");
     }
 }
+
+/// Dump a CWL document as a JSON string
+unittest
+{
+    import std.array : appender;
+    import std.regex : ctRegex, replaceAll;
+    import dyaml : dumper, Loader, Node;
+
+    enum cwl = "examples/count-lines1-wf.cwl";
+    auto wf = Loader.fromFile(cwl)
+                    .load
+                    .as!Workflow;
+
+    auto app = appender!string;
+
+    // Convert CWL document to Node
+    auto n = Node(wf);
+
+    // Dump Node to JSON string
+    auto d = dumper();
+    d.YAMLVersion = null;
+    d.dump(app, n);
+    // Note: dumper.dump outputs multi-line (but not pretty-printed) JSON string
+    auto str = app[].replaceAll(ctRegex!`\n\s+`, " ");
+
+    import std.exception : assertNotThrown;
+    import std.json : JSONException, parseJSON;
+    parseJSON(str).assertNotThrown!JSONException;
+}
