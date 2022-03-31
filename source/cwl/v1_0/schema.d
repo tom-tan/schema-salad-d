@@ -115,7 +115,6 @@ class CWLType
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
@@ -273,7 +272,6 @@ class stdout // @suppress(dscanner.style.phobos_naming_convention)
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
@@ -288,7 +286,6 @@ class stderr // @suppress(dscanner.style.phobos_naming_convention)
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
@@ -616,7 +613,6 @@ class CWLVersion
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
@@ -634,7 +630,7 @@ class CWLVersion
     auto cmd = Loader.fromFile(cwl)
                      .load
                      .as!CommandLineTool;
-    assert(cmd.dig!"cwlVersion"("v1.2") == "v1.0");
+    assert(cmd.dig!"cwlVersion"(new CWLVersion("draft-3")) == "v1.0");
     assert(cmd.dig!(["inputs", "reference", "type"], CWLType) == "File");
     assert(cmd.dig!(["hints", "ResourceRequirement"], ResourceRequirement)
               .enforce!AssertError
@@ -717,7 +713,6 @@ class LinkMergeMethod
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
@@ -865,7 +860,6 @@ class ScatterMethod
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;
@@ -1013,7 +1007,7 @@ unittest
                     .load
                     .as!Workflow;
     assert(wf.dig!"class"("Invalid") == "Workflow");
-    assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
+    assert(wf.dig!"cwlVersion"(new CWLVersion("draft-3")) == "v1.0");
     assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
 }

@@ -75,7 +75,6 @@ class PrimitiveType
     }
 
     Symbol value_;
-    alias value_ this;
 
     mixin genCtor;
     mixin genOpEq;

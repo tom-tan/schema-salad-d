@@ -31,7 +31,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
 
     auto cmd = cwl.tryMatch!((CommandLineTool c) => c)
                   .assertNotThrown;
-    assert(cmd.dig!"cwlVersion"("v1.2") == "v1.0");
+    assert(cmd.dig!"cwlVersion"(new CWLVersion("draft-2")) == "v1.0");
     assert(cmd.dig!(["inputs", "reference", "type"], CWLType) == "File");
     assert(cmd.dig!(["hints", "ResourceRequirement"], ResourceRequirement)
               .enforce!AssertError
@@ -57,7 +57,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
     auto wf = cwl.tryMatch!((Workflow w) => w)
                  .assertNotThrown;
     assert(wf.edig!("class", string) == "Workflow");
-    assert(wf.dig!"cwlVersion"("v1.2") == "v1.0");
+    assert(wf.dig!"cwlVersion"(new CWLVersion("draft-3")) == "v1.0");
     assert(wf.dig!(["inputs", "file1", "type"], CWLType) == "File");
     assert(wf.dig!(["outputs", "count_output", "outputSource"], string) == "step2/output");
 }
