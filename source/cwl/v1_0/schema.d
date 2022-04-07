@@ -131,7 +131,7 @@ class File
     Optional!string nameroot_;
     Optional!string nameext_;
     Optional!string checksum_;
-    Optional!int size_;
+    Optional!long size_;
     Optional!(Either!(File, Directory)[]) secondaryFiles_;
     Optional!string format_;
     Optional!string contents_;
