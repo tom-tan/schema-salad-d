@@ -9,6 +9,7 @@ import dyaml : Node, NodeType;
 
 import salad.context : LoadingContext;
 
+import std.file : getcwd;
 import std.typecons : Tuple;
 
 /** 
@@ -23,28 +24,40 @@ auto isAbsoluteURI(string uriOrPath) @nogc nothrow pure @safe
 }
 
 /**
+ * Returns: an absolute URI with scheme
  * Params: 
  *   pathOrURI = a string that is an absolute or relative local path, or a URI
  */
-auto toURI(string pathOrURI) pure @safe
+auto absoluteURI(string pathOrURI, string base = getcwd()) nothrow pure @safe
 {
+    import salad.resolver : isAbsoluteURI;
+    import std.path : isAbsolute;
+
     if (pathOrURI.isAbsoluteURI)
     {
         return pathOrURI;
     }
+    else if (pathOrURI.isAbsolute)
+    {
+        return pathOrURI;
+    }
+    else if (base.isAbsolute)
+    {
+        import std.exception : assumeUnique, assumeWontThrow;
+        import std.path : absolutePath, asNormalizedPath;
+        import std.array : array;
+        auto absPath = pathOrURI.absolutePath(base)
+                                .assumeWontThrow
+                                .asNormalizedPath
+                                .array;
+        return "file://"~(() @trusted => absPath.assumeUnique)();
+    }
     else
     {
-        import std.algorithm : startsWith;
-
-        if (pathOrURI.startsWith("/"))
-        {
-            return "file://"~pathOrURI;
-        }
-        else
-        {
-            import std.path : absolutePath;
-            return "file://"~pathOrURI.absolutePath;
-        }
+        assert(base.isAbsoluteURI);
+        auto sc = base.scheme; // assumes `base` starts with `$sc://`
+        auto abs = pathOrURI.absoluteURI(base[sc.length+2..$]);
+        return sc~abs[4..$];
     }
 }
 
