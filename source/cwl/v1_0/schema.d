@@ -908,7 +908,7 @@ class StepInputExpressionRequirement
     InputParameter[] inputs_;
     @idMap("id", "type")
     ExpressionToolOutputParameter[] outputs_;
-    static immutable class_ = "Expression";
+    static immutable class_ = "ExpressionTool";
     string expression_;
     @id Optional!string id_;
     @idMap("class")
