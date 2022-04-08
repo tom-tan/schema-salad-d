@@ -484,6 +484,10 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                     {
                         return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
                     }
+                    else
+                    {
+                        throw new DocumentException("Unknown record type", expanded);
+                    }
                 }
             }
         }
