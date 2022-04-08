@@ -119,3 +119,15 @@ unittest
     import std.json : JSONException, parseJSON;
     parseJSON(str).assertNotThrown!JSONException;
 }
+
+@safe unittest
+{
+    import dyaml : Loader;
+    import salad.util : edig;
+
+    enum cwl = "examples/glob-expr-list.cwl";
+    auto clt = Loader.fromFile(cwl)
+                     .load
+                     .as!CommandLineTool;
+    assert(clt.edig!(["inputs", "ids", "type", "type"], string) == "array");
+}

@@ -392,22 +392,20 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                 if (s.endsWith("[]?"))
                 {
                     expanded.add("null");
-                    expanded.add([
-                            "type": "array",
-                            "items": s[0 .. $ - 3],
-                        ]);
+                    Node n;
+                    n.add("type", "array");
+                    n.add("items", s[0..$-3]);
+                    expanded.add(n);
                 }
                 else if (s.endsWith("[]"))
                 {
-                    expanded.add([
-                            "type": "array",
-                            "items": s[0 .. $ - 2],
-                        ]);
+                    expanded.add("type", "array");
+                    expanded.add("items", s[0..$-2]);
                 }
                 else if (s.endsWith("?"))
                 {
                     expanded.add("null");
-                    expanded.add(s[0 .. $ - 1]);
+                    expanded.add(s[0..$-1]);
                 }
                 else
                 {
@@ -421,7 +419,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
         }
         else
         {
-            expanded = Node(cast()r.node);
+            expanded = Node(r.node);
         }
 
         // dispatch

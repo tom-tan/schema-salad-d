@@ -61,6 +61,7 @@ class CommandInputParameter
     Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
     Optional!Any default_;
+    @typeDSL
     Optional!(
         CWLType,
         CommandInputRecordSchema,
@@ -172,6 +173,7 @@ class CommandInputRecordSchema
 class CommandInputRecordField
 {
     string name_;
+    @typeDSL
     Either!(
         CWLType,
         CommandInputRecordSchema,
@@ -210,6 +212,7 @@ class CommandInputEnumSchema
 
 class CommandInputArraySchema
 {
+    @typeDSL
     Either!(
         CWLType,
         CommandInputRecordSchema,
@@ -242,6 +245,7 @@ class CommandOutputParameter
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
     Optional!string format_;
+    @typeDSL
     Optional!(
         CWLType,
         stdout,
@@ -319,6 +323,7 @@ class CommandOutputRecordSchema
 class CommandOutputRecordField
 {
     string name_;
+    @typeDSL
     Either!(
         CWLType,
         CommandOutputRecordSchema,
@@ -355,6 +360,7 @@ class CommandOutputEnumSchema
 
 class CommandOutputArraySchema
 {
+    @typeDSL
     Either!(
         CWLType,
         CommandOutputRecordSchema,
@@ -420,6 +426,7 @@ class InputRecordSchema
 class InputRecordField
 {
     string name_;
+    @typeDSL
     Either!(
         CWLType,
         InputRecordSchema,
@@ -458,6 +465,7 @@ class InputEnumSchema
 
 class InputArraySchema
 {
+    @typeDSL
     Either!(
         CWLType,
         InputRecordSchema,
@@ -684,6 +692,7 @@ class WorkflowOutputParameter
     Optional!string format_;
     Optional!(string, string[]) outputSource_;
     Optional!LinkMergeMethod linkMerge_;
+    @typeDSL
     Optional!(
         CWLType,
         OutputRecordSchema,
@@ -734,6 +743,7 @@ class OutputRecordSchema
 class OutputRecordField
 {
     string name_;
+    @typeDSL
     Either!(
         CWLType,
         OutputRecordSchema,
@@ -770,6 +780,7 @@ class OutputEnumSchema
 
 class OutputArraySchema
 {
+    @typeDSL
     Either!(
         CWLType,
         OutputRecordSchema,
@@ -948,6 +959,7 @@ class InputParameter
     Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
     Optional!Any default_;
+    @typeDSL
     Optional!(
         CWLType,
         InputRecordSchema,
@@ -977,6 +989,7 @@ class ExpressionToolOutputParameter
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
     Optional!string format_;
+    @typeDSL
     Optional!(
         CWLType,
         OutputRecordSchema,
