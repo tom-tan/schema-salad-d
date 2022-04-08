@@ -7,6 +7,7 @@ module salad.type;
 
 public import std.sumtype;
 import std.meta : allSatisfy, anySatisfy, templateNot;
+import std.traits : isArray;
 
 struct None{}
 
@@ -30,10 +31,17 @@ enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templa
 }
 
 ///
-auto orElse(T, U)(T val, lazy U default_)
+auto orElse(T, U)(T val, lazy U default_) @safe
 if (is(T == Optional!U))
 {
     return val.match!((U u) => u, none => default_);
+}
+
+///
+auto orElse(T)(T val, lazy void[] default_) @trusted
+if (isOptional!T && isArray!(T.Types[1]))
+{
+    return val.match!((T.Types[1] u) => u, none => cast(T.Types[1])default_);
 }
 
 ///
@@ -44,6 +52,16 @@ if (is(T == Optional!U))
 
     num = 1;
     assert(num.orElse(5) == 1);
+}
+
+@safe unittest
+{
+    Optional!(string[]) arr;
+    assert(arr.orElse(["a", "b", "c"]) == ["a", "b", "c"]);
+    assert(arr.orElse([]) == (string[]).init);
+    
+    arr = ["foo"];
+    assert(arr.orElse([]) == ["foo"]);
 }
 
 // TODO: more appropriate name
