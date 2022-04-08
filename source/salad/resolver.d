@@ -39,7 +39,7 @@ auto absoluteURI(string pathOrURI, string base = getcwd()) nothrow pure @safe
     }
     else if (pathOrURI.isAbsolute)
     {
-        return pathOrURI;
+        return "file://"~pathOrURI;
     }
     else if (base.isAbsolute)
     {
@@ -57,8 +57,18 @@ auto absoluteURI(string pathOrURI, string base = getcwd()) nothrow pure @safe
         assert(base.isAbsoluteURI);
         auto sc = base.scheme; // assumes `base` starts with `$sc://`
         auto abs = pathOrURI.absoluteURI(base[sc.length+2..$]);
-        return sc~abs[4..$];
+        return sc~"://"~abs[(sc == "file" ? 7 : 8)..$];
     }
+}
+
+pure @safe unittest
+{
+    assert("http://example.com/foo/bar".absoluteURI == "http://example.com/foo/bar");
+    assert("/foo/bar/buzz".absoluteURI == "file:///foo/bar/buzz");
+    assert("../fuga/piyo".absoluteURI("http://example.com/foo/bar")
+        == "http://example.com/foo/fuga/piyo");
+    assert("../fuga/piyo".absoluteURI("/foo/bar")
+        == "file:///foo/fuga/piyo");
 }
 
 ///
