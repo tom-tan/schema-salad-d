@@ -465,21 +465,24 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
 
                 enum DispatchFieldName = StaticMembersOf!(DispatchableRecords[0])[0];
 
-                auto id = expanded.edig(DispatchFieldName[0 .. $ - 1]).as!string;
-                switch (id)
+                if (auto id = DispatchFieldName[0..$-1] in expanded)
                 {
-                    static foreach (RT; DispatchableRecords)
+                    switch (id.as!string)
                     {
-                        case __traits(getMember, RT, DispatchFieldName): return T(expanded.as_!RT(r.context));
-                    }
-                    static if (NonDispatchableRecords.length == 0)
-                    {
-                        default: throw new DocumentException("Unknown record type: " ~ id, expanded.edig(
+                        static foreach (RT; DispatchableRecords)
+                        {
+                            case __traits(getMember, RT, DispatchFieldName): return T(expanded.as_!RT(r.context));
+                        }
+                    default:
+                        throw new DocumentException("Unknown record type: " ~ id.as!string, expanded.edig(
                                 DispatchFieldName[0 .. $ - 1]));
                     }
-                    else
+                }
+                else
+                {
+                    static if (NonDispatchableRecords.length == 1)
                     {
-                        default: return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
+                        return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
                     }
                 }
             }
