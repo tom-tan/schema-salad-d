@@ -32,16 +32,19 @@ enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templa
 
 ///
 auto orElse(T, U)(T val, lazy U default_) @safe
-if (is(T == Optional!U))
+if (isOptional!T && T.Types.length == 2)
 {
-    return val.match!((U u) => u, none => default_);
-}
+    alias V = T.Types[1];
 
-///
-auto orElse(T)(T val, lazy void[] default_) @trusted
-if (isOptional!T && isArray!(T.Types[1]))
-{
-    return val.match!((T.Types[1] u) => u, none => cast(T.Types[1])default_);
+    static if ((isArray!V && is(U == void[])) ||
+               (is(V == class) && is(U == typeof(null))))
+    {
+        return val.match!((V v) => v, none => V.init);
+    }
+    else
+    {
+        return val.match!((U u) => u, none => default_);
+    }
 }
 
 ///
@@ -62,6 +65,17 @@ if (isOptional!T && isArray!(T.Types[1]))
     
     arr = ["foo"];
     assert(arr.orElse([]) == ["foo"]);
+}
+
+@safe unittest
+{
+    static class C {}
+
+    Optional!C c;
+    assert(c.orElse(null) is null);
+
+    c = new C;
+    assert(c.orElse(null) !is null);
 }
 
 // TODO: more appropriate name
