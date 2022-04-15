@@ -291,14 +291,16 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     import salad.exception : docEnforce;
     import salad.resolver : resolveDirectives;
 
+    auto resolved = resolveDirectives(node, context);
+
     static if (idMap_.subject.empty)
     {
-        docEnforce(node.type == NodeType.sequence, "Sequence is expected but it is not", node);
+        docEnforce(resolved.node.type == NodeType.sequence, "Sequence is expected but it is not", resolved.node);
         auto app = appender!T;
-        foreach (elem; node.sequence)
+        foreach (elem; resolved.node.sequence)
         {
             alias E = ElementType!T;
-            auto r = resolveDirectives(elem, context);
+            auto r = resolveDirectives(elem, resolved.context);
             if (r.node.type == NodeType.sequence)
             {
                 import std.algorithm : map;
@@ -316,18 +318,18 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     else
     {
         // map notation
-        docEnforce(node.type == NodeType.sequence || node.type == NodeType.mapping,
-            "Sequence or mapping is expected but it is not", node);
-        if (node.type == NodeType.sequence)
+        docEnforce(resolved.node.type == NodeType.sequence || resolved.node.type == NodeType.mapping,
+            "Sequence or mapping is expected but it is not", resolved.node);
+        if (resolved.node.type == NodeType.sequence)
         {
-            return node.as_!(T, typeDSL)(context);
+            return resolved.node.as_!(T, typeDSL)(resolved.context);
         }
 
         auto app = appender!T;
-        foreach (kv; node.mapping)
+        foreach (kv; resolved.node.mapping)
         {
             auto key = kv.key.as!string;
-            auto r = resolveDirectives(kv.value, context);
+            auto r = resolveDirectives(kv.value, resolved.context);
             auto value = r.node;
             auto newContext = r.context;
             Node elem;

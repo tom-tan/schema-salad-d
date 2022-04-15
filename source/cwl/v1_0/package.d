@@ -131,3 +131,22 @@ unittest
                      .as!CommandLineTool;
     assert(clt.edig!(["inputs", "ids", "type", "type"], string) == "array");
 }
+
+@safe unittest
+{
+    import core.exception : AssertError;
+    import salad.type : tryMatch;
+    import salad.util : dig, edig;
+    import std.exception : assertNotThrown, enforce;
+    import std.path : absolutePath;
+
+    auto uri = "file://"~"examples/params.cwl".absolutePath;
+
+    auto cwl = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                                 .assertNotThrown;
+    assert(cwl.edig!("class", string) == "CommandLineTool");
+
+    auto cmd = cwl.tryMatch!((CommandLineTool c) => c)
+                  .assertNotThrown;
+    assert(cmd.edig!(["outputs", "t1", "type"], string) == "Any");
+}
