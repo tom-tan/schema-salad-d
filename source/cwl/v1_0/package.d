@@ -65,7 +65,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
 @safe unittest
 {
     import salad.type : tryMatch;
-    import salad.util : dig, edig;
+    import salad.util : edig;
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
@@ -134,10 +134,9 @@ unittest
 
 @safe unittest
 {
-    import core.exception : AssertError;
     import salad.type : tryMatch;
-    import salad.util : dig, edig;
-    import std.exception : assertNotThrown, enforce;
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
     auto uri = "file://"~"examples/cwl-v1.0/params.cwl".absolutePath;
@@ -153,10 +152,9 @@ unittest
 
 @safe unittest
 {
-    import core.exception : AssertError;
     import salad.type : tryMatch;
-    import salad.util : dig, edig;
-    import std.exception : assertNotThrown, enforce;
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
     auto uri = "file://"~"examples/cwl-v1.0/formattest.cwl".absolutePath;
@@ -165,4 +163,19 @@ unittest
                                  .tryMatch!((CommandLineTool c) => c)
                                  .assertNotThrown;
     assert(cmd.edig!(["inputs", "input", "format"], string) == "http://edamontology.org/format_2330");
+}
+
+@safe unittest
+{
+    import salad.type : tryMatch;
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
+    import std.path : absolutePath;
+
+    auto uri = "file://"~"examples/cwl-v1.0/formattest2.cwl".absolutePath;
+
+    auto cmd = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                                 .tryMatch!((CommandLineTool c) => c)
+                                 .assertNotThrown;
+    assert(cmd.edig!(["outputs", "output", "format"], string) == "$(inputs.input.format)");
 }

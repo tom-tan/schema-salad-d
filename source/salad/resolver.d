@@ -262,7 +262,7 @@ auto resolveLink(string link, in LoadingContext context) nothrow pure @safe
 {
     import std.algorithm : canFind, endsWith, findSplitAfter, findSplitBefore, startsWith;
 
-    if (link.isAbsoluteURI)
+    if (link.isAbsoluteURI || link.isExpression)
     {
         return link;
     }
@@ -333,6 +333,15 @@ nothrow pure @safe unittest
     };
 
     assert("edam:format_2330".resolveLink(context) == "http://edamontology.org/format_2330");
+}
+
+// Returns: true if `exp` is an expression, which starts with `"$("` or `"${"`
+// Note: It is CWL-specific but needed as a workaround for schema_salad#39.
+// See_Also: https://github.com/common-workflow-language/schema_salad/issues/39
+auto isExpression(string exp) @nogc nothrow pure @safe
+{
+    import std.algorithm : startsWith;
+    return exp.startsWith("$(") || exp.startsWith("${");
 }
 
 ///
