@@ -9,7 +9,7 @@ module cwl.v1_0.schema;
 
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
-import salad.meta.uda : documentRoot, id, idMap, typeDSL;
+import salad.meta.uda : documentRoot, id, idMap, link, typeDSL;
 import salad.type : Either, Optional;
 
 @documentRoot class CommandLineTool
@@ -58,7 +58,7 @@ class CommandInputParameter
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
-    Optional!(string, string[]) format_;
+    @link Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
     Optional!Any default_;
     @typeDSL
@@ -125,8 +125,8 @@ class CWLType
 class File
 {
     static immutable class_ = "File";
-    Optional!string location_;
-    Optional!string path_;
+    @link Optional!string location_;
+    @link Optional!string path_;
     Optional!string basename_;
     Optional!string dirname_;
     Optional!string nameroot_;
@@ -134,7 +134,7 @@ class File
     Optional!string checksum_;
     Optional!long size_;
     Optional!(Either!(File, Directory)[]) secondaryFiles_;
-    Optional!string format_;
+    @link Optional!string format_;
     Optional!string contents_;
 
     mixin genCtor;
@@ -145,8 +145,8 @@ class File
 class Directory
 {
     static immutable class_ = "Directory";
-    Optional!string location_;
-    Optional!string path_;
+    @link Optional!string location_;
+    @link Optional!string path_;
     Optional!string basename_;
     Optional!(
         Either!(File, Directory)[]
@@ -244,7 +244,7 @@ class CommandOutputParameter
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
-    Optional!string format_;
+    @link Optional!string format_;
     @typeDSL
     Optional!(
         CWLType,
@@ -634,7 +634,7 @@ class CWLVersion
     import salad.util : dig;
     import std.exception : enforce;
 
-    enum cwl = "examples/bwa-mem-tool.cwl";
+    enum cwl = "examples/cwl-v1.0/bwa-mem-tool.cwl";
     auto cmd = Loader.fromFile(cwl)
                      .load
                      .as!CommandLineTool;
@@ -956,7 +956,7 @@ class InputParameter
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
-    Optional!(string, string[]) format_;
+    @link Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
     Optional!Any default_;
     @typeDSL
@@ -988,7 +988,7 @@ class ExpressionToolOutputParameter
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
-    Optional!string format_;
+    @link Optional!string format_;
     @typeDSL
     Optional!(
         CWLType,
@@ -1015,7 +1015,7 @@ unittest
     import dyaml;
     import salad.util : dig;
 
-    enum cwl = "examples/count-lines1-wf.cwl";
+    enum cwl = "examples/cwl-v1.0/count-lines1-wf.cwl";
     auto wf = Loader.fromFile(cwl)
                     .load
                     .as!Workflow;

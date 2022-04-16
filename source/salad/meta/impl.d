@@ -180,15 +180,17 @@ template Assign(alias node, alias field, alias context)
         enum Assign = format!q"EOS
             if (auto f = "%s" in %s)
             {
-                %s = (*f).as_!(%s, %s, %s)(%s);
+                %s = (*f).as_!(%s, %s, %s, %s)(%s);
             }
-EOS"(param, node.stringof, field.stringof, T.stringof, hasUDA!(field, typeDSL), idMap_, context.stringof);
+EOS"(param, node.stringof, field.stringof,
+    T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), context.stringof);
     }
     else
     {
         enum Assign = format!q"EOS
-            %s = %s.edig("%s").as_!(%s, %s, %s)(%s);
-EOS"(field.stringof, node.stringof, param, T.stringof, hasUDA!(field, typeDSL), idMap_, context.stringof);
+            %s = %s.edig("%s").as_!(%s, %s, %s, %s)(%s);
+EOS"(field.stringof, node.stringof, param,
+T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), context.stringof);
     }
 }
 
@@ -214,7 +216,7 @@ version(unittest)
     LoadingContext con;
     enum exp = Assign!(n, strVariable_, con).stripLeftAll;
     static assert(exp == q"EOS
-        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""))(con);
+        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""), false)(con);
 EOS".stripLeftAll, exp);
 
     mixin(exp);
@@ -234,7 +236,7 @@ EOS".stripLeftAll, exp);
     static assert(exp == q"EOS
         if (auto f = "param" in n)
         {
-            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""))(con);
+            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""), false)(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -258,7 +260,7 @@ unittest
     static assert(exp == q"EOS
         if (auto f = "params" in n)
         {
-            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""))(con);
+            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""), false)(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -267,7 +269,8 @@ EOS".stripLeftAll, exp);
                   .assertNotThrown == [1, 2, 3]);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+     (in Node node, in LoadingContext context) @trusted
         if (is(T == class))
 {
     import salad.resolver : resolveDirectives;
@@ -275,15 +278,25 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     return new T(resolved.node, resolved.context);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+     (in Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
-    import salad.resolver : resolveDirectives;
+    import salad.resolver : resolveDirectives, resolveLink;
     auto resolved = resolveDirectives(node, context);
-    return resolved.node.as!T;
+    auto ret = resolved.node.as!T;
+    static if (isSomeString!T && isLink)
+    {
+        return ret.resolveLink(resolved.context);
+    }
+    else
+    {
+        return ret;
+    }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+     (in Node node, in LoadingContext context) @trusted
         if (!isSomeString!T && isArray!T)
 {
     import std.array : appender;
@@ -358,7 +371,8 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in LoadingContext context) @trusted
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+     (in Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
     import salad.resolver : resolveDirectives;
@@ -375,7 +389,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
     static if (Types.length == 1)
     {
         auto r = resolveDirectives(node, context);
-        return T(r.node.as_!(Types[0], typeDSL, idMap_)(r.context));
+        return T(r.node.as_!(Types[0], typeDSL, idMap_, isLink)(r.context));
     }
     else
     {
@@ -432,7 +446,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
             static assert(ArrayTypes.length == 1, "Type `T[] | U[] | ...` is not supported yet");
             if (expanded.type == NodeType.sequence)
             {
-                return T(expanded.as_!(ArrayTypes[0])(r.context));
+                return T(expanded.as_!(ArrayTypes[0], false, idMap.init, isLink)(r.context));
             }
         }
 
@@ -500,6 +514,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
         {                
             if (expanded.type == NodeType.string)
             {
+                import salad.resolver : resolveLink;
                 import std.algorithm : canFind;
                 import std.traits : EnumMembers;
 
@@ -515,7 +530,14 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init)(in Node node, in Loadi
                     }
                     static if (hasString)
                     {
-                        default: return T(value);
+                        static if (isLink)
+                        {
+                            default: return T(value.resolveLink(context));
+                        }
+                        else
+                        {
+                            default: return T(value);
+                        }
                     }
                     else
                     {

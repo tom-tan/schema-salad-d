@@ -34,3 +34,9 @@ struct id {} // @suppress(dscanner.style.phobos_naming_convention)
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Identifier_resolution
  */
 struct subscope { string subscope; } // @suppress(dscanner.style.phobos_naming_convention)
+
+/**
+ * UDA for link fields
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Link_validation
+ */
+struct link {}

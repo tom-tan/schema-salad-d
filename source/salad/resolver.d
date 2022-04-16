@@ -312,7 +312,7 @@ nothrow pure @safe unittest
             "acid": "http://example.com/acid#",
         ]
     };
-    
+
     enum zero = "http://example.com/base/zero";
     assert(zero.resolveLink(context) == zero);
 
@@ -321,6 +321,18 @@ nothrow pure @safe unittest
     assert("#three".resolveLink(context) == "http://example.com/base#three");
     assert("four#five".resolveLink(context) == "http://example.com/four#five");
     assert("acid:six".resolveLink(context) == "http://example.com/acid#six");
+}
+
+nothrow pure @safe unittest
+{
+    LoadingContext context = {
+        baseURI: "http://example.com/base",
+        namespaces: [
+            "edam": "http://edamontology.org/",
+        ]
+    };
+
+    assert("edam:format_2330".resolveLink(context) == "http://edamontology.org/format_2330");
 }
 
 ///
@@ -344,7 +356,7 @@ ExplicitContext splitContext(in Node node, string uri) @safe
         }
         con.fileURI = uri;
 
-        if (auto ns = "$namespaaces" in node)
+        if (auto ns = "$namespaces" in node)
         {
             import std.algorithm : map;
             import std.array : assocArray;

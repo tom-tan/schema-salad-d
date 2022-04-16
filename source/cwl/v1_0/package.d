@@ -23,7 +23,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
     import std.exception : assertNotThrown, enforce;
     import std.path : absolutePath;
 
-    auto uri = "file://"~"examples/bwa-mem-tool.cwl".absolutePath;
+    auto uri = "file://"~"examples/cwl-v1.0/bwa-mem-tool.cwl".absolutePath;
 
     auto cwl = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
                                  .assertNotThrown;
@@ -49,7 +49,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
-    auto uri = "file://"~"examples/count-lines1-wf.cwl".absolutePath;
+    auto uri = "file://"~"examples/cwl-v1.0/count-lines1-wf.cwl".absolutePath;
     auto cwl = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
                                  .assertNotThrown;
     assert(cwl.edig!("class", string) == "Workflow");
@@ -69,7 +69,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
     import std.exception : assertNotThrown;
     import std.path : absolutePath;
 
-    auto uri = "file://"~"examples/revsort-packed.cwl".absolutePath;
+    auto uri = "file://"~"examples/cwl-v1.0/revsort-packed.cwl".absolutePath;
     auto cwls = importFromURI(uri).tryMatch!((DocumentRootType[] rs) => rs)
                                   .assertNotThrown;
     assert(cwls.length == 3);
@@ -98,7 +98,7 @@ unittest
     import std.regex : ctRegex, replaceAll;
     import dyaml : dumper, Loader, Node;
 
-    enum cwl = "examples/count-lines1-wf.cwl";
+    enum cwl = "examples/cwl-v1.0/count-lines1-wf.cwl";
     auto wf = Loader.fromFile(cwl)
                     .load
                     .as!Workflow;
@@ -125,7 +125,7 @@ unittest
     import dyaml : Loader;
     import salad.util : edig;
 
-    enum cwl = "examples/glob-expr-list.cwl";
+    enum cwl = "examples/cwl-v1.0/glob-expr-list.cwl";
     auto clt = Loader.fromFile(cwl)
                      .load
                      .as!CommandLineTool;
@@ -140,7 +140,7 @@ unittest
     import std.exception : assertNotThrown, enforce;
     import std.path : absolutePath;
 
-    auto uri = "file://"~"examples/params.cwl".absolutePath;
+    auto uri = "file://"~"examples/cwl-v1.0/params.cwl".absolutePath;
 
     auto cwl = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
                                  .assertNotThrown;
@@ -149,4 +149,20 @@ unittest
     auto cmd = cwl.tryMatch!((CommandLineTool c) => c)
                   .assertNotThrown;
     assert(cmd.edig!(["outputs", "t1", "type"], string) == "Any");
+}
+
+@safe unittest
+{
+    import core.exception : AssertError;
+    import salad.type : tryMatch;
+    import salad.util : dig, edig;
+    import std.exception : assertNotThrown, enforce;
+    import std.path : absolutePath;
+
+    auto uri = "file://"~"examples/cwl-v1.0/formattest.cwl".absolutePath;
+
+    auto cmd = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                                 .tryMatch!((CommandLineTool c) => c)
+                                 .assertNotThrown;
+    assert(cmd.edig!(["inputs", "input", "format"], string) == "http://edamontology.org/format_2330");
 }
