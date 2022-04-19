@@ -108,9 +108,9 @@ if (__traits(isModule, module_))
     return objs.match!(
         (DocType doc) {
             import salad.context : LoadingContext;
-            import salad.resolver : resolveIdentifier;
+            import salad.resolver : resolveIdentifier, withoutFragment;
 
-            auto context = LoadingContext(uri);
+            auto context = LoadingContext(uri.withoutFragment);
             docEnforce(uri.fragment || doc.match!(d => d.identifier.resolveIdentifier(context).fragment) == frag,
                        "Mismatched fragment", node);
             return objs;
@@ -123,12 +123,12 @@ if (__traits(isModule, module_))
             else
             {
                 import salad.context : LoadingContext;
-                import salad.resolver : resolveIdentifier;
+                import salad.resolver : resolveIdentifier, withoutFragment;
                 import std.algorithm : filter;
                 import std.array : array;
                 import std.format : format;
     
-                auto context = LoadingContext(uri);
+                auto context = LoadingContext(uri.withoutFragment);
                 auto elems = () @trusted {
                     // SumType.opAssign used in `array` is unsafe
                     // we can mark it as trusted because it does not leak any pointers outside an array

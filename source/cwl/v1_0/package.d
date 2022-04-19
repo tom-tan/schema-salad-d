@@ -179,3 +179,17 @@ unittest
                                  .assertNotThrown;
     assert(cmd.edig!(["outputs", "output", "format"], string) == "$(inputs.input.format)");
 }
+
+@safe unittest
+{
+    import salad.type : tryMatch;
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
+    import std.path : absolutePath;
+
+    auto uri = "file://"~"examples/cwl-v1.0/search.cwl".absolutePath;
+
+    auto wf = importFromURI(uri~"#main").tryMatch!((DocumentRootType r) => r)
+                                 .tryMatch!((Workflow wf) => wf)
+                                 .assertNotThrown;
+}
