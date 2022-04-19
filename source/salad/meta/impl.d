@@ -25,25 +25,72 @@ mixin template genCtor()
     private import salad.context : LoadingContext;
     private import salad.meta.impl : isSaladRecord, isSaladEnum;
 
-    this() pure @nogc nothrow @safe {}
+    this() pure @nogc nothrow @safe {
+        import std.traits : getSymbolsByUDA;
+        static if (getSymbolsByUDA!(typeof(this), id).length == 1)
+        {
+            identifier = "";
+        }
+    }
 
     static if (isSaladRecord!(typeof(this)))
     {
-        this(in Node node, in LoadingContext context = LoadingContext.init) @safe
+        this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
         {
             import salad.meta.impl : Assign, as_;
             import salad.util : edig;
             import salad.type : None, SumType;
             import std.algorithm : endsWith;
-            import std.traits : FieldNameTuple;
+            import std.range : empty;
+            import std.traits : getSymbolsByUDA, FieldNameTuple;
 
             alias This = typeof(this);
 
+            static if (getSymbolsByUDA!(This, id).length == 1)
+            {
+                mixin(Assign!(node, getSymbolsByUDA!(This, id)[0], context));
+
+                identifier = (() {
+                    import salad.resolver : resolveIdentifier;
+                    import std.traits : Unqual;
+                    auto i = getSymbolsByUDA!(This, id)[0];
+                    alias idType = Unqual!(typeof(i));
+                    static assert(is(idType == string) || is(idType == Optional!string));
+                    static if (is(idType == string))
+                    {
+                        return i.resolveIdentifier(context);
+                    }
+                    else
+                    {
+                        import salad.type : match;
+
+                        return i.match!(
+                            (string s) => s.resolveIdentifier(context),
+                            none => "",
+                        );
+                    }
+                })();
+
+                static immutable idFieldName = getSymbolsByUDA!(This, id)[0].stringof;
+
+                auto con = const(LoadingContext)(
+                    identifier.empty ? context.baseURI : identifier,
+                    context.fileURI,
+                    context.namespaces,
+                    context.subscope,
+                );
+            }
+            else
+            {
+                static immutable idFieldName = "";
+                auto con = context;
+            }
+
             static foreach (field; FieldNameTuple!This)
             {
-                static if (field.endsWith("_"))
+                static if (field.endsWith("_") && field != idFieldName~"_")
                 {
-                    mixin(Assign!(node, __traits(getMember, this, field), context));
+                    mixin(Assign!(node, __traits(getMember, this, field), con));
                 }
             }
         }
@@ -119,26 +166,7 @@ mixin template genIdentifier()
 
     static if (getSymbolsByUDA!(typeof(this), id).length == 1)
     {
-        auto identifier() const @nogc nothrow pure @safe
-        {
-            import std.traits : Unqual;
-            auto i = getSymbolsByUDA!(typeof(this), id)[0];
-            alias idType = Unqual!(typeof(i));
-            static assert(is(idType == string) || is(idType == Optional!string));
-            static if (is(idType == string))
-            {
-                return i;
-            }
-            else
-            {
-                import salad.type : match;
-
-                return i.match!(
-                    (string s) => s,
-                    none => "",
-                );
-            }
-        }
+        immutable string identifier;
     }
 }
 
@@ -151,7 +179,7 @@ mixin template genOpEq()
     }
 }
 
-enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier(); });
+enum hasIdentifier(T) = __traits(compiles, { auto id = T.init.identifier; });
 
 enum isDefinedField(string F) = F[$-1] == '_';
 enum StaticMembersOf(T) = Filter!(ApplyLeft!(hasStaticMember, T), Filter!(isDefinedField, __traits(derivedMembers, T)));

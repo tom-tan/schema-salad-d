@@ -89,12 +89,12 @@ if (__traits(isModule, module_))
 {
     import salad.exception : docEnforce;
     import salad.fetcher : fetchNode;
-    import salad.resolver : fragment;
+    import salad.resolver : fragment, withoutFragment;
     import salad.type : match, tryMatch;
     import std.range : empty;
 
     auto frag = uri.fragment;
-    auto baseuri = uri[0..$-frag.length];
+    auto baseuri = uri.withoutFragment;
     auto node = fetchNode(baseuri);
     auto objs = parse!module_(node, baseuri);
     if (frag.empty)
@@ -102,16 +102,13 @@ if (__traits(isModule, module_))
         import std.algorithm : startsWith;
         frag = defaultFragment.startsWith("#") ? defaultFragment[1..$] : defaultFragment;
     }
+    auto targetURI = baseuri~"#"~frag;
 
     alias RetType = typeof(objs);
     alias DocType = DocumentRootType!module_;
     return objs.match!(
         (DocType doc) {
-            import salad.context : LoadingContext;
-            import salad.resolver : resolveIdentifier, withoutFragment;
-
-            auto context = LoadingContext(uri.withoutFragment);
-            docEnforce(uri.fragment || doc.match!(d => d.identifier.resolveIdentifier(context).fragment) == frag,
+            docEnforce(uri.fragment.empty || doc.match!(d => d.identifier) == targetURI,
                        "Mismatched fragment", node);
             return objs;
         },
@@ -122,23 +119,18 @@ if (__traits(isModule, module_))
             }
             else
             {
-                import salad.context : LoadingContext;
-                import salad.resolver : resolveIdentifier, withoutFragment;
-                import std.algorithm : filter;
-                import std.array : array;
                 import std.format : format;
-    
-                auto context = LoadingContext(uri.withoutFragment);
+
                 auto elems = () @trusted {
+                    import std.algorithm : filter;
+                    import std.array : array;
                     // SumType.opAssign used in `array` is unsafe
                     // we can mark it as trusted because it does not leak any pointers outside an array
-                    return docs.filter!(e => e.tryMatch!(d => d.identifier
-                                                               .resolveIdentifier(context)
-                                                               .fragment) == frag)
+                    return docs.filter!(e => e.tryMatch!(d => d.identifier) == targetURI)
                                .array;
                 }();
-                docEnforce(!elems.empty, format!"No objects for fragment `%s`"(frag), node);
-                docEnforce(elems.length == 1, format!"Duplicated objects for fragment `%s`"(frag), node);
+                docEnforce(!elems.empty, format!"No objects for ID `%s`"(targetURI), node);
+                docEnforce(elems.length == 1, format!"Duplicated objects for ID `%s`"(targetURI), node);
                 return RetType(elems[0]);
             }
         }

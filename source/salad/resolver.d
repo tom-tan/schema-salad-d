@@ -161,7 +161,11 @@ auto resolveIdentifier(string id, in LoadingContext context) nothrow pure @safe
     import std.algorithm : canFind, findSplitBefore, startsWith;
     import std.range : empty;
 
-    if (id.isAbsoluteURI)
+    if (id.empty)
+    {
+        return id;
+    }
+    else if (id.isAbsoluteURI)
     {
         return id;
     }
