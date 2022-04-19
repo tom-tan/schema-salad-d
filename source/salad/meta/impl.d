@@ -173,7 +173,7 @@ mixin template genIdentifier()
 
     static if (getSymbolsByUDA!(typeof(this), id).length == 1)
     {
-        immutable string identifier;
+        string identifier;
         LoadingContext context;
     }
 }
