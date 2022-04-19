@@ -41,8 +41,9 @@ mixin template genCtor()
             import salad.util : edig;
             import salad.type : None, SumType;
             import std.algorithm : endsWith;
+            import std.conv : to;
             import std.range : empty;
-            import std.traits : getSymbolsByUDA, FieldNameTuple;
+            import std.traits : getSymbolsByUDA, FieldNameTuple, hasUDA;
 
             alias This = typeof(this);
 
@@ -73,10 +74,10 @@ mixin template genCtor()
 
                 static immutable idFieldName = getSymbolsByUDA!(This, id)[0].stringof;
 
-                auto con = const(LoadingContext)(
+                auto con = LoadingContext(
                     identifier.empty ? context.baseURI : identifier,
                     context.fileURI,
-                    context.namespaces,
+                    context.namespaces.to!(string[string]),
                     context.subscope,
                 );
             }
@@ -84,6 +85,11 @@ mixin template genCtor()
             {
                 static immutable idFieldName = "";
                 auto con = context;
+            }
+
+            static if (hasUDA!(this, documentRoot))
+            {
+                this.context = con;                
             }
 
             static foreach (field; FieldNameTuple!This)
@@ -162,11 +168,13 @@ version(none) mixin template genToString()
 ///
 mixin template genIdentifier()
 {
-    import std.traits : getSymbolsByUDA;
+    private import std.traits : getSymbolsByUDA;
+    private import salad.context : LoadingContext;
 
     static if (getSymbolsByUDA!(typeof(this), id).length == 1)
     {
         immutable string identifier;
+        LoadingContext context;
     }
 }
 
