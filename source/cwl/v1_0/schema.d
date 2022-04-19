@@ -163,7 +163,7 @@ class CommandInputRecordSchema
     @idMap("name", "type")
     Optional!(CommandInputRecordField[]) fields_;
     Optional!string label_;
-    Optional!string name_;
+    @id Optional!string name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -202,7 +202,7 @@ class CommandInputEnumSchema
     string[] symbols_;
     static immutable type_ = "enum";
     Optional!string label_;
-    Optional!string name_;
+    @id Optional!string name_;
     Optional!CommandLineBinding inputBinding_;
 
     mixin genCtor;
