@@ -26,8 +26,9 @@ mixin template genCtor()
     private import salad.meta.impl : isSaladRecord, isSaladEnum;
 
     this() pure @nogc nothrow @safe {
+        import salad.meta.impl : hasIdentifier;
         import std.traits : getSymbolsByUDA;
-        static if (getSymbolsByUDA!(typeof(this), id).length == 1)
+        static if (hasIdentifier!(typeof(this)))
         {
             identifier = "";
         }
@@ -37,7 +38,7 @@ mixin template genCtor()
     {
         this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
         {
-            import salad.meta.impl : Assign, as_;
+            import salad.meta.impl : Assign, as_, hasIdentifier;
             import salad.util : edig;
             import salad.type : None, SumType;
             import std.algorithm : endsWith;
@@ -47,7 +48,7 @@ mixin template genCtor()
 
             alias This = typeof(this);
 
-            static if (getSymbolsByUDA!(This, id).length == 1)
+            static if (hasIdentifier!This)
             {
                 mixin(Assign!(node, getSymbolsByUDA!(This, id)[0], context));
 
@@ -80,16 +81,12 @@ mixin template genCtor()
                     context.namespaces.to!(string[string]),
                     context.subscope,
                 );
+                this.context = con;                
             }
             else
             {
                 static immutable idFieldName = "";
                 auto con = context;
-            }
-
-            static if (hasUDA!(this, documentRoot))
-            {
-                this.context = con;                
             }
 
             static foreach (field; FieldNameTuple!This)
@@ -561,14 +558,14 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                     {
                         static foreach(m; EnumMembers!(RT.Symbol))
                         {
-                            case m: return T(expanded.as_!RT(context));
+                            case m: return T(expanded.as_!RT(r.context));
                         }
                     }
                     static if (hasString)
                     {
                         static if (isLink)
                         {
-                            default: return T(value.resolveLink(context));
+                            default: return T(value.resolveLink(r.context));
                         }
                         else
                         {

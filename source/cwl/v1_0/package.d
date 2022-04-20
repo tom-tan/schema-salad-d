@@ -178,6 +178,7 @@ unittest
                                  .tryMatch!((CommandLineTool c) => c)
                                  .assertNotThrown;
     assert(cmd.edig!(["outputs", "output", "format"], string) == "$(inputs.input.format)");
+    assert(cmd.identifier == uri);
 }
 
 @safe unittest
@@ -192,4 +193,5 @@ unittest
     auto wf = importFromURI(uri~"#main").tryMatch!((DocumentRootType r) => r)
                                  .tryMatch!((Workflow wf) => wf)
                                  .assertNotThrown;
+    assert(wf.identifier == uri~"#main");
 }

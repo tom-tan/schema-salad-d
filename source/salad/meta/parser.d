@@ -65,16 +65,65 @@ if (__traits(isModule, module_))
 
     if (node.type == NodeType.mapping)
     {
+        import salad.context : LoadingContext;
         import salad.resolver : splitContext;
         auto r = splitContext(node, uri);
 
+        alias setID = (t) {
+            import salad.meta.impl : hasIdentifier;
+            static if (hasIdentifier!(typeof(t)))
+            {
+                import salad.meta.uda : id;
+                import std.traits : getSymbolsByUDA;
+                import std.range : empty;
+
+                enum idField = getSymbolsByUDA!(typeof(t), id)[0].stringof;
+
+                auto i = __traits(getMember, t, idField);
+                static if (is(typeof(i) == string))
+                {
+                    auto istr = i;
+                }
+                else
+                {
+                    import salad.type : match;
+
+                    auto istr = i.match!((string s) => s, _ => "");
+                }
+
+                if (istr.empty)
+                {
+                    t.identifier = t.context.baseURI;
+                }
+            }
+            return t;
+        };
+
         if (r.node.type == NodeType.mapping)
         {
-            return ReturnType(r.node.as_!T(r.context));
+            import salad.type : match;
+
+            return ReturnType(r
+                .node
+                .as_!T(r.context)
+                .match!(t => T(setID(t)))
+            );
         }
         else
         {
-            return ReturnType(r.node.as_!(T[])(r.context));
+            import salad.type : match;
+            import std.algorithm : map;
+            import std.array : array;
+
+            return ReturnType(
+                (() @trusted {
+                    return r
+                        .node
+                        .as_!(T[])(r.context)
+                        .map!(t => t.match!(t => T(setID(t))))
+                        .array;
+                }())
+            );
         }
     }
     else
