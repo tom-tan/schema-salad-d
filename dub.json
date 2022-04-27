@@ -16,10 +16,10 @@
 	},
 	"copyright": "Copyright © 2021, Tomoya Tanjo",
 	"dependencies": {
-		"requests": "~>2.0.3",
+		"requests": "~>2.0.5",
 		"dyaml": {
 			"repository": "git+https://github.com/dlang-community/D-YAML.git",
-			"version": "20f5ba33444a8acfe1a3737f4477c2fe8730bdba"
+			"version": "bc1773b4596fd99acdd72c11b292d20e7f8c742a"
 		}
 	},
 	"description": "Semantic Annotations for Linked Avro Data in D",
