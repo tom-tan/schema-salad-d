@@ -5,58 +5,51 @@
  */
 module salad.exception;
 
-import dyaml : Node;
+import dyaml : Mark, Node;
 
 ///
-class SchemaException : Exception
+abstract class SaladException : Exception
 {
     ///
-    this(string msg, Node node, Throwable nextInChain = null) nothrow pure
+    this(string msg, Mark mark, Throwable nextInChain = null) nothrow pure @safe
     {
-        auto mark = node.startMark;
         super(msg, mark.name, mark.line+1, nextInChain);
-        column = mark.column+1;
+        this.mark = mark;
     }
 
-    ///
-    ulong column;
+    Mark mark;
 }
 
 ///
-E schemaEnforce(E)(lazy E exp, string msg, Node node)
+class SchemaException : SaladException
 {
-    if (auto e = exp())
+    ///
+    this(string msg, Mark mark, Throwable nextInChain = null) nothrow pure @safe
     {
-        return e;
+        super(msg, mark, nextInChain);
     }
-    throw new SchemaException(msg, node);
 }
 
 ///
-class DocumentException : Exception
+E schemaEnforce(E)(lazy E exp, string msg, Mark mark)
 {
-    ///
-    this(string msg, Node node, Throwable nextInChain = null) nothrow pure @trusted
-    {
-        auto mark = node.startMark;
-        super(msg, mark.name, mark.line+1, nextInChain);
-        column = mark.column+1;
-        this.node = node;
-    }
-
-    ///
-    ulong column;
-
-    ///
-    Node node;
+    import std.exception : enforce;
+    return enforce(exp, new SchemaException(msg, mark));
 }
 
 ///
-E docEnforce(E)(lazy E exp, string msg, Node node)
+class DocumentException : SaladException
 {
-    if (auto e = exp())
+    ///
+    this(string msg, Mark mark, Throwable nextInChain = null) nothrow pure @safe
     {
-        return e;
+        super(msg, mark, nextInChain);
     }
-    throw new DocumentException(msg, node);
+}
+
+///
+E docEnforce(E)(lazy E exp, string msg, Mark mark)
+{
+    import std.exception : enforce;
+    return enforce(exp, new DocumentException(msg, mark));
 }

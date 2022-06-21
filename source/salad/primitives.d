@@ -9,7 +9,7 @@ module salad.primitives;
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 class Any
 {
-    private import dyaml : Node, NodeType;
+    private import dyaml : Mark, Node, NodeType;
     private import salad.context : LoadingContext;
 
     enum Symbols
@@ -17,30 +17,31 @@ class Any
         Any = "Any",
     }
 
-    Node value_;
-    const LoadingContext context_;
+    Node value;
+    LoadingContext context;
+    Mark mark;
 
     ///
     this(Node node, in LoadingContext context = LoadingContext.init) @safe
     {
         import salad.exception : docEnforce;
         docEnforce(node.type != NodeType.null_,
-                   "Any should be non-null", node);
-        value_ = node;
-        context_ = context;
+                   "Any should be non-null", node.startMark);
+        value = node;
+        this.context = context;
+        mark = node.startMark;
     }
 
     ///
     T as(T)() @safe
     {
         import salad.meta.impl : as_;
-        return value_.as_!T(context_);
+        return value.as_!T(context);
     }
 
     ///
-    Node opCast(T: Node)() const
+    Node opCast(T: Node)() const @nogc nothrow @safe
     {
-        // TODO: its style may not be JSON-compatible.
-        return value_;
+        return value;
     }
 }

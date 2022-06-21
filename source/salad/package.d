@@ -40,7 +40,7 @@ alias DocumentRootType = DocRootType!(salad.schema);
 }
 
 /// Loading CWL v1.1 schema
-/// Does not work due to `:` in a string
+/// Bugs: Does not work due to `:` in a string
 /// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
 version(none)
 @safe unittest
@@ -54,7 +54,7 @@ version(none)
 }
 
 /// Loading CWL v1.2 schema
-/// Does not work due to `:` in a string
+/// Bugs: Does not work due to `:` in a string
 /// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
 version(none)
 @safe unittest

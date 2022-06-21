@@ -7,6 +7,21 @@ module salad.context;
 
 struct LoadingContext
 {
+    ///
+    this(ref return scope inout LoadingContext rhs) nothrow pure @safe
+    {
+        import std.conv : to;
+        import std.exception : assertNotThrown;
+
+        baseURI = rhs.baseURI;
+        fileURI = rhs.fileURI;
+        namespaces = rhs
+            .namespaces
+            .to!(string[string])
+            .assertNotThrown; // https://issues.dlang.org/show_bug.cgi?id=21236
+        subscope = rhs.subscope;
+    }
+
     string baseURI;
     /**
      * URI for `include` and `import` directives

@@ -158,7 +158,7 @@ if (__traits(isModule, module_))
     return objs.match!(
         (DocType doc) {
             docEnforce(uri.fragment.empty || doc.match!(d => d.identifier) == targetURI,
-                       "Mismatched fragment", node);
+                       "Mismatched fragment", node.startMark);
             return objs;
         },
         (DocType[] docs) {
@@ -178,8 +178,8 @@ if (__traits(isModule, module_))
                     return docs.filter!(e => e.tryMatch!(d => d.identifier) == targetURI)
                                .array;
                 }();
-                docEnforce(!elems.empty, format!"No objects for ID `%s`"(targetURI), node);
-                docEnforce(elems.length == 1, format!"Duplicated objects for ID `%s`"(targetURI), node);
+                docEnforce(!elems.empty, format!"No objects for ID `%s`"(targetURI), node.startMark);
+                docEnforce(elems.length == 1, format!"Duplicated objects for ID `%s`"(targetURI), node.startMark);
                 return RetType(elems[0]);
             }
         }

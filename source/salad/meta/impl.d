@@ -25,7 +25,8 @@ mixin template genCtor()
     private import salad.context : LoadingContext;
     private import salad.meta.impl : isSaladRecord, isSaladEnum;
 
-    this() pure @nogc nothrow @safe {
+    this() pure @nogc nothrow @safe
+    {
         import salad.meta.impl : hasIdentifier;
         import std.traits : getSymbolsByUDA;
         static if (hasIdentifier!(typeof(this)))
@@ -36,7 +37,7 @@ mixin template genCtor()
 
     static if (isSaladRecord!(typeof(this)))
     {
-        this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
+        this(Node node, in LoadingContext context = LoadingContext.init) @trusted
         {
             import salad.meta.impl : Assign, as_, hasIdentifier;
             import salad.util : edig;
@@ -100,7 +101,7 @@ mixin template genCtor()
     }
     else static if (isSaladEnum!(typeof(this)))
     {
-        this(in Node node, in LoadingContext context = LoadingContext.init) @trusted
+        this(in Node node, in LoadingContext context = LoadingContext.init) @safe
         {
             import salad.exception : docEnforce;
             import std.algorithm : canFind;
@@ -109,11 +110,11 @@ mixin template genCtor()
 
             docEnforce(node.type == NodeType.string,
                 format!"Invalid type for %s: string is expected"(typeof(this).stringof),
-                node);
+                node.startMark);
             auto val = node.as!string;
             docEnforce([EnumMembers!Symbol].canFind(val),
                 format!"Invalid value for %s: `%s`"(typeof(this).stringof, val),
-                node);
+                node.startMark);
             value_ = cast(Symbol)val;
         }
 
@@ -303,7 +304,7 @@ EOS".stripLeftAll, exp);
 }
 
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
-     (in Node node, in LoadingContext context) @trusted
+     (Node node, in LoadingContext context) @trusted
         if (is(T == class))
 {
     import salad.resolver : resolveDirectives;
@@ -312,7 +313,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
 }
 
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
-     (in Node node, in LoadingContext context) @trusted
+     (Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
     import salad.resolver : resolveDirectives, resolveLink;
@@ -329,7 +330,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
 }
 
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
-     (in Node node, in LoadingContext context) @trusted
+     (Node node, in LoadingContext context) @trusted
         if (!isSomeString!T && isArray!T)
 {
     import std.array : appender;
@@ -341,7 +342,11 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
 
     static if (idMap_.subject.empty)
     {
-        docEnforce(resolved.node.type == NodeType.sequence, "Sequence is expected but it is not", resolved.node);
+        docEnforce(
+            resolved.node.type == NodeType.sequence,
+            "Sequence is expected but it is not",
+            resolved.node.startMark
+        );
         auto app = appender!T;
         foreach (elem; resolved.node.sequence)
         {
@@ -365,7 +370,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
     {
         // map notation
         docEnforce(resolved.node.type == NodeType.sequence || resolved.node.type == NodeType.mapping,
-            "Sequence or mapping is expected but it is not", resolved.node);
+            "Sequence or mapping is expected but it is not", resolved.node.startMark);
         if (resolved.node.type == NodeType.sequence)
         {
             return resolved.node.as_!(T, typeDSL)(resolved.context);
@@ -381,14 +386,14 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
             Node elem;
             static if (idMap_.predicate.empty)
             {
-                docEnforce(value.type == NodeType.mapping, "It must be a mapping", kv.value);
-                elem = cast()value;
+                docEnforce(value.type == NodeType.mapping, "It must be a mapping", kv.value.startMark);
+                elem = value;
             }
             else
             {
                 if (value.type == NodeType.mapping)
                 {
-                    elem = cast()value;
+                    elem = value;
                 }
                 else
                 {
@@ -396,7 +401,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                 }
             }
             alias E = ElementType!T;
-            docEnforce(idMap_.subject !in elem, "Duplicated field", kv.key);
+            docEnforce(idMap_.subject !in elem, "Duplicated field", kv.key.startMark);
             elem.add(idMap_.subject, key);
             app.put(elem.as_!E(newContext));
         }
@@ -521,8 +526,10 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                             case __traits(getMember, RT, DispatchFieldName): return T(expanded.as_!RT(r.context));
                         }
                     default:
-                        throw new DocumentException("Unknown record type: " ~ id.as!string, expanded.edig(
-                                DispatchFieldName[0 .. $ - 1]));
+                        throw new DocumentException(
+                            "Unknown record type: " ~ id.as!string,
+                            expanded.edig(DispatchFieldName[0 .. $ - 1]).startMark
+                        );
                     }
                 }
                 else
@@ -533,7 +540,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                     }
                     else
                     {
-                        throw new DocumentException("Unknown record type", expanded);
+                        throw new DocumentException("Unknown record type", expanded.startMark);
                     }
                 }
             }
@@ -574,7 +581,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                     }
                     else
                     {
-                        default: throw new DocumentException("Unknown symbol value: "~value, expanded);
+                        default: throw new DocumentException("Unknown symbol value: "~value, expanded.startMark);
                     }
                 }
             }
@@ -600,6 +607,9 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
                     hasString, Filter!(isIntegral, Types).stringof
                 ));
-        throw new DocumentException(format!"Unknown node type for type %s: %s"(T.stringof, expanded.type), expanded);
+        throw new DocumentException(
+            format!"Unknown node type for type %s: %s"(T.stringof, expanded.type),
+            expanded.startMark
+        );
     }
 }

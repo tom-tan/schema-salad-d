@@ -158,7 +158,7 @@ if (!is(T: Node))
                     }
                     else static if (is(typeof(e) == Any))
                     {
-                        auto k = e.value_[idMap_.subject].as!string;
+                        auto k = e.value[idMap_.subject].as!string;
                     }
                     else
                     {
@@ -413,7 +413,7 @@ if (!is(T: Node))
                     }
                     else static if (is(typeof(e) == Any))
                     {
-                        auto k = e.value_[idMap_.subject].as!string;
+                        auto k = e.value[idMap_.subject].as!string;
                     }
                     else
                     {

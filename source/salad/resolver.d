@@ -89,21 +89,17 @@ auto scheme(string uri) @nogc nothrow pure @safe
 auto path(string uri) pure @safe
 {
     import std.algorithm : findSplit;
-    if (auto sp1 = uri.findSplit("://"))
+    import std.exception : enforce;
+
+    auto sp1 = enforce(uri.findSplit("://"), "Not valid URI");
+    auto rest = sp1[2];
+    if (auto sp2 = rest.findSplit("#"))
     {
-        auto rest = sp1[2];
-        if (auto sp2 = rest.findSplit("#"))
-        {
-            return sp2[0];
-        }
-        else
-        {
-            return rest;
-        }
+        return sp2[0];
     }
     else
     {
-        throw new Exception("Not valid URI");
+        return rest;
     }
 }
 
@@ -354,7 +350,7 @@ alias ExplicitContext = Tuple!(Node, "node", LoadingContext, "context");
 /**
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Document_context
  */
-ExplicitContext splitContext(in Node node, string uri) @safe
+ExplicitContext splitContext(Node node, string uri) @safe
 {
     if (node.type == NodeType.mapping)
     {
@@ -407,7 +403,7 @@ ExplicitContext splitContext(in Node node, string uri) @safe
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Import
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Include
  */
-ExplicitContext resolveDirectives(in Node node, in LoadingContext context) @trusted
+ExplicitContext resolveDirectives(Node node, in LoadingContext context) @trusted
 {
     if (node.type == NodeType.mapping)
     {
@@ -438,10 +434,10 @@ ExplicitContext resolveDirectives(in Node node, in LoadingContext context) @trus
             };
             auto uri = resolveLink(link.as!string, con);
             auto n = Node(uri.fetchText);
-            return typeof(return)(n, cast()context);
+            return typeof(return)(n, context);
         }
     }
-    return typeof(return)(cast()node, cast()context);
+    return typeof(return)(node, context);
 }
 
 /**
