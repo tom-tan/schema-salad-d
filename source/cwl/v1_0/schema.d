@@ -606,7 +606,7 @@ class CWLVersion
 {
     enum Symbol
     {
-        s1	= "draft-2",
+        s1 = "draft-2",
         s2 = "draft-3.dev1",
         s3 = "draft-3.dev2",
         s4 = "draft-3.dev3",
