@@ -10,9 +10,10 @@ module cwl.v1_0.schema;
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
 import salad.meta.uda : documentRoot, id, idMap, link, typeDSL;
+import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
 
-@documentRoot class CommandLineTool
+@documentRoot class CommandLineTool : SchemaBase
 {
     @idMap("id", "type")
     CommandInputParameter[] inputs_;
@@ -51,7 +52,7 @@ import salad.type : Either, Optional;
     mixin genDumper;
 }
 
-class CommandInputParameter
+class CommandInputParameter : SchemaBase
 {
     @id string id_;
     Optional!string label_;
@@ -82,7 +83,7 @@ class CommandInputParameter
     mixin genDumper;
 }
 
-class CommandLineBinding
+class CommandLineBinding : SchemaBase
 {
     Optional!bool loadContents_;
     Optional!int position_;
@@ -100,7 +101,7 @@ class CommandLineBinding
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 public import salad.primitives : Any;
 
-class CWLType
+class CWLType : SchemaBase
 {
     enum Symbol
     {
@@ -115,14 +116,14 @@ class CWLType
         s9 = "Directory",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
     mixin genDumper;
 }
 
-class File
+class File : SchemaBase
 {
     static immutable class_ = "File";
     @link Optional!string location_;
@@ -142,7 +143,7 @@ class File
     mixin genDumper;
 }
 
-class Directory
+class Directory : SchemaBase
 {
     static immutable class_ = "Directory";
     @link Optional!string location_;
@@ -157,7 +158,7 @@ class Directory
     mixin genDumper;
 }
 
-class CommandInputRecordSchema
+class CommandInputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
@@ -170,7 +171,7 @@ class CommandInputRecordSchema
     mixin genDumper;
 }
 
-class CommandInputRecordField
+class CommandInputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
@@ -197,7 +198,7 @@ class CommandInputRecordField
     mixin genDumper;
 }
 
-class CommandInputEnumSchema
+class CommandInputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
@@ -210,7 +211,7 @@ class CommandInputEnumSchema
     mixin genDumper;
 }
 
-class CommandInputArraySchema
+class CommandInputArraySchema : SchemaBase
 {
     @typeDSL
     Either!(
@@ -236,7 +237,7 @@ class CommandInputArraySchema
     mixin genDumper;
 }
 
-class CommandOutputParameter
+class CommandOutputParameter : SchemaBase
 {
     @id string id_;
     Optional!string label_;
@@ -268,35 +269,35 @@ class CommandOutputParameter
     mixin genDumper;
 }
 
-class stdout // @suppress(dscanner.style.phobos_naming_convention)
+class stdout : SchemaBase // @suppress(dscanner.style.phobos_naming_convention)
 {
     enum Symbol
     {
         s1 = "stdout",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
     mixin genDumper;
 }
 
-class stderr // @suppress(dscanner.style.phobos_naming_convention)
+class stderr : SchemaBase // @suppress(dscanner.style.phobos_naming_convention)
 {
     enum Symbol
     {
         s2 = "stderr",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
     mixin genDumper;
 }
 
-class CommandOutputBinding
+class CommandOutputBinding : SchemaBase
 {
     Optional!(string, string[]) glob_;
     Optional!bool loadContents_;
@@ -307,7 +308,7 @@ class CommandOutputBinding
     mixin genDumper;
 }
 
-class CommandOutputRecordSchema
+class CommandOutputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
@@ -320,7 +321,7 @@ class CommandOutputRecordSchema
     mixin genDumper;
 }
 
-class CommandOutputRecordField
+class CommandOutputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
@@ -346,7 +347,7 @@ class CommandOutputRecordField
     mixin genDumper;
 }
 
-class CommandOutputEnumSchema
+class CommandOutputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
@@ -358,7 +359,7 @@ class CommandOutputEnumSchema
     mixin genDumper;
 }
 
-class CommandOutputArraySchema
+class CommandOutputArraySchema : SchemaBase
 {
     @typeDSL
     Either!(
@@ -384,7 +385,7 @@ class CommandOutputArraySchema
     mixin genDumper;
 }
 
-class InlineJavascriptRequirement
+class InlineJavascriptRequirement : SchemaBase
 {
     static immutable class_ = "InlineJavascriptRequirement";
     Optional!(string[]) expressionLib_;
@@ -394,7 +395,7 @@ class InlineJavascriptRequirement
     mixin genDumper;
 }
 
-class SchemaDefRequirement
+class SchemaDefRequirement : SchemaBase
 {
     static immutable class_ = "SchemaDefRequirement";
     Either!(
@@ -408,7 +409,7 @@ class SchemaDefRequirement
     mixin genDumper;
 }
 
-class InputRecordSchema
+class InputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
@@ -423,7 +424,7 @@ class InputRecordSchema
     mixin genDumper;
 }
 
-class InputRecordField
+class InputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
@@ -450,7 +451,7 @@ class InputRecordField
     mixin genDumper;
 }
 
-class InputEnumSchema
+class InputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
@@ -463,7 +464,7 @@ class InputEnumSchema
     mixin genDumper;
 }
 
-class InputArraySchema
+class InputArraySchema : SchemaBase
 {
     @typeDSL
     Either!(
@@ -489,7 +490,7 @@ class InputArraySchema
     mixin genDumper;
 }
 
-class DockerRequirement
+class DockerRequirement : SchemaBase
 {
     static immutable class_ = "DockerRequirement";
     Optional!string dockerPull_;
@@ -504,7 +505,7 @@ class DockerRequirement
     mixin genDumper;
 }
 
-class SoftwareRequirement
+class SoftwareRequirement : SchemaBase
 {
     static immutable class_ = "SoftwareRequirement";
     @idMap("package", "specs")
@@ -515,7 +516,7 @@ class SoftwareRequirement
     mixin genDumper;
 }
 
-class SoftwarePackage
+class SoftwarePackage : SchemaBase
 {
     string package_;
     Optional!(string[]) version_;
@@ -526,7 +527,7 @@ class SoftwarePackage
     mixin genDumper;
 }
 
-class InitialWorkDirRequirement
+class InitialWorkDirRequirement : SchemaBase
 {
     static immutable class_ = "InitialWorkDirRequirement";
     Either!(
@@ -544,7 +545,7 @@ class InitialWorkDirRequirement
     mixin genDumper;
 }
 
-class Dirent
+class Dirent : SchemaBase
 {
     string entry_;
     Optional!string entryname_;
@@ -555,7 +556,7 @@ class Dirent
     mixin genDumper;
 }
 
-class EnvVarRequirement
+class EnvVarRequirement : SchemaBase
 {
     static immutable class_ = "EnvVarRequirement";
     @idMap("envName", "envValue")
@@ -566,7 +567,7 @@ class EnvVarRequirement
     mixin genDumper;
 }
 
-class EnvironmentDef
+class EnvironmentDef : SchemaBase
 {
     string envName_;
     string envValue_;
@@ -576,7 +577,7 @@ class EnvironmentDef
     mixin genDumper;
 }
 
-class ShellCommandRequirement
+class ShellCommandRequirement : SchemaBase
 {
     static immutable class_ = "ShellCommandRequirement";
 
@@ -585,7 +586,7 @@ class ShellCommandRequirement
     mixin genDumper;
 }
 
-class ResourceRequirement
+class ResourceRequirement : SchemaBase
 {
     static immutable class_ = "ResourceRequirement";
     Optional!(long, string) coresMin_;
@@ -602,7 +603,7 @@ class ResourceRequirement
     mixin genDumper;
 }
 
-class CWLVersion
+class CWLVersion : SchemaBase
 {
     enum Symbol
     {
@@ -620,7 +621,7 @@ class CWLVersion
         s12 = "v1.0",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
@@ -645,7 +646,7 @@ class CWLVersion
               .dig!("coresMin", long) == 2);
 }
 
-@documentRoot class Workflow
+@documentRoot class Workflow : SchemaBase
 {
     @idMap("id", "type")
     InputParameter[] inputs_;
@@ -681,7 +682,7 @@ class CWLVersion
     mixin genDumper;
 }
 
-class WorkflowOutputParameter
+class WorkflowOutputParameter : SchemaBase
 {
     @id string id_;
     Optional!string label_;
@@ -713,7 +714,7 @@ class WorkflowOutputParameter
     mixin genDumper;
 }
 
-class LinkMergeMethod
+class LinkMergeMethod : SchemaBase
 {
     enum Symbol
     {
@@ -721,14 +722,14 @@ class LinkMergeMethod
         s2 = "merge_flattened",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
     mixin genDumper;
 }
 
-class OutputRecordSchema
+class OutputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
@@ -740,7 +741,7 @@ class OutputRecordSchema
     mixin genDumper;
 }
 
-class OutputRecordField
+class OutputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
@@ -766,7 +767,7 @@ class OutputRecordField
     mixin genDumper;
 }
 
-class OutputEnumSchema
+class OutputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
@@ -778,7 +779,7 @@ class OutputEnumSchema
     mixin genDumper;
 }
 
-class OutputArraySchema
+class OutputArraySchema : SchemaBase
 {
     @typeDSL
     Either!(
@@ -804,7 +805,7 @@ class OutputArraySchema
     mixin genDumper;
 }
 
-class WorkflowStep
+class WorkflowStep : SchemaBase
 {
     @id string id_;
     @idMap("id", "source")
@@ -839,7 +840,7 @@ class WorkflowStep
     mixin genDumper;
 }
 
-class WorkflowStepInput
+class WorkflowStepInput : SchemaBase
 {
     @id string id_;
     Optional!(string, string[]) source_;
@@ -852,7 +853,7 @@ class WorkflowStepInput
     mixin genDumper;
 }
 
-class WorkflowStepOutput
+class WorkflowStepOutput : SchemaBase
 {
     @id string id_;
 
@@ -861,7 +862,7 @@ class WorkflowStepOutput
     mixin genDumper;
 }
 
-class ScatterMethod
+class ScatterMethod : SchemaBase
 {
     enum Symbol
     {
@@ -870,14 +871,14 @@ class ScatterMethod
         s3 = "flat_crossproduct_",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
     mixin genDumper;
 }
 
-class SubworkflowFeatureRequirement
+class SubworkflowFeatureRequirement : SchemaBase
 {
     static immutable class_ = "SubworkflowFeatureRequirement";
 
@@ -886,7 +887,7 @@ class SubworkflowFeatureRequirement
     mixin genDumper;
 }
 
-class ScatterFeatureRequirement
+class ScatterFeatureRequirement : SchemaBase
 {
     static immutable class_ = "ScatterFeatureRequirement";
 
@@ -895,7 +896,7 @@ class ScatterFeatureRequirement
     mixin genDumper;
 }
 
-class MultipleInputFeatureRequirement
+class MultipleInputFeatureRequirement : SchemaBase
 {
     static immutable class_ = "MultipleInputFeatureRequirement";
 
@@ -904,7 +905,7 @@ class MultipleInputFeatureRequirement
     mixin genDumper;
 }
 
-class StepInputExpressionRequirement
+class StepInputExpressionRequirement : SchemaBase
 {
     static immutable class_ = "StepInputExpressionRequirement";
 
@@ -913,7 +914,7 @@ class StepInputExpressionRequirement
     mixin genDumper;
 }
 
-@documentRoot class ExpressionTool
+@documentRoot class ExpressionTool : SchemaBase
 {
     @idMap("id", "type")
     InputParameter[] inputs_;
@@ -949,7 +950,7 @@ class StepInputExpressionRequirement
     mixin genDumper;
 }
 
-class InputParameter
+class InputParameter : SchemaBase
 {
     @id string id_;
     Optional!string label_;
@@ -980,7 +981,7 @@ class InputParameter
     mixin genDumper;
 }
 
-class ExpressionToolOutputParameter
+class ExpressionToolOutputParameter : SchemaBase
 {
     @id string id_;
     Optional!string label_;

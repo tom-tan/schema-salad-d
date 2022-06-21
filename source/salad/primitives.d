@@ -6,11 +6,28 @@
  */
 module salad.primitives;
 
-/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
-class Any
+import dyaml : Mark;
+import salad.context : LoadingContext;
+
+/// Base class for schema objects
+abstract class SchemaBase
 {
-    private import dyaml : Mark, Node, NodeType;
-    private import salad.context : LoadingContext;
+    this() @nogc nothrow pure @safe {}
+
+    this(Mark mark, in LoadingContext context = LoadingContext.init) nothrow pure @safe
+    {
+        this.mark = mark;
+        this.context = context;
+    }
+
+    LoadingContext context;
+    Mark mark;
+}
+
+/// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
+class Any : SchemaBase
+{
+    private import dyaml : Node;
 
     enum Symbols
     {
@@ -18,18 +35,16 @@ class Any
     }
 
     Node value;
-    LoadingContext context;
-    Mark mark;
 
     ///
     this(Node node, in LoadingContext context = LoadingContext.init) @safe
     {
+        import dyaml : NodeType;
         import salad.exception : docEnforce;
         docEnforce(node.type != NodeType.null_,
                    "Any should be non-null", node.startMark);
         value = node;
-        this.context = context;
-        mark = node.startMark;
+        super(node.startMark, context);
     }
 
     ///

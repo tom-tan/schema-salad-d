@@ -9,10 +9,11 @@ module salad.schema;
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
+import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
-@documentRoot class SaladRecordSchema
+@documentRoot class SaladRecordSchema : SchemaBase
 {
     @id string name_;
     static immutable type_ = "record";
@@ -34,7 +35,7 @@ import salad.type : Either, Optional;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
-class SaladRecordField
+class SaladRecordField : SchemaBase
 {
     @id string name_;
     @typeDSL
@@ -61,7 +62,7 @@ class SaladRecordField
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
-class PrimitiveType
+class PrimitiveType : SchemaBase
 {
     enum Symbol
     {
@@ -74,7 +75,7 @@ class PrimitiveType
         s7 = "string",
     }
 
-    Symbol value_;
+    Symbol value;
 
     mixin genCtor;
     mixin genOpEq;
@@ -85,7 +86,7 @@ class PrimitiveType
 public import salad.primitives : Any;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
-class RecordSchema
+class RecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type") Optional!(RecordField[]) fields_;
@@ -96,7 +97,7 @@ class RecordSchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
-class RecordField
+class RecordField : SchemaBase
 {
     @id string name_;
     @typeDSL 
@@ -121,7 +122,7 @@ class RecordField
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
-class EnumSchema
+class EnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
@@ -132,7 +133,7 @@ class EnumSchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
-class ArraySchema
+class ArraySchema : SchemaBase
 {
     Either!(
         PrimitiveType,
@@ -155,7 +156,7 @@ class ArraySchema
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
-class JsonldPredicate
+class JsonldPredicate : SchemaBase
 {
     Optional!string _id_;
     Optional!string _type_;
@@ -175,7 +176,7 @@ class JsonldPredicate
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
-class SpecializeDef
+class SpecializeDef : SchemaBase
 {
     string specializeFrom_;
     string specializeTo_;
@@ -186,7 +187,7 @@ class SpecializeDef
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
-@documentRoot class SaladEnumSchema
+@documentRoot class SaladEnumSchema : SchemaBase
 {
     @id string name_;
     string[] symbols_;
@@ -206,7 +207,7 @@ class SpecializeDef
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
-@documentRoot class Documentation
+@documentRoot class Documentation : SchemaBase
 {
     @id string name_;
     static immutable type_ = "documentation";

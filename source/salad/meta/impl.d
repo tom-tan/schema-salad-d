@@ -7,6 +7,7 @@
 module salad.meta.impl;
 
 import salad.context : LoadingContext;
+import salad.primitives : SchemaBase;
 import salad.meta.uda;
 import salad.type;
 
@@ -15,8 +16,8 @@ import std.traits : hasStaticMember, isArray, isScalarType, isSomeString;
 
 import dyaml;
 
-enum isSaladRecord(T) = is(T == class) && !__traits(compiles, T.Symbol);
-enum isSaladEnum(T) = is(T == class) && __traits(compiles, T.Symbol);
+enum isSaladRecord(T) = is(T : SchemaBase) && !__traits(compiles, T.Symbol);
+enum isSaladEnum(T) = is(T : SchemaBase) && __traits(compiles, T.Symbol);
 
 ///
 mixin template genCtor()
@@ -25,10 +26,14 @@ mixin template genCtor()
     private import salad.context : LoadingContext;
     private import salad.meta.impl : isSaladRecord, isSaladEnum;
 
+    static assert(is(typeof(this) : SchemaBase));
+
     this() pure @nogc nothrow @safe
     {
         import salad.meta.impl : hasIdentifier;
         import std.traits : getSymbolsByUDA;
+
+        super();
         static if (hasIdentifier!(typeof(this)))
         {
             identifier = "";
@@ -39,6 +44,7 @@ mixin template genCtor()
     {
         this(Node node, in LoadingContext context = LoadingContext.init) @trusted
         {
+            import dyaml : Mark;
             import salad.meta.impl : Assign, as_, hasIdentifier;
             import salad.util : edig;
             import salad.type : None, SumType;
@@ -82,13 +88,14 @@ mixin template genCtor()
                     context.namespaces.to!(string[string]),
                     context.subscope,
                 );
-                this.context = con;                
             }
             else
             {
                 static immutable idFieldName = "";
                 auto con = context;
             }
+
+            super(node.startMark, con);
 
             static foreach (field; FieldNameTuple!This)
             {
@@ -101,8 +108,9 @@ mixin template genCtor()
     }
     else static if (isSaladEnum!(typeof(this)))
     {
-        this(in Node node, in LoadingContext context = LoadingContext.init) @safe
+        this(Node node, in LoadingContext context = LoadingContext.init) @safe
         {
+            import dyaml : Mark;
             import salad.exception : docEnforce;
             import std.algorithm : canFind;
             import std.format : format;
@@ -115,7 +123,8 @@ mixin template genCtor()
             docEnforce([EnumMembers!Symbol].canFind(val),
                 format!"Invalid value for %s: `%s`"(typeof(this).stringof, val),
                 node.startMark);
-            value_ = cast(Symbol)val;
+            super(node.startMark, context);
+            value = cast(Symbol)val;
         }
 
         this(string value) @safe
@@ -167,12 +176,10 @@ version(none) mixin template genToString()
 mixin template genIdentifier()
 {
     private import std.traits : getSymbolsByUDA;
-    private import salad.context : LoadingContext;
 
     static if (getSymbolsByUDA!(typeof(this), id).length == 1)
     {
         string identifier;
-        LoadingContext context;
     }
 }
 
@@ -181,7 +188,7 @@ mixin template genOpEq()
 {
     bool opEquals(string s) const @nogc nothrow pure @safe
     {
-        return value_ == s;
+        return value == s;
     }
 }
 
@@ -305,7 +312,7 @@ EOS".stripLeftAll, exp);
 
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
      (Node node, in LoadingContext context) @trusted
-        if (is(T == class))
+        if (is(T : SchemaBase))
 {
     import salad.resolver : resolveDirectives;
     auto resolved = resolveDirectives(node, context);
@@ -410,7 +417,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
 }
 
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
-     (in Node node, in LoadingContext context) @trusted
+     (Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
     import salad.resolver : resolveDirectives;
@@ -588,24 +595,34 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
         }
 
         import std.traits : isIntegral;
-        static if (Filter!(isIntegral, Types).length > 0)
+        alias IntTypes = Filter!(isIntegral, Types);
+        static if (IntTypes.length > 0)
         {
             if (expanded.type == NodeType.integer)
             {
-                // TODO: long
-                return T(expanded.as!int);
+                import std.traits : CommonType;
+                return T(expanded.as!(CommonType!IntTypes));
             }
         }
 
-        // TODO: float, double
+        import std.traits : isFloatingPoint;
+        alias DecimalTypes = Filter!(isFloatingPoint, Types);
+        static if (DecimalTypes.length > 0)
+        {
+            if (expanded.type == NodeType.decimal)
+            {
+                import std.traits : CommonType;
+                return T(expanded.as!(CommonType!DecimalTypes));
+            }
+        }
+
         import std.format : format;
         static assert(Types.length ==
                 ArrayTypes.length + RecordTypes.length + EnumTypes.length +
-                    (hasString ? 1 : 0) + Filter!(isIntegral, Types)
-                .length,
-                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s"(
+                    (hasString ? 1 : 0) + IntTypes.length + DecimalTypes.length,
+                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s"(
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
-                    hasString, Filter!(isIntegral, Types).stringof
+                    hasString, IntTypes.stringof, DecimalTypes.stringof,
                 ));
         throw new DocumentException(
             format!"Unknown node type for type %s: %s"(T.stringof, expanded.type),

@@ -12,6 +12,8 @@ import std.traits : isArray, isScalarType, isSomeString;
 ///
 mixin template genDumper()
 {
+    private import dyaml : Node;
+
     ///
     Node opCast(T: Node)() const
     {
@@ -25,6 +27,7 @@ mixin template genDumper()
             alias This = typeof(this);
 
             Node ret;
+            ret.startMark = mark;
             static foreach (field; __traits(allMembers, This))
             {
                 static if (field.endsWith("_"))
@@ -43,7 +46,9 @@ mixin template genDumper()
         }
         else static if (isSaladEnum!(typeof(this)))
         {
-            return Node(cast(string)value_);
+            auto ret = Node(cast(string)value);
+            ret.startMark = mark;
+            return ret;
         }
     }
 }
