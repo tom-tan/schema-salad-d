@@ -6,8 +6,9 @@
 module salad.meta.dumper;
 
 import dyaml : Node;
+import salad.primitives : SchemaBase;
 import salad.type : isSumType;
-import std.traits : isArray, isScalarType, isSomeString;
+import std.traits : isArray, isScalarType, isSomeString, Unqual;
 
 ///
 mixin template genDumper()
@@ -19,7 +20,7 @@ mixin template genDumper()
     {
         static if (isSaladRecord!(typeof(this)))
         {
-            import dyaml : CollectionStyle, NodeType;
+            import dyaml : NodeType;
             import std.algorithm : endsWith;
             import std.traits : FieldNameTuple;
             import salad.meta.dumper : toNode;
@@ -27,7 +28,6 @@ mixin template genDumper()
             alias This = typeof(this);
 
             Node ret;
-            ret.startMark = mark;
             static foreach (field; __traits(allMembers, This))
             {
                 static if (field.endsWith("_"))
@@ -46,15 +46,17 @@ mixin template genDumper()
         }
         else static if (isSaladEnum!(typeof(this)))
         {
-            auto ret = Node(cast(string)value);
-            ret.startMark = mark;
-            return ret;
+            return Node(cast(string)value);
+        }
+        else
+        {
+            static assert(false, "It must be a SchemaRecord type or SchemaEnum type");
         }
     }
 }
 
 Node toNode(T)(T t)
-    if (is(T == class) || isScalarType!T || isSomeString!T)
+    if (is(Unqual!T : SchemaBase) || isScalarType!T || isSomeString!T)
 {
     return Node(t);
 }

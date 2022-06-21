@@ -18,6 +18,7 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
 @safe unittest
 {
     import core.exception : AssertError;
+    import dyaml : Node;
     import salad.resolver : absoluteURI;
     import salad.type : tryMatch;
     import salad.util : dig, edig;
@@ -39,6 +40,8 @@ alias DocumentRootType = DocRootType!(cwl.v1_0.schema);
     assert(cmd.edig!(["hints", "ResourceRequirement"], ResourceRequirement)
               .assertNotThrown
               .dig!("coresMin", long) == 2);
+
+    auto node = Node(cmd);
 }
 
 ///

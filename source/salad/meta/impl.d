@@ -12,12 +12,12 @@ import salad.meta.uda;
 import salad.type;
 
 import std.meta : ApplyLeft, Filter;
-import std.traits : hasStaticMember, isArray, isScalarType, isSomeString;
+import std.traits : hasStaticMember, isArray, isScalarType, isSomeString, Unqual;
 
 import dyaml;
 
-enum isSaladRecord(T) = is(T : SchemaBase) && !__traits(compiles, T.Symbol);
-enum isSaladEnum(T) = is(T : SchemaBase) && __traits(compiles, T.Symbol);
+enum isSaladRecord(T) = is(Unqual!T : SchemaBase) && !__traits(compiles, T.Symbol);
+enum isSaladEnum(T) = is(Unqual!T : SchemaBase) && __traits(compiles, T.Symbol);
 
 ///
 mixin template genCtor()
