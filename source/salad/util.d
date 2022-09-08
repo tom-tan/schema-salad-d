@@ -121,10 +121,19 @@ if (!is(T: Node))
             enum canDig(T) = __traits(compiles, T.init.dig!(K, U, T, idMap_));
             alias TS = Filter!(canDig, T.Types);
             alias ddig(T) = dig!(K, U, T, idMap_);
-            return t.match!(
-                staticMap!(ddig, TS),
-                _ => default_,
-            );
+            static if (TS.length == T.Types.length)
+            {
+                return t.match!(
+                    staticMap!(ddig, TS)
+                );
+            }
+            else
+            {
+                return t.match!(
+                    staticMap!(ddig, TS),
+                    _ => default_,
+                );
+            }
         }
         else static if (isArray!T)
         {
@@ -522,4 +531,34 @@ if (!is(T: Node))
     ]);
     assert(c.edig!(["elems", "foo"], E1).val_ == 1);
     assert(c.edig!(["elems", "bar"], E2).val_ == "val");
+}
+
+@safe unittest
+{
+    import salad.type : Either;
+
+    class E1
+    {
+        string id_;
+        int val_;
+        this(string id, int val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    class E2
+    {
+        string id_;
+        string val_;
+        this(string id, string val)
+        {
+            id_ = id;
+            val_ = val;
+        }
+    }
+
+    auto e = Either!(E1, E2)(new E1("foo", 1));
+    assert(e.dig!("id", string) == "foo");
 }
