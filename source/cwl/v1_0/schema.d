@@ -13,6 +13,9 @@ import salad.meta.uda : documentRoot, id, idMap, link, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
 
+// workaround for https://issues.dlang.org/show_bug.cgi?id=20443
+static if (__traits(compiles, { hashOf(File.init); })) {}
+
 @documentRoot class CommandLineTool : SchemaBase
 {
     @idMap("id", "type")
