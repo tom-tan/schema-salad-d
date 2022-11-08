@@ -14,7 +14,13 @@ import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
 
 // workaround for https://issues.dlang.org/show_bug.cgi?id=20443
+// it is needed for self-recursive definitions
 static if (__traits(compiles, { hashOf(File.init); })) {}
+static if (__traits(compiles, { hashOf(Directory.init); })) {}
+static if (__traits(compiles, { hashOf(CommandInputArraySchema.init); })) {}
+static if (__traits(compiles, { hashOf(CommandOutputArraySchema.init); })) {}
+static if (__traits(compiles, { hashOf(InputArraySchema.init); })) {}
+static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
 
 @documentRoot class CommandLineTool : SchemaBase
 {
@@ -871,7 +877,7 @@ class ScatterMethod : SchemaBase
     {
         s1 = "dotproduct",
         s2 = "nested_crossproduct",
-        s3 = "flat_crossproduct_",
+        s3 = "flat_crossproduct",
     }
 
     Symbol value;
