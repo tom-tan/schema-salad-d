@@ -52,7 +52,7 @@ if (!is(T: Node))
     else
     {
         import std.traits : getUDAs, hasMember, hasStaticMember, hasUDA, isArray;
-        import salad.type : isEither, isOptional, isSumType, match, None;
+        import salad.type : isOptional, isSumType, match, None;
 
         static if (K.length == 0)
         {
@@ -114,7 +114,7 @@ if (!is(T: Node))
                 others => others.dig!(K, U, typeof(others), idMap_)(default_),
             );
         }
-        else static if (isEither!T)
+        else static if (isSumType!T)
         {
             import std.meta : Filter, staticMap;
 
@@ -148,7 +148,7 @@ if (!is(T: Node))
                     import salad.type : tryMatch;
                     import std.typecons : tuple;
 
-                    static if (isEither!(typeof(e)))
+                    static if (isSumType!(typeof(e)))
                     {
                         auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject ~ "_"));
                     }
@@ -319,7 +319,7 @@ if (!is(T: Node))
     else
     {
         import std.traits : getUDAs, hasMember, hasStaticMember, hasUDA, isArray;
-        import salad.type : isEither, isOptional, isSumType, tryMatch, None;
+        import salad.type : isOptional, isSumType, tryMatch, None;
 
         static if (K.length == 0)
         {
@@ -379,7 +379,7 @@ if (!is(T: Node))
                 staticMap!(ddig, TS)
             );
         }
-        else static if (isEither!T)
+        else static if (isSumType!T)
         {
             import std.meta : Filter, staticMap;
 
@@ -403,7 +403,7 @@ if (!is(T: Node))
                     import salad.type : isSumType, tryMatch;
                     import std.typecons : tuple;
 
-                    static if (isEither!(typeof(e)))
+                    static if (isSumType!(typeof(e)))
                     {
                         auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject ~ "_"));
                     }

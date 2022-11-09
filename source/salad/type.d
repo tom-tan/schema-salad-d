@@ -16,7 +16,7 @@ enum isNone(T) = is(T == None);
 template Optional(TS...)
 if (allSatisfy!(templateNot!isNone, TS))
 {
-    alias Optional = SumType!(None, TS);
+    alias Optional = Either!(None, TS);
 }
 
 enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templateNot!isNone, T.Types[1..$]);
@@ -79,19 +79,18 @@ if (isOptional!T && T.Types.length == 2)
 }
 
 // TODO: more appropriate name
+// It is almost same as SumType but remove duplicated types
+// It is introduced to handle `Expression` in a simple way
 template Either(TS...)
-if (allSatisfy!(templateNot!isNone, TS))
 {
-    alias Either = SumType!TS;
+    import std.meta : NoDuplicates;
+    alias Either = SumType!(NoDuplicates!TS);
 }
 
-enum isEither(T) = isSumType!T && allSatisfy!(templateNot!isNone, T.Types);
-
-@safe unittest
+unittest
 {
-    static assert(isEither!(SumType!(int, string, double)));
-    static assert(!isEither!(Optional!int));
-    static assert(isEither!(SumType!(int, string)));
-    static assert(!isEither!(SumType!(None, int, string)));
-    static assert(!isEither!string);
+    import salad.primitives : Expression;
+
+    static assert(is(Either!(None, string, Expression) == SumType!(None, string)));
+    static assert(is(Either!(int, Expression) == SumType!(int, string)));
 }

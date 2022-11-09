@@ -134,44 +134,6 @@ mixin template genCtor()
     }
 }
 
-/**
- * Bugs: It does not work with self recursive classes
- */
-version(none) mixin template genToString()
-{
-    override string toString() const @trusted
-    {
-        import salad.type : isEither, isOptional, match, None;
-        import std.array : join;
-        import std.format : format;
-        import std.traits : FieldNameTuple;
-
-        string[] fstrs;
-
-        alias This = typeof(this);
-
-        static foreach(field; FieldNameTuple!This)
-        {
-            static if (isOptional!(typeof(__traits(getMember, this, field))))
-            {
-                __traits(getMember, this, field).match!(
-                    (None _) { },
-                    (rest) { fstrs ~= format!"%s: %s"(field, rest); }
-                );
-            }
-            else static if (isEither!(typeof(__traits(getMember, this, field))))
-            {
-                __traits(getMember, this, field).match!(f => fstrs ~= format!"%s: %s"(field, f));
-            }
-            else
-            {
-                fstrs ~= format!"%s: %s"(field, __traits(getMember, this, field));
-            }
-        }
-        return format!"%s(%s)"(This.stringof, fstrs.join(", "));
-    }
-}
-
 ///
 mixin template genIdentifier()
 {
