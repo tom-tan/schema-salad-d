@@ -47,7 +47,7 @@ mixin template genCtor()
             import dyaml : Mark;
             import salad.meta.impl : Assign, as_, hasIdentifier;
             import salad.util : edig;
-            import salad.type : None, SumType;
+            import salad.type : None, Optional, SumType;
             import std.algorithm : endsWith;
             import std.conv : to;
             import std.range : empty;
