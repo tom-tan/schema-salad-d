@@ -616,13 +616,24 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
             }
         }
 
+        import std.traits : isBoolean;
+        alias BooleanTypes = Filter!(isBoolean, Types);
+        static assert(BooleanTypes.length <= 1);
+        static if (BooleanTypes.length == 1)
+        {
+            if (expanded.type == NodeType.boolean)
+            {
+                return T(expanded.as!bool);
+            }
+        }
+
         import std.format : format;
         static assert(Types.length ==
                 ArrayTypes.length + RecordTypes.length + EnumTypes.length +
-                    (hasString ? 1 : 0) + IntTypes.length + DecimalTypes.length,
-                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s"(
+                    (hasString ? 1 : 0) + IntTypes.length + DecimalTypes.length + BooleanTypes.length,
+                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s"(
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
-                    hasString, IntTypes.stringof, DecimalTypes.stringof,
+                    hasString, IntTypes.stringof, DecimalTypes.stringof, BooleanTypes.stringof,
                 ));
         throw new DocumentException(
             format!"Unknown node type for type %s: %s"(T.stringof, expanded.type),
