@@ -6,6 +6,9 @@
 module salad.meta.parser;
 
 import dyaml : Node;
+import std : isSumType;
+
+// Note: these components assumes that a given module contains at least two documentRoot classes
 
 ///
 template DocumentRootType(alias module_)
@@ -33,34 +36,13 @@ template DocumentRootType(alias module_)
 }
 
 ///
-template IdentifierType(alias module_)
-{
-    import std.meta : allSatisfy, Filter, staticMap;
-    import std.traits : fullyQualifiedName;
-
-    alias StrToType(string T) = __traits(getMember, module_, T);
-    alias syms = staticMap!(StrToType, __traits(allMembers, module_));
-    alias IDTypes = Filter!(hasIdentifier, syms);
-
-    static if (IDTypes.length > 0)
-    {
-        alias IdentifierType = SumType!IDTypes;
-    }
-    else
-    {
-        static assert(false, "No schemas with identifier field");
-    }
-}
-
-///
-auto parse(alias module_)(Node node, string uri) @safe
-if (__traits(isModule, module_))
+auto parse(T)(Node node, string uri) @safe
+if (isSumType!T)
 {
     import dyaml : NodeType;
     import salad.meta.impl : as_;
     import salad.type : SumType;
 
-    alias T = DocumentRootType!module_;
     alias ReturnType = SumType!(T, T[]);
 
     if (node.type == NodeType.mapping)
@@ -132,9 +114,21 @@ if (__traits(isModule, module_))
     }
 }
 
-///
-auto importFromURI(alias module_)(string uri, string defaultFragment = "") @safe
+/// ditto
+auto parse(alias module_)(Node node, string uri) @safe
 if (__traits(isModule, module_))
+{
+    import dyaml : NodeType;
+    import salad.meta.impl : as_;
+    import salad.type : SumType;
+
+    alias T = DocumentRootType!module_;
+    return parse!T(node, uri);
+}
+
+///
+auto importFromURI(T)(string uri, string defaultFragment = "") @safe
+if (isSumType!T)
 {
     import salad.exception : docEnforce;
     import salad.fetcher : fetchNode;
@@ -145,7 +139,7 @@ if (__traits(isModule, module_))
     auto frag = uri.fragment;
     auto baseuri = uri.withoutFragment;
     auto node = fetchNode(baseuri);
-    auto objs = parse!module_(node, baseuri);
+    auto objs = parse!T(node, baseuri);
     if (frag.empty)
     {
         import std.algorithm : startsWith;
@@ -154,7 +148,7 @@ if (__traits(isModule, module_))
     auto targetURI = baseuri~"#"~frag;
 
     alias RetType = typeof(objs);
-    alias DocType = DocumentRootType!module_;
+    alias DocType = T;
     return objs.match!(
         (DocType doc) {
             docEnforce(uri.fragment.empty || doc.match!(d => d.identifier) == targetURI,
@@ -184,4 +178,12 @@ if (__traits(isModule, module_))
             }
         }
     );
+}
+
+/// ditto
+auto importFromURI(alias module_)(string uri, string defaultFragment = "") @safe
+if (__traits(isModule, module_))
+{
+    alias DocRootType = DocumentRootType!module_;
+    return importFromURI!DocRootType(uri, defaultFragment);
 }
