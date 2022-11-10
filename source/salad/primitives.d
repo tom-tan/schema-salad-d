@@ -29,11 +29,6 @@ class Any : SchemaBase
 {
     private import dyaml : Node;
 
-    enum Symbols
-    {
-        Any = "Any",
-    }
-
     Node value;
 
     ///

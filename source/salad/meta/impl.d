@@ -7,7 +7,7 @@
 module salad.meta.impl;
 
 import salad.context : LoadingContext;
-import salad.primitives : SchemaBase;
+import salad.primitives : Any, SchemaBase;
 import salad.meta.uda;
 import salad.type;
 
@@ -16,8 +16,8 @@ import std.traits : hasStaticMember, isArray, isScalarType, isSomeString, Unqual
 
 import dyaml;
 
-enum isSaladRecord(T) = is(Unqual!T : SchemaBase) && !__traits(compiles, T.Symbol);
-enum isSaladEnum(T) = is(Unqual!T : SchemaBase) && __traits(compiles, T.Symbol);
+enum isSaladRecord(T) = is(Unqual!T : SchemaBase) && !is(Unqual!T : Any) && !__traits(compiles, T.Symbol);
+enum isSaladEnum(T) = is(Unqual!T : SchemaBase) && !is(Unqual!T : Any) && __traits(compiles, T.Symbol);
 
 ///
 mixin template genCtor()
@@ -590,16 +590,27 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
         }
 
         import std.format : format;
+
+        enum isAny(T) = is(T == Any);
+        enum hasAny = anySatisfy!(isAny, Types);
+        static if (hasAny)
+        {
+            return T(expanded.as!Any);
+        }
+        else
+        {
+            throw new DocumentException(
+                format!"Unknown node type for type %s: %s"(T.stringof, expanded.type),
+                expanded.startMark
+            );
+        }
+
         static assert(Types.length ==
                 ArrayTypes.length + RecordTypes.length + EnumTypes.length +
-                    (hasString ? 1 : 0) + IntTypes.length + DecimalTypes.length + BooleanTypes.length,
-                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s"(
+                    (hasString ? 1 : 0) + IntTypes.length + DecimalTypes.length + BooleanTypes.length + (hasAny ? 1 : 0),
+                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s, hasAny: %s"(
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
-                    hasString, IntTypes.stringof, DecimalTypes.stringof, BooleanTypes.stringof,
+                    hasString, IntTypes.stringof, DecimalTypes.stringof, BooleanTypes.stringof, hasAny,
                 ));
-        throw new DocumentException(
-            format!"Unknown node type for type %s: %s"(T.stringof, expanded.type),
-            expanded.startMark
-        );
     }
 }
