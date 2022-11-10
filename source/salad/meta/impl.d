@@ -480,6 +480,10 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
                     {
                         return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
                     }
+                    else static if (hasAny)
+                    {
+                        return T(expanded.as_!Any(r.context));
+                    }
                     else
                     {
                         throw new DocumentException("Unknown record type", expanded.startMark);
