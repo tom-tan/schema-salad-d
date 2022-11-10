@@ -17,6 +17,12 @@ struct idMap { string subject; string predicate = ""; } // @suppress(dscanner.st
 */
 struct typeDSL {} // @suppress(dscanner.style.phobos_naming_convention)
 
+/**
+ * UDA for DSL for secondary files
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Domain_Specific_Language_for_secondary_files
+*/
+struct secondaryFilesDSL {} // @suppress(dscanner.style.phobos_naming_convention)
+
 /** 
  * UDA for documentRoot
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
