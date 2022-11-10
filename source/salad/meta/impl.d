@@ -183,17 +183,17 @@ template Assign(alias node, alias field, alias context)
         enum Assign = format!q"EOS
             if (auto f = "%s" in %s)
             {
-                %s = (*f).as_!(%s, %s, %s, %s)(%s);
+                %s = (*f).as_!(%s, %s, %s, %s, %s)(%s);
             }
 EOS"(param, node.stringof, field.stringof,
-    T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), context.stringof);
+    T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
     else
     {
         enum Assign = format!q"EOS
-            %s = %s.edig("%s").as_!(%s, %s, %s, %s)(%s);
+            %s = %s.edig("%s").as_!(%s, %s, %s, %s, %s)(%s);
 EOS"(field.stringof, node.stringof, param,
-T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), context.stringof);
+T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
 }
 
@@ -219,7 +219,7 @@ version(unittest)
     LoadingContext con;
     enum exp = Assign!(n, strVariable_, con).stripLeftAll;
     static assert(exp == q"EOS
-        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""), false)(con);
+        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""), false, false)(con);
 EOS".stripLeftAll, exp);
 
     mixin(exp);
@@ -239,7 +239,7 @@ EOS".stripLeftAll, exp);
     static assert(exp == q"EOS
         if (auto f = "param" in n)
         {
-            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""), false)(con);
+            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""), false, false)(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -263,7 +263,7 @@ unittest
     static assert(exp == q"EOS
         if (auto f = "params" in n)
         {
-            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""), false)(con);
+            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""), false, false)(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -272,16 +272,17 @@ EOS".stripLeftAll, exp);
                   .assertNotThrown == [1, 2, 3]);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (is(T : SchemaBase))
 {
     import salad.resolver : resolveDirectives;
     auto resolved = resolveDirectives(node, context);
-    return new T(resolved.node, resolved.context);
+    auto expanded = expandDSL!(typeDSL, secondaryFilesDSL)(resolved.node);
+    return new T(expanded, resolved.context);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
@@ -298,7 +299,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (!isSomeString!T && isArray!T)
 {
@@ -325,12 +326,11 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
             {
                 import std.algorithm : map;
                 import std.range : array;
-
-                app.put(r.node.as_!T(r.context));
+                app.put(r.node.as_!(T, typeDSL, idMap.init, isLink, secondaryFilesDSL)(r.context));
             }
             else
             {
-                app.put(r.node.as_!E(r.context));
+                app.put(r.node.as_!(E, typeDSL, idMap.init, isLink, secondaryFilesDSL)(r.context));
             }
         }
         return app[];
@@ -342,7 +342,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
             "Sequence or mapping is expected but it is not", resolved.node.startMark);
         if (resolved.node.type == NodeType.sequence)
         {
-            return resolved.node.as_!(T, typeDSL)(resolved.context);
+            return resolved.node.as_!(T, typeDSL, idMap.init, false, secondaryFilesDSL)(resolved.context);
         }
 
         auto app = appender!T;
@@ -378,7 +378,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
@@ -396,7 +396,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
     static if (Types.length == 1)
     {
         auto r = resolveDirectives(node, context);
-        return T(r.node.as_!(Types[0], typeDSL, idMap_, isLink)(r.context));
+        return T(r.node.as_!(Types[0], typeDSL, idMap_, isLink, secondaryFilesDSL)(r.context));
     }
     else
     {
@@ -404,46 +404,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
         import salad.exception : DocumentException;
 
         auto r = resolveDirectives(node, context);
-        Node expanded;
-        static if (typeDSL && Filter!(isSomeString, Types).length > 0)
-        {
-            if (r.node.type == NodeType.string)
-            {
-                import std.algorithm : endsWith;
-
-                auto s = r.node.as!string;
-                if (s.endsWith("[]?"))
-                {
-                    expanded.add("null");
-                    Node n;
-                    n.add("type", "array");
-                    n.add("items", s[0..$-3]);
-                    expanded.add(n);
-                }
-                else if (s.endsWith("[]"))
-                {
-                    expanded.add("type", "array");
-                    expanded.add("items", s[0..$-2]);
-                }
-                else if (s.endsWith("?"))
-                {
-                    expanded.add("null");
-                    expanded.add(s[0..$-1]);
-                }
-                else
-                {
-                    expanded = Node(r.node);
-                }
-            }
-            else
-            {
-                expanded = Node(r.node);
-            }
-        }
-        else
-        {
-            expanded = Node(r.node);
-        }
+        auto expanded = expandDSL!(typeDSL, secondaryFilesDSL)(r.node);
 
         // dispatch
         import std.meta : anySatisfy;
@@ -458,7 +419,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
             static assert(ArrayTypes.length == 1, "Type `T[] | U[] | ...` is not supported yet");
             if (expanded.type == NodeType.sequence)
             {
-                return T(expanded.as_!(ArrayTypes[0], false, idMap.init, isLink)(r.context));
+                return T(expanded.as_!(ArrayTypes[0], typeDSL, idMap.init, isLink, secondaryFilesDSL)(r.context));
             }
         }
 
@@ -622,5 +583,74 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
                     hasString, IntTypes.stringof, DecimalTypes.stringof, BooleanTypes.stringof, hasAny,
                 ));
+    }
+}
+
+
+///
+auto expandDSL(bool typeDSL, bool secondaryFilesDSL)(Node node)
+{
+    static if (typeDSL)
+    {
+        Node expanded;
+        if (node.type == NodeType.string)
+        {
+            import std.algorithm : endsWith;
+
+            auto s = node.as!string;
+
+            if (s.endsWith("[]?"))
+            {
+                expanded.add("null");
+                Node n;
+                n.add("type", "array");
+                n.add("items", s[0 .. $ - 3]);
+                expanded.add(n);
+            }
+            else if (s.endsWith("[]"))
+            {
+                expanded.add("type", "array");
+                expanded.add("items", s[0 .. $ - 2]);
+            }
+            else if (s.endsWith("?"))
+            {
+                expanded.add("null");
+                expanded.add(s[0 .. $ - 1]);
+            }
+            else
+            {
+                expanded = Node(node);
+            }
+        }
+        else
+        {
+            expanded = Node(node);
+        }
+        return expanded;
+    }
+    else static if (secondaryFilesDSL)
+    {
+        Node expanded;
+        if (node.type == NodeType.string)
+        {
+            import std.algorithm : endsWith;
+
+            auto pattern = node.as!string;
+            if (pattern.endsWith("?"))
+            {
+                pattern = pattern[0 .. $ - 1];
+                expanded.add("required", false);
+            }
+            expanded.add("pattern", pattern);
+        }
+        else
+        {
+            expanded = Node(node);
+        }
+        return expanded;
+    }
+    else
+    {
+        return Node(node);
     }
 }
