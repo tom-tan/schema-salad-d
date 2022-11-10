@@ -15,6 +15,8 @@ alias importFromURI = import_!(salad.schema);
 alias DocumentRootType = DocRootType!(salad.schema);
 
 /// Loading SALAD metaschema
+// disabled due to https://github.com/common-workflow-language/schema_salad/issues/626
+version(none):
 @safe unittest
 {
     import salad.type : tryMatch;
