@@ -446,6 +446,11 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
         }
 
         // dispatch
+        import std.meta : anySatisfy;
+
+        enum isAny(T) = is(T == Any);
+        enum hasAny = anySatisfy!(isAny, Types);
+
         enum isNonStringArray(T) = !isSomeString!T && isArray!T;
         alias ArrayTypes = Filter!(isNonStringArray, Types);
         static if (ArrayTypes.length > 0)
@@ -495,10 +500,17 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
                             case __traits(getMember, RT, DispatchFieldName): return T(expanded.as_!RT(r.context));
                         }
                     default:
-                        throw new DocumentException(
-                            "Unknown record type: " ~ id.as!string,
-                            expanded.edig(DispatchFieldName[0 .. $ - 1]).startMark
-                        );
+                        static if (hasAny)
+                        {
+                            return T(expanded.as_!Any(r.context));
+                        }
+                        else
+                        {
+                            throw new DocumentException(
+                                "Unknown record type: " ~ id.as!string,
+                                expanded.edig(DispatchFieldName[0 .. $ - 1]).startMark
+                            );
+                        }
                     }
                 }
                 else
@@ -515,7 +527,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
             }
         }
 
-        import std.meta : anySatisfy, Filter, staticMap;
+        import std.meta : Filter, staticMap;
 
         alias EnumTypes = Filter!(isSaladEnum, Types);
         enum hasString = anySatisfy!(isSomeString, Types);
@@ -591,8 +603,6 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false)
 
         import std.format : format;
 
-        enum isAny(T) = is(T == Any);
-        enum hasAny = anySatisfy!(isAny, Types);
         static if (hasAny)
         {
             return T(expanded.as!Any);
