@@ -6,7 +6,7 @@
 module salad.type;
 
 public import std.sumtype;
-import std.meta : allSatisfy, anySatisfy, templateNot;
+import std.meta : allSatisfy, anySatisfy, NoDuplicates, templateNot;
 import std.traits : isArray;
 
 struct None{}
@@ -77,8 +77,6 @@ if (isOptional!T && T.Types.length == 2)
     c = new C;
     assert(c.orElse(null) !is null);
 }
-
-import std.meta : NoDuplicates;
 
 /**
  * It is almost same as SumType but remove duplicated types
