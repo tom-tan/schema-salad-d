@@ -150,7 +150,20 @@ if (!is(T: Node))
 
                     static if (isSumType!(typeof(e)))
                     {
-                        auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject ~ "_"));
+                        import std.meta : anySatisfy;
+
+                        enum isAny(T) = is(T == Any);
+                        static if (anySatisfy!(isAny, e.Types))
+                        {
+                            auto f = e.tryMatch!(
+                                (Any any) => any.value[idMap_.subject].as!string,
+                                ee => __traits(getMember, ee, idMap_.subject ~ "_"),
+                            );
+                        }
+                        else
+                        {
+                            auto f = e.tryMatch!(ee => __traits(getMember, ee, idMap_.subject ~ "_"));
+                        }
                     }
                     else static if (is(typeof(e) == Any))
                     {
