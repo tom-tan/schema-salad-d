@@ -78,19 +78,34 @@ if (isOptional!T && T.Types.length == 2)
     assert(c.orElse(null) !is null);
 }
 
-// TODO: more appropriate name
-// It is almost same as SumType but remove duplicated types
-// It is introduced to handle `Expression` in a simple way
+import std.meta : NoDuplicates;
+
+/**
+ * It is almost same as SumType but remove duplicated types
+ * It is introduced to handle `Expression` in a simple way
+ * TODO: more appropriate name
+ */
 template Either(TS...)
+if (NoDuplicates!TS.length > 1)
 {
     import std.meta : NoDuplicates;
+
     alias Either = SumType!(NoDuplicates!TS);
 }
 
+/// ditto
+template Either(TS...)
+if (NoDuplicates!TS.length == 1)
+{
+    alias Either = NoDuplicates!TS[0];
+}
+
+///
 unittest
 {
     import salad.primitives : Expression;
 
     static assert(is(Either!(None, string, Expression) == SumType!(None, string)));
     static assert(is(Either!(int, Expression) == SumType!(int, string)));
+    static assert(is(Either!(string, Expression) == string));
 }
