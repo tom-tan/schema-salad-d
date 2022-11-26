@@ -161,7 +161,7 @@ auto resolveIdentifier(string id, in LoadingContext context) nothrow pure @safe
     {
         return id;
     }
-    else if (id.isAbsoluteURI)
+    else if (id.isAbsoluteURI || id.isExpression)
     {
         return id;
     }

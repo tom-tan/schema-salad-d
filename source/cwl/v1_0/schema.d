@@ -9,7 +9,7 @@ module cwl.v1_0.schema;
 
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
-import salad.meta.uda : documentRoot, id, idMap, link, typeDSL;
+import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
 
@@ -68,7 +68,7 @@ class CommandInputParameter : SchemaBase
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
-    @link Optional!(string, string[]) format_;
+    @link(LinkResolver.id) Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
     Optional!Any default_;
     @typeDSL
@@ -135,8 +135,8 @@ class CWLType : SchemaBase
 class File : SchemaBase
 {
     static immutable class_ = "File";
-    @link Optional!string location_;
-    @link Optional!string path_;
+    @link() Optional!string location_;
+    @link() Optional!string path_;
     Optional!string basename_;
     Optional!string dirname_;
     Optional!string nameroot_;
@@ -144,7 +144,7 @@ class File : SchemaBase
     Optional!string checksum_;
     Optional!long size_;
     Optional!(Either!(File, Directory)[]) secondaryFiles_;
-    @link Optional!string format_;
+    @link(LinkResolver.id) Optional!string format_;
     Optional!string contents_;
 
     mixin genCtor;
@@ -155,8 +155,8 @@ class File : SchemaBase
 class Directory : SchemaBase
 {
     static immutable class_ = "Directory";
-    @link Optional!string location_;
-    @link Optional!string path_;
+    @link() Optional!string location_;
+    @link() Optional!string path_;
     Optional!string basename_;
     Optional!(
         Either!(File, Directory)[]
@@ -254,7 +254,7 @@ class CommandOutputParameter : SchemaBase
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
-    @link Optional!string format_;
+    @link(LinkResolver.id) Optional!string format_;
     @typeDSL
     Optional!(
         CWLType,
@@ -699,7 +699,7 @@ class WorkflowOutputParameter : SchemaBase
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
-    Optional!string format_;
+    @link(LinkResolver.id) Optional!string format_;
     Optional!(string, string[]) outputSource_;
     Optional!LinkMergeMethod linkMerge_;
     @typeDSL
@@ -966,7 +966,7 @@ class InputParameter : SchemaBase
     Optional!(string, string[]) secondaryFiles_;
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
-    @link Optional!(string, string[]) format_;
+    @link(LinkResolver.id) Optional!(string, string[]) format_;
     Optional!CommandLineBinding inputBinding_;
     Optional!Any default_;
     @typeDSL
@@ -998,7 +998,7 @@ class ExpressionToolOutputParameter : SchemaBase
     Optional!bool streamable_;
     Optional!(string, string[]) doc_;
     Optional!CommandOutputBinding outputBinding_;
-    @link Optional!string format_;
+    @link(LinkResolver.id) Optional!string format_;
     @typeDSL
     Optional!(
         CWLType,

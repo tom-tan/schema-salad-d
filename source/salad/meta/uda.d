@@ -41,8 +41,19 @@ struct id {} // @suppress(dscanner.style.phobos_naming_convention)
  */
 struct subscope { string subscope; } // @suppress(dscanner.style.phobos_naming_convention)
 
+/// See_Also: https://github.com/common-workflow-language/schema_salad/pull/631
+enum LinkResolver
+{
+    none,
+    link, // use link resolution
+    id, // use identifier resolution
+}
+
 /**
  * UDA for link fields
  * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Link_validation
  */
-struct link {}
+struct link // @suppress(dscanner.style.phobos_naming_convention)
+{
+    LinkResolver resolver = LinkResolver.link;
+}

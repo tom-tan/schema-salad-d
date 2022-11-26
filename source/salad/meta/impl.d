@@ -46,6 +46,7 @@ mixin template genCtor()
         {
             import dyaml : Mark;
             import salad.meta.impl : Assign, as_, hasIdentifier;
+            import salad.meta.uda : LinkResolver;
             import salad.util : edig;
             import salad.type : None, Optional, SumType;
             import std.algorithm : endsWith;
@@ -174,6 +175,15 @@ template Assign(alias node, alias field, alias context)
         enum idMap_ = idMap.init;
     }
 
+    static if (hasUDA!(field, link))
+    {
+        enum lresolver = getUDAs!(field, link)[0].resolver;
+    }
+    else
+    {
+        enum lresolver = LinkResolver.none;
+    }
+
     alias T = typeof(field);
 
     enum param = field.stringof[0..$-1];
@@ -183,17 +193,17 @@ template Assign(alias node, alias field, alias context)
         enum Assign = format!q"EOS
             if (auto f = "%s" in %s)
             {
-                %s = (*f).as_!(%s, %s, %s, %s, %s)(%s);
+                %s = (*f).as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
             }
 EOS"(param, node.stringof, field.stringof,
-    T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), hasUDA!(field, secondaryFilesDSL), context.stringof);
+    T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
     else
     {
         enum Assign = format!q"EOS
-            %s = %s.edig("%s").as_!(%s, %s, %s, %s, %s)(%s);
+            %s = %s.edig("%s").as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
 EOS"(field.stringof, node.stringof, param,
-T.stringof, hasUDA!(field, typeDSL), idMap_, hasUDA!(field, link), hasUDA!(field, secondaryFilesDSL), context.stringof);
+T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
 }
 
@@ -219,7 +229,7 @@ version(unittest)
     LoadingContext con;
     enum exp = Assign!(n, strVariable_, con).stripLeftAll;
     static assert(exp == q"EOS
-        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""), false, false)(con);
+        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""), LinkResolver.none, false)(con);
 EOS".stripLeftAll, exp);
 
     mixin(exp);
@@ -239,7 +249,7 @@ EOS".stripLeftAll, exp);
     static assert(exp == q"EOS
         if (auto f = "param" in n)
         {
-            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""), false, false)(con);
+            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""), LinkResolver.none, false)(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -263,7 +273,7 @@ unittest
     static assert(exp == q"EOS
         if (auto f = "params" in n)
         {
-            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""), false, false)(con);
+            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""), LinkResolver.none, false)(con);
         }
 EOS".stripLeftAll, exp);
 
@@ -272,7 +282,7 @@ EOS".stripLeftAll, exp);
                   .assertNotThrown == [1, 2, 3]);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (is(T : SchemaBase))
 {
@@ -282,16 +292,20 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
     return new T(expanded, resolved.context);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
-    import salad.resolver : resolveDirectives, resolveLink;
+    import salad.resolver : resolveDirectives, resolveIdentifier, resolveLink;
     auto resolved = resolveDirectives(node, context);
     auto ret = resolved.node.as!T;
-    static if (isSomeString!T && isLink)
+    static if (isSomeString!T && lresolver == LinkResolver.link)
     {
         return ret.resolveLink(resolved.context);
+    }
+    else static if (isSomeString!T && lresolver == LinkResolver.id)
+    {
+        return ret.resolveIdentifier(resolved.context);
     }
     else
     {
@@ -299,7 +313,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (!isSomeString!T && isArray!T)
 {
@@ -326,11 +340,11 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
             {
                 import std.algorithm : map;
                 import std.range : array;
-                app.put(r.node.as_!(T, typeDSL, idMap.init, isLink, secondaryFilesDSL)(r.context));
+                app.put(r.node.as_!(T, typeDSL, idMap.init, lresolver, secondaryFilesDSL)(r.context));
             }
             else
             {
-                app.put(r.node.as_!(E, typeDSL, idMap.init, isLink, secondaryFilesDSL)(r.context));
+                app.put(r.node.as_!(E, typeDSL, idMap.init, lresolver, secondaryFilesDSL)(r.context));
             }
         }
         return app[];
@@ -342,7 +356,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
             "Sequence or mapping is expected but it is not", resolved.node.startMark);
         if (resolved.node.type == NodeType.sequence)
         {
-            return resolved.node.as_!(T, typeDSL, idMap.init, false, secondaryFilesDSL)(resolved.context);
+            return resolved.node.as_!(T, typeDSL, idMap.init, LinkResolver.none, secondaryFilesDSL)(resolved.context);
         }
 
         auto app = appender!T;
@@ -378,7 +392,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
@@ -396,7 +410,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
     static if (Types.length == 1)
     {
         auto r = resolveDirectives(node, context);
-        return T(r.node.as_!(Types[0], typeDSL, idMap_, isLink, secondaryFilesDSL)(r.context));
+        return T(r.node.as_!(Types[0], typeDSL, idMap_, lresolver, secondaryFilesDSL)(r.context));
     }
     else
     {
@@ -419,7 +433,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
             static assert(ArrayTypes.length == 1, "Type `T[] | U[] | ...` is not supported yet");
             if (expanded.type == NodeType.sequence)
             {
-                return T(expanded.as_!(ArrayTypes[0], typeDSL, idMap.init, isLink, secondaryFilesDSL)(r.context));
+                return T(expanded.as_!(ArrayTypes[0], typeDSL, idMap.init, lresolver, secondaryFilesDSL)(r.context));
             }
         }
 
@@ -500,7 +514,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
         {                
             if (expanded.type == NodeType.string)
             {
-                import salad.resolver : resolveLink;
+                import salad.resolver : resolveIdentifier, resolveLink;
                 import std.algorithm : canFind;
                 import std.traits : EnumMembers;
 
@@ -516,9 +530,13 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, bool isLink = false, b
                     }
                     static if (hasString)
                     {
-                        static if (isLink)
+                        static if (lresolver == LinkResolver.link)
                         {
                             default: return T(value.resolveLink(r.context));
+                        }
+                        else static if (lresolver == LinkResolver.id)
+                        {
+                            default: return T(value.resolveIdentifier(r.context));
                         }
                         else
                         {
