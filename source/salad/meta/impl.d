@@ -161,7 +161,7 @@ enum isDefinedField(string F) = F[$-1] == '_';
 enum StaticMembersOf(T) = Filter!(ApplyLeft!(hasStaticMember, T), Filter!(isDefinedField, __traits(derivedMembers, T)));
 
 ///
-template Assign(alias node, alias field, alias context)
+template Assign(alias node, alias field, alias context, string file = __FILE__, size_t line = __LINE__)
 {
     import std.format : format;
     import std.traits : getUDAs, hasUDA, select;
@@ -191,30 +191,32 @@ template Assign(alias node, alias field, alias context)
     static if (isOptional!T)
     {
         enum Assign = format!q"EOS
+            #line %s "%s"
             if (auto f = "%s" in %s)
             {
                 %s = (*f).as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
             }
-EOS"(param, node.stringof, field.stringof,
+EOS"(line, file, param, node.stringof, field.stringof,
     T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
     else
     {
         enum Assign = format!q"EOS
+            #line %s "%s"
             %s = %s.edig("%s").as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
-EOS"(field.stringof, node.stringof, param,
+EOS"(line, file, field.stringof, node.stringof, param,
 T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
 }
 
 version(unittest)
 {
-    auto stripLeftAll(string str) @safe
+    auto stripLeftAll(string str) nothrow pure @safe
     {
-        import std.algorithm : joiner, map;
-        import std.array : array;
+        import std.algorithm : map;
+        import std.array : array, join;
         import std.string : split, stripLeft;
-        return str.split.map!stripLeft.joiner("\n").array;
+        return str.split("\n").map!stripLeft.join("\n");
     }
 }
 
@@ -227,12 +229,8 @@ version(unittest)
     Node n = [ fieldName: "string value" ];
     string strVariable_;
     LoadingContext con;
-    enum exp = Assign!(n, strVariable_, con).stripLeftAll;
-    static assert(exp == q"EOS
-        strVariable_ = n.edig("strVariable").as_!(string, false, idMap("", ""), LinkResolver.none, false)(con);
-EOS".stripLeftAll, exp);
 
-    mixin(exp);
+    mixin(Assign!(n, strVariable_, con));
     assert(strVariable_ == "string value");
 }
 
@@ -245,15 +243,8 @@ EOS".stripLeftAll, exp);
     Node n = [fieldName: true];
     Optional!bool param_;
     LoadingContext con;
-    enum exp = Assign!(n, param_, con).stripLeftAll;
-    static assert(exp == q"EOS
-        if (auto f = "param" in n)
-        {
-            param_ = (*f).as_!(SumType!(None, bool), false, idMap("", ""), LinkResolver.none, false)(con);
-        }
-EOS".stripLeftAll, exp);
 
-    mixin(exp);
+    mixin(Assign!(n, param_, con));
     assert(param_.tryMatch!((bool b) => b)
                  .assertNotThrown);
 }
@@ -269,15 +260,8 @@ unittest
     Node n = [fieldName: [1, 2, 3]];
     Optional!(int[]) params_;
     LoadingContext con;
-    enum exp = Assign!(n, params_, con).stripLeftAll;
-    static assert(exp == q"EOS
-        if (auto f = "params" in n)
-        {
-            params_ = (*f).as_!(SumType!(None, int[]), false, idMap("", ""), LinkResolver.none, false)(con);
-        }
-EOS".stripLeftAll, exp);
 
-    mixin(exp);
+    mixin(Assign!(n, params_, con));
     assert(params_.tryMatch!((int[] arr) => arr)
                   .assertNotThrown == [1, 2, 3]);
 }
