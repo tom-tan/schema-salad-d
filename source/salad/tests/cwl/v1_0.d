@@ -6,7 +6,7 @@
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module cwl.v1_0;
+module salad.tests.cwl.v1_0;
 
 version(unittest):
 
