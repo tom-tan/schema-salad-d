@@ -2,18 +2,6 @@
 	"authors": [
 		"Tomoya Tanjo"
 	],
-	"buildTypes": {
-		"release-static": {
-			"buildOptions": [
-				"releaseMode",
-				"inline",
-				"optimize"
-			],
-			"dflags-posix-ldc": [
-				"-static"
-			]
-		}
-	},
 	"copyright": "Copyright © 2021, Tomoya Tanjo",
 	"dependencies": {
 		"requests": "~>2.0.8",
