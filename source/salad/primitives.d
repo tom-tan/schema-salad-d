@@ -1,5 +1,6 @@
 /**
  * This module declares primitive types that need special handling.
+ *
  * Authors: Tomoya Tanjo
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
