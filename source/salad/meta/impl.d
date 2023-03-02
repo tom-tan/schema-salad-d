@@ -452,11 +452,12 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver
 
                 if (auto id = DispatchFieldName[0..$-1] in expanded)
                 {
+                    enum DispatchFieldValue(T) = __traits(getMember, T, DispatchFieldName);
                     switch (id.as!string)
                     {
                         static foreach (RT; DispatchableRecords)
                         {
-                            case __traits(getMember, RT, DispatchFieldName): return T(expanded.as_!RT(r.context));
+                            case DispatchFieldValue!RT: return T(expanded.as_!RT(r.context));
                         }
                     default:
                         static if (hasAny)
@@ -465,8 +466,14 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver
                         }
                         else
                         {
+                            import std.format : format;
+                            import std.meta : staticMap;
+
+                            enum DispatchFieldValues = staticMap!(DispatchFieldValue, DispatchableRecords);
                             throw new DocumentException(
-                                "Unknown record type: " ~ id.as!string,
+                                format!"Unknown %s field: `%s` (canditates: %-(`%s`%|, %))"(
+                                    DispatchFieldName[0..$-1], id.as!string, [DispatchFieldValues],
+                                ),
                                 expanded.edig(DispatchFieldName[0 .. $ - 1]).startMark
                             );
                         }
