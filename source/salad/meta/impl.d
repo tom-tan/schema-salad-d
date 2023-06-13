@@ -194,9 +194,16 @@ template Assign(alias node, alias field, alias context, string file = __FILE__, 
             #line %s "%s"
             if (auto f = "%s" in %s)
             {
-                %s = (*f).as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
+                if (f.type == NodeType.null_)
+                {
+                    %s = None();
+                }
+                else
+                {
+                    %s = (*f).as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
+                }
             }
-EOS"(line, file, param, node.stringof, field.stringof,
+EOS"(line, file, param, node.stringof, field.stringof, field.stringof,
     T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL), context.stringof);
     }
     else
