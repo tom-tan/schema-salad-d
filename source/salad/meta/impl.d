@@ -266,7 +266,8 @@ unittest
                   .assertNotThrown == [1, 2, 3]);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
+      LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (is(T : SchemaBase))
 {
@@ -276,7 +277,8 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver
     return new T(expanded, resolved.context);
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, 
+      LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (isScalarType!T || isSomeString!T)
 {
@@ -297,7 +299,8 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
+      LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (!isSomeString!T && isArray!T)
 {
@@ -376,7 +379,8 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver
     }
 }
 
-T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
+      LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
@@ -591,8 +595,9 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init, LinkResolver lresolver
 
         static assert(Types.length ==
                 ArrayTypes.length + RecordTypes.length + EnumTypes.length +
-                    (hasString ? 1 : 0) + IntTypes.length + DecimalTypes.length + BooleanTypes.length + (hasAny ? 1 : 0),
-                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s, hasAny: %s"(
+                    (hasString ? 1 : 0) +
+                    IntTypes.length + DecimalTypes.length + BooleanTypes.length + (hasAny ? 1 : 0),
+                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s, hasAny: %s"( // @suppress(dscanner.style.long_line)
                     Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
                     hasString, IntTypes.stringof, DecimalTypes.stringof, BooleanTypes.stringof, hasAny,
                 ));
