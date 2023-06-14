@@ -32,7 +32,8 @@ class Root : SchemaBase
     import salad.context : LoadingContext;
     import salad.meta.impl : as_;
     import salad.type : None;
-    import std : assertNotThrown, tryMatch;
+    import salad.util : edig;
+    import std : assertNotThrown;
 
     enum yaml = q"EOS
         id: name
@@ -40,7 +41,7 @@ EOS";
 
     auto node = Loader.fromString(yaml).load;
     auto root = node.as_!Root(LoadingContext.init);
-    root.value_.tryMatch!((None _) => true).assertNotThrown;
+    root.edig!(["value"], None).assertNotThrown;
 }
 
 /++
@@ -53,7 +54,8 @@ EOS";
     import salad.context : LoadingContext;
     import salad.meta.impl : as_;
     import salad.type : None;
-    import std : assertNotThrown, tryMatch;
+    import salad.util : edig;
+    import std : assertNotThrown;
 
     enum yaml = q"EOS
         id: name
@@ -62,5 +64,5 @@ EOS";
 
     auto node = Loader.fromString(yaml).load;
     auto root = node.as_!Root(LoadingContext.init);
-    root.value_.tryMatch!((None _) => true).assertNotThrown;
+    root.edig!(["value"], None).assertNotThrown;
 }
