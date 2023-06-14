@@ -22,7 +22,7 @@ class Root : SchemaBase
     mixin genCtor;
 }
 
-/++
+/+
  + When a field is not present in the node, the corresponding field must have `None` value.
  + See_Also: https://github.com/common-workflow-language/cwl-v1.2/issues/75#issuecomment-741730322
  +/
@@ -44,7 +44,7 @@ EOS";
     root.edig!(["value"], None).assertNotThrown;
 }
 
-/++
+/+
  + A field with null value is treated as the field is not present.
  + See_Also: https://github.com/common-workflow-language/cwl-v1.2/issues/75#issuecomment-741730322
  +/
