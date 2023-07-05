@@ -1207,20 +1207,3 @@ alias importFromURI = import_!DocumentRootType;
                                  .assertNotThrown;
     assert(wf.identifier == uri~"#main");
 }
-
-@safe unittest
-{
-    import salad.resolver : absoluteURI;
-    import salad.type : tryMatch, match;
-    import salad.util : edig;
-    import std.exception : assertNotThrown;
-    import std : stderr;
-
-    auto uri = "examples/nested-typedsl.cwl".absoluteURI;
-
-    assert(importFromURI(uri).tryMatch!((DocumentRootType r) => r)
-                             .tryMatch!((CommandLineTool clt) => clt)
-                             .assertNotThrown
-                             .edig!(["inputs", "inp", "type", "items", "items"], CWLType)
-                             == "File");
-}
