@@ -19,14 +19,18 @@ import dyaml;
 enum isSaladRecord(T) = is(Unqual!T : SchemaBase) && !is(Unqual!T : Any) && !__traits(compiles, T.Symbol);
 enum isSaladEnum(T) = is(Unqual!T : SchemaBase) && !is(Unqual!T : Any) && __traits(compiles, T.Symbol);
 
+enum defaultSaladVersion = "v1.1";
+
 ///
-mixin template genCtor()
+mixin template genCtor_(string saladVersion_)
 {
     private import dyaml : Node, NodeType;
     private import salad.context : LoadingContext;
     private import salad.meta.impl : isSaladRecord, isSaladEnum;
 
     static assert(is(typeof(this) : SchemaBase));
+
+    enum saladVersion = saladVersion_;
 
     this() pure @nogc nothrow @safe
     {
@@ -280,7 +284,15 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
 {
     import salad.resolver : resolveDirectives;
     auto resolved = resolveDirectives(node, context);
-    auto expanded = expandDSL!(typeDSL, secondaryFilesDSL)(resolved.node);
+    static if (is(T : Any))
+    {
+        enum saladVersion = defaultSaladVersion;
+    }
+    else
+    {
+        enum saladVersion = T.saladVersion;
+    }
+    auto expanded = expandDSL!(saladVersion, typeDSL, secondaryFilesDSL)(resolved.node);
     return new T(expanded, resolved.context);
 }
 
@@ -412,8 +424,20 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
         import std.meta : Filter;
         import salad.exception : DocumentException;
 
+        enum isSchemaBase(T) = is(T : SchemaBase);
+
         auto r = resolveDirectives(node, context);
-        auto expanded = expandDSL!(typeDSL, secondaryFilesDSL)(r.node);
+
+        alias Schemas = Filter!(isSchemaBase, Types);
+        static if (Schemas.length > 0)
+        {
+            enum saladVersion = Schemas[0].saladVersion;
+        }
+        else
+        {
+            enum saladVersion = defaultSaladVersion;
+        }
+        auto expanded = expandDSL!(saladVersion, typeDSL, secondaryFilesDSL)(r.node);
 
         // dispatch
         import std.meta : anySatisfy;
@@ -613,16 +637,27 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
 
 
 ///
-auto expandDSL(bool typeDSL, bool secondaryFilesDSL)(Node node)
+auto expandDSL(string saladVersion, bool typeDSL, bool secondaryFilesDSL)(Node node)
 {
     static if (typeDSL)
     {
         Node expanded;
         if (node.type == NodeType.string)
         {
-            import std.algorithm : endsWith;
+            import std.algorithm : canFind, endsWith, map;
+            import std.array : array, split;
+            import std.conv : to;
+            import std.experimental.logger;
 
             auto s = node.as!string;
+
+            // auto vers = saladVersion[1..$].split(".").map!(to!int).array;
+            // auto mark = node.startMark;
+            // sharedLog.warningf(
+            //     vers < [1, 3] && s.canFind("[][]"),
+            //     "[nested-array] Using nested array with syntax sugar (e.g., `%s`) has a portability issue.",
+            //     s,
+            // );
 
             if (s.endsWith("[]?"))
             {

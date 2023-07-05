@@ -9,10 +9,17 @@ module salad.tests.optional;
 
 version(unittest):
 
-import salad.meta.impl : genCtor;
+import salad.meta.impl : genCtor_;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : Optional;
+
+enum saladVersion = "v1.1";
+
+mixin template genCtor()
+{
+    mixin genCtor_!(saladVersion);
+}
 
 class Root : SchemaBase
 {

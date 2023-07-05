@@ -11,11 +11,18 @@ module salad.tests.cwl.v1_0;
 version(unittest):
 
 import salad.meta.dumper : genDumper;
-import salad.meta.impl : genCtor, genIdentifier, genOpEq;
+import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
+
+enum saladVersion = "v1.1";
+
+mixin template genCtor()
+{
+    mixin genCtor_!saladVersion;
+}
 
 // workaround for https://issues.dlang.org/show_bug.cgi?id=20443
 // it is needed for self-recursive definitions
@@ -1199,4 +1206,21 @@ alias importFromURI = import_!DocumentRootType;
                                  .tryMatch!((Workflow wf) => wf)
                                  .assertNotThrown;
     assert(wf.identifier == uri~"#main");
+}
+
+@safe unittest
+{
+    import salad.resolver : absoluteURI;
+    import salad.type : tryMatch, match;
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
+    import std : stderr;
+
+    auto uri = "examples/nested-typedsl.cwl".absoluteURI;
+
+    assert(importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                             .tryMatch!((CommandLineTool clt) => clt)
+                             .assertNotThrown
+                             .edig!(["inputs", "inp", "type", "items", "items"], CWLType)
+                             == "File");
 }

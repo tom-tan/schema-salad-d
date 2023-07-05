@@ -7,10 +7,17 @@
 module salad.schema;
 
 import salad.meta.dumper : genDumper;
-import salad.meta.impl : genCtor, genIdentifier, genOpEq;
+import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : Either, Optional;
+
+enum saladVersion = "v1.1";
+
+mixin template genCtor()
+{
+    mixin genCtor_!(saladVersion);
+}
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
 @documentRoot class SaladRecordSchema : SchemaBase
