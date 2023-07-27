@@ -15,7 +15,7 @@ import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
-import salad.type : Either, Optional;
+import salad.type : Union, Optional;
 
 enum saladVersion = "v1.1";
 
@@ -43,7 +43,7 @@ static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
     @id Optional!string id_;
     @idMap("class")
     Optional!(
-        Either!(
+        Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
             DockerRequirement,
@@ -59,7 +59,7 @@ static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
     Optional!string doc_;
     Optional!CWLVersion cwlVersion_;
     Optional!(string, string[]) baseCommand_;
-    Optional!(Either!(string, CommandLineBinding)[]) arguments_;
+    Optional!(Union!(string, CommandLineBinding)[]) arguments_;
     Optional!string stdin_;
     Optional!string stderr_;
     Optional!string stdout_;
@@ -89,7 +89,7 @@ class CommandInputParameter : SchemaBase
         CommandInputEnumSchema,
         CommandInputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             CommandInputRecordSchema,
             CommandInputEnumSchema,
@@ -154,7 +154,7 @@ class File : SchemaBase
     Optional!string nameext_;
     Optional!string checksum_;
     Optional!long size_;
-    Optional!(Either!(File, Directory)[]) secondaryFiles_;
+    Optional!(Union!(File, Directory)[]) secondaryFiles_;
     @link(LinkResolver.id) Optional!string format_;
     Optional!string contents_;
 
@@ -170,7 +170,7 @@ class Directory : SchemaBase
     @link() Optional!string path_;
     Optional!string basename_;
     Optional!(
-        Either!(File, Directory)[]
+        Union!(File, Directory)[]
     ) listing_;
 
     mixin genCtor;
@@ -195,13 +195,13 @@ class CommandInputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         CommandInputRecordSchema,
         CommandInputEnumSchema,
         CommandInputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             CommandInputRecordSchema,
             CommandInputEnumSchema,
@@ -234,13 +234,13 @@ class CommandInputEnumSchema : SchemaBase
 class CommandInputArraySchema : SchemaBase
 {
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         CommandInputRecordSchema,
         CommandInputEnumSchema,
         CommandInputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             CommandInputRecordSchema,
             CommandInputEnumSchema,
@@ -275,7 +275,7 @@ class CommandOutputParameter : SchemaBase
         CommandOutputEnumSchema,
         CommandOutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             CommandOutputRecordSchema,
             CommandOutputEnumSchema,
@@ -345,13 +345,13 @@ class CommandOutputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         CommandOutputRecordSchema,
         CommandOutputEnumSchema,
         CommandOutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             CommandOutputRecordSchema,
             CommandOutputEnumSchema,
@@ -382,13 +382,13 @@ class CommandOutputEnumSchema : SchemaBase
 class CommandOutputArraySchema : SchemaBase
 {
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         CommandOutputRecordSchema,
         CommandOutputEnumSchema,
         CommandOutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             CommandOutputRecordSchema,
             CommandOutputEnumSchema,
@@ -418,7 +418,7 @@ class InlineJavascriptRequirement : SchemaBase
 class SchemaDefRequirement : SchemaBase
 {
     static immutable class_ = "SchemaDefRequirement";
-    Either!(
+    Union!(
         InputRecordSchema,
         InputEnumSchema,
         InputArraySchema,
@@ -448,13 +448,13 @@ class InputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         InputRecordSchema,
         InputEnumSchema,
         InputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             InputRecordSchema,
             InputEnumSchema,
@@ -487,13 +487,13 @@ class InputEnumSchema : SchemaBase
 class InputArraySchema : SchemaBase
 {
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         InputRecordSchema,
         InputEnumSchema,
         InputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             InputRecordSchema,
             InputEnumSchema,
@@ -550,8 +550,8 @@ class SoftwarePackage : SchemaBase
 class InitialWorkDirRequirement : SchemaBase
 {
     static immutable class_ = "InitialWorkDirRequirement";
-    Either!(
-        Either!(
+    Union!(
+        Union!(
             File,
             Directory,
             Dirent,
@@ -677,7 +677,7 @@ class CWLVersion : SchemaBase
     @id Optional!string id_;
     @idMap("class")
     Optional!(
-        Either!(
+        Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
             DockerRequirement,
@@ -720,7 +720,7 @@ class WorkflowOutputParameter : SchemaBase
         OutputEnumSchema,
         OutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             OutputRecordSchema,
             OutputEnumSchema,
@@ -765,13 +765,13 @@ class OutputRecordField : SchemaBase
 {
     string name_;
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         OutputRecordSchema,
         OutputEnumSchema,
         OutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             OutputRecordSchema,
             OutputEnumSchema,
@@ -802,13 +802,13 @@ class OutputEnumSchema : SchemaBase
 class OutputArraySchema : SchemaBase
 {
     @typeDSL
-    Either!(
+    Union!(
         CWLType,
         OutputRecordSchema,
         OutputEnumSchema,
         OutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             OutputRecordSchema,
             OutputEnumSchema,
@@ -830,11 +830,11 @@ class WorkflowStep : SchemaBase
     @id string id_;
     @idMap("id", "source")
     WorkflowStepInput[] in_;
-    Either!(string, WorkflowStepOutput)[] out_;
-    Either!(string, CommandLineTool, ExpressionTool, Workflow) run_;
+    Union!(string, WorkflowStepOutput)[] out_;
+    Union!(string, CommandLineTool, ExpressionTool, Workflow) run_;
     @idMap("class")
     Optional!(
-        Either!(
+        Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
             DockerRequirement,
@@ -945,7 +945,7 @@ class StepInputExpressionRequirement : SchemaBase
     @id Optional!string id_;
     @idMap("class")
     Optional!(
-        Either!(
+        Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
             DockerRequirement,
@@ -987,7 +987,7 @@ class InputParameter : SchemaBase
         InputEnumSchema,
         InputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             InputRecordSchema,
             InputEnumSchema,
@@ -1017,7 +1017,7 @@ class ExpressionToolOutputParameter : SchemaBase
         OutputEnumSchema,
         OutputArraySchema,
         string,
-        Either!(
+        Union!(
             CWLType,
             OutputRecordSchema,
             OutputEnumSchema,
@@ -1047,7 +1047,7 @@ unittest
 }
 
 ///
-alias DocumentRootType = Either!(CommandLineTool, ExpressionTool, Workflow);
+alias DocumentRootType = Union!(CommandLineTool, ExpressionTool, Workflow);
 
 ///
 alias importFromURI = import_!DocumentRootType;

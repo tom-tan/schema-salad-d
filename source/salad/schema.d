@@ -10,7 +10,7 @@ import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
 import salad.primitives : SchemaBase;
-import salad.type : Either, Optional;
+import salad.type : Union, Optional;
 
 enum saladVersion = "v1.1";
 
@@ -46,13 +46,13 @@ class SaladRecordField : SchemaBase
 {
     @id string name_;
     @typeDSL
-    Either!(
+    Union!(
         PrimitiveType,
         RecordSchema,
         EnumSchema,
         ArraySchema,
         string,
-        Either!(
+        Union!(
             PrimitiveType,
             RecordSchema,
             EnumSchema,
@@ -108,13 +108,13 @@ class RecordField : SchemaBase
 {
     @id string name_;
     @typeDSL 
-    Either!(
+    Union!(
         PrimitiveType,
         RecordSchema,
         EnumSchema,
         ArraySchema,
         string,
-        Either!(
+        Union!(
             PrimitiveType,
             RecordSchema,
             EnumSchema,
@@ -142,13 +142,13 @@ class EnumSchema : SchemaBase
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
 class ArraySchema : SchemaBase
 {
-    Either!(
+    Union!(
         PrimitiveType,
         RecordSchema,
         EnumSchema,
         ArraySchema,
         string,
-        Either!(
+        Union!(
             PrimitiveType,
             RecordSchema,
             EnumSchema,

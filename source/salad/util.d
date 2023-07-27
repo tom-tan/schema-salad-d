@@ -506,7 +506,7 @@ if (!is(T: Node))
 
 @safe unittest
 {
-    import salad.type : Either, Optional, tryMatch;
+    import salad.type : Union, Optional, tryMatch;
 
     class E1
     {
@@ -530,7 +530,7 @@ if (!is(T: Node))
         }
     }
 
-    alias ElemType = Either!(E1, E2);
+    alias ElemType = Union!(E1, E2);
     class C
     {
         @idMap("id")
@@ -548,7 +548,7 @@ if (!is(T: Node))
 
 @safe unittest
 {
-    import salad.type : Either;
+    import salad.type : Union;
 
     class E1
     {
@@ -572,6 +572,6 @@ if (!is(T: Node))
         }
     }
 
-    auto e = Either!(E1, E2)(new E1("foo", 1));
+    auto e = Union!(E1, E2)(new E1("foo", 1));
     assert(e.dig!("id", string) == "foo");
 }
