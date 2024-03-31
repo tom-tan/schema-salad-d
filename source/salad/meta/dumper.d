@@ -27,7 +27,7 @@ mixin template genDumper()
 
             alias This = typeof(this);
 
-            Node ret;
+            auto ret = Node((Node[string]).init);
             static foreach (field; __traits(allMembers, This))
             {
                 static if (field.endsWith("_"))
