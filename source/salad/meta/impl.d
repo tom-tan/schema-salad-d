@@ -49,20 +49,46 @@ mixin template genCtor_(string saladVersion_)
         this(Node node, in LoadingContext context = LoadingContext.init) @trusted
         {
             import dyaml : Mark;
-            import salad.meta.impl : Assign, as_, hasIdentifier;
+            import salad.exception : docEnforce;
+            import salad.meta.impl : Assign, as_, hasIdentifier, StaticMembersOf;
             import salad.meta.uda : LinkResolver;
             import salad.util : edig;
             import salad.type : None, Optional, SumType;
             import std.algorithm : endsWith;
+            import std.container : make, RedBlackTree;
             import std.conv : to;
+            import std.format : format;
             import std.range : empty;
             import std.traits : getSymbolsByUDA, FieldNameTuple, hasUDA;
 
             alias This = typeof(this);
 
+            auto rest = make!(RedBlackTree!string)(node.mappingKeys!string);
+
+            static foreach(m; StaticMembersOf!This)
+            {
+                static if (m.endsWith("_"))
+                {
+                    auto val = docEnforce(
+                        m[0..$-1] in node,
+                        format!"Missing field `%s` in %s"(m[0..$-1], This.stringof),
+                        node.startMark,
+                    );
+                    docEnforce(
+                        __traits(getMember, this, m) == val.as!string,
+                        format!"Conflict the value of %s.%s (Expected: %s, Actual: %s)"(
+                            This.stringof, m[0..$-1], __traits(getMember, this, m), val.as!string
+                        ),
+                        node.startMark,
+                    );
+                    rest.removeKey(m[0..$-1]);
+                }
+            }
+
             static if (hasIdentifier!This)
             {
                 mixin(Assign!(node, getSymbolsByUDA!(This, id)[0], context));
+                rest.removeKey(getSymbolsByUDA!(This, id)[0].stringof[5..$-1]);
 
                 identifier = (() {
                     import salad.resolver : resolveIdentifier;
@@ -107,7 +133,28 @@ mixin template genCtor_(string saladVersion_)
                 static if (field.endsWith("_") && field != idFieldName~"_")
                 {
                     mixin(Assign!(node, __traits(getMember, this, field), con));
+                    rest.removeKey(field[0..$-1]);
                 }
+            }
+
+            foreach(f; rest[])
+            {
+                import salad.primitives : Any;
+                import salad.resolver : resolveLink;
+                import std : canFind, format;
+
+                if (["$namespaces", "$schemas", "$graph"].canFind(f))
+                {
+                    continue;
+                }
+
+                docEnforce(
+                    f.canFind(":"),
+                    format!"Invalid field found: `%s` in %s"(f, This.stringof),
+                    node.startMark,
+                );
+                auto resolved = f.resolveLink(con);
+                extension_fields[resolved] = node[f].as_!Any(con);
             }
         }
     }

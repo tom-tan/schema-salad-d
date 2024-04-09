@@ -22,6 +22,7 @@ abstract class SchemaBase
     }
 
     LoadingContext context;
+    Any[string] extension_fields;
     Mark mark;
 }
 

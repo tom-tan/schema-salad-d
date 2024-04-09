@@ -1207,3 +1207,26 @@ alias importFromURI = import_!DocumentRootType;
                                  .assertNotThrown;
     assert(wf.identifier == uri~"#main");
 }
+
+/// Supporting extension fields in objects
+@safe unittest
+{
+    import salad.resolver : absoluteURI;
+    import salad.type : tryMatch;
+    import std.exception : assertNotThrown;
+
+    auto uri = "examples/cwl-v1.0/metadata.cwl".absoluteURI;
+
+    auto c = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                               .tryMatch!((CommandLineTool c) => c)
+                               .assertNotThrown;
+    // Extension field names are resolved
+    auto creator = "http://purl.org/dc/terms/creator" in c.extension_fields;
+    assert(creator);
+    // Each field name and its value are not resolved
+    assert(creator.value["class"] == "foaf:Person");
+    assert(creator.value["foaf:name"] == "Peter Amstutz");
+
+    import dyaml;
+    import std : File;
+}
