@@ -1,6 +1,10 @@
 {
-  "image": "ghcr.io/tom-tan/ldc:1.37.0",
-  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
+	"image": "ghcr.io/tom-tan/ldc:1.37.0",
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined"
+	],
 	"customizations": {
 		// Configure properties specific to VS Code.
 		"vscode": {
@@ -20,5 +24,5 @@
 			]
 		}
 	},
-  "remoteUser": "vscode"
+	"containerUser": "vscode"
 }
