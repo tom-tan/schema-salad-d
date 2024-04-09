@@ -335,6 +335,43 @@ nothrow pure @safe unittest
     assert("edam:format_2330".resolveLink(context) == "http://edamontology.org/format_2330");
 }
 
+///
+auto shortname(string uri, in LoadingContext context) pure @safe
+{
+    if (uri.isAbsoluteURI)
+    {
+        import std : byPair, find, startsWith;
+
+        auto rng = context.namespaces.byPair.find!(pair => uri.startsWith(pair.value));
+        if (rng.empty)
+        {
+            return uri;
+        }
+        else
+        {
+            import std : replace;
+            auto pair = rng.front;
+            return uri.replace(pair.value, pair.key~":");
+        }
+    }
+    else
+    {
+        return uri;
+    }
+}
+
+pure @safe unittest
+{
+    LoadingContext context = {
+        baseURI: "http://example.com/base",
+        namespaces: [
+            "edam": "http://edamontology.org/",
+        ]
+    };
+
+    assert("http://edamontology.org/format_2330".shortname(context) == "edam:format_2330");
+}
+
 // Returns: true if `exp` is an expression, which starts with `"$("` or `"${"`
 // Note: It is CWL-specific but needed as a workaround for schema_salad#39.
 // See_Also: https://github.com/common-workflow-language/schema_salad/issues/39
@@ -378,10 +415,20 @@ ExplicitContext splitContext(Node node, string uri) @safe
 
         if (auto s = "$schemas" in node)
         {
-            // TODO
-            import std.algorithm : map;
+            import std.algorithm : map, sort;
             import std.array : array;
-            auto schemas = s.sequence.map!(a => a.as!string).array;
+            import std.path : buildPath, dirName;
+            con.schemas = s.sequence.map!(a => "file://"~con.fileURI.path.dirName.buildPath(a.as!string)).array;
+            foreach(sch; con.schemas)
+            {
+                import std : exists, format, stdThreadLocalLog;
+
+                stdThreadLocalLog.warning(
+                    !sch.path.exists,
+                    format!"RDF schema `%s` not found"(sch),
+                    s.startMark,
+                );
+            }
         }
 
         if (auto g = "$graph" in node)

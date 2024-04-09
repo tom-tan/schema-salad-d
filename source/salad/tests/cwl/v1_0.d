@@ -1214,6 +1214,7 @@ alias importFromURI = import_!DocumentRootType;
     import salad.resolver : absoluteURI;
     import salad.type : tryMatch;
     import std.exception : assertNotThrown;
+    import dyaml : Node;
 
     auto uri = "examples/cwl-v1.0/metadata.cwl".absoluteURI;
 
@@ -1227,6 +1228,7 @@ alias importFromURI = import_!DocumentRootType;
     assert(creator.value["class"] == "foaf:Person");
     assert(creator.value["foaf:name"] == "Peter Amstutz");
 
-    import dyaml;
-    import std : File;
+    // full qualified identifier is shortened when converting to Node
+    auto n = Node(c);
+    assert("dct:creator" in n);
 }

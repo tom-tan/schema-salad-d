@@ -20,6 +20,7 @@ struct LoadingContext
             .to!(string[string])
             .assertNotThrown; // https://issues.dlang.org/show_bug.cgi?id=21236
         subscope = rhs.subscope;
+        schemas = rhs.schemas.dup;
     }
 
     string baseURI;
@@ -30,5 +31,7 @@ struct LoadingContext
     string fileURI;
     string[string] namespaces;
     string subscope;
-    // TODO: validation with RDF schema
+    // TODO (optional feature): validate extension fields with RDF schema
+    // https://www.commonwl.org/v1.0/SchemaSalad.html#Explicit_context
+    string[] schemas;
 }

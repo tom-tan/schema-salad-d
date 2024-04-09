@@ -118,6 +118,7 @@ mixin template genCtor_(string saladVersion_)
                     context.fileURI,
                     context.namespaces.to!(string[string]),
                     context.subscope,
+                    context.schemas.dup,
                 );
             }
             else
