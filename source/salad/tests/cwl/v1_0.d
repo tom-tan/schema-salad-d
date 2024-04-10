@@ -1232,3 +1232,18 @@ alias importFromURI = import_!DocumentRootType;
     auto n = Node(c);
     assert("dct:creator" in n);
 }
+
+/// Supporting extension objects in array
+version(none) @safe unittest
+{
+    import salad.resolver : absoluteURI;
+    import salad.type : tryMatch;
+    import salad.util : edig;
+    import std.exception : assertNotThrown;
+
+    auto uri = "examples/cwltool/mpi_simple.cwl".absoluteURI;
+
+    auto c = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                               .tryMatch!((CommandLineTool c) => c)
+                               .assertNotThrown;
+}
