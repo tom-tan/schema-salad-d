@@ -15,7 +15,7 @@ import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
-import salad.type : Union, Optional;
+import salad.type : None, Union;
 
 enum saladVersion = "v1.1";
 
@@ -40,9 +40,10 @@ static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
     @idMap("id", "type")
     CommandOutputParameter[] outputs_;
     static immutable class_ = "CommandLineTool";
-    @id Optional!string id_;
+    @id Union!(None, string) id_;
     @idMap("class")
-    Optional!(
+    Union!(
+        None,
         Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
@@ -54,18 +55,18 @@ static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
             ResourceRequirement,
         )[]
     ) requirements_;
-    @idMap("class") Optional!(Any[]) hints_;
-    Optional!string label_;
-    Optional!string doc_;
-    Optional!CWLVersion cwlVersion_;
-    Optional!(string, string[]) baseCommand_;
-    Optional!(Union!(string, CommandLineBinding)[]) arguments_;
-    Optional!string stdin_;
-    Optional!string stderr_;
-    Optional!string stdout_;
-    Optional!(int[]) successCodes_;
-    Optional!(int[]) temporaryFailCodes_;
-    Optional!(int[]) permanentFailCodes_;
+    @idMap("class") Union!(None, Any[]) hints_;
+    Union!(None, string) label_;
+    Union!(None, string) doc_;
+    Union!(None, CWLVersion) cwlVersion_;
+    Union!(None, string, string[]) baseCommand_;
+    Union!(None, Union!(string, CommandLineBinding)[]) arguments_;
+    Union!(None, string) stdin_;
+    Union!(None, string) stderr_;
+    Union!(None, string) stdout_;
+    Union!(None, int[]) successCodes_;
+    Union!(None, int[]) temporaryFailCodes_;
+    Union!(None, int[]) permanentFailCodes_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -75,15 +76,16 @@ static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
 class CommandInputParameter : SchemaBase
 {
     @id string id_;
-    Optional!string label_;
-    Optional!(string, string[]) secondaryFiles_;
-    Optional!bool streamable_;
-    Optional!(string, string[]) doc_;
-    @link(LinkResolver.id) Optional!(string, string[]) format_;
-    Optional!CommandLineBinding inputBinding_;
-    Optional!Any default_;
+    Union!(None, string) label_;
+    Union!(None, string, string[]) secondaryFiles_;
+    Union!(None, bool) streamable_;
+    Union!(None, string, string[]) doc_;
+    @link(LinkResolver.id) Union!(None, string, string[]) format_;
+    Union!(None, CommandLineBinding) inputBinding_;
+    Union!(None, Any) default_;
     @typeDSL
-    Optional!(
+    Union!(
+        None,
         CWLType,
         CommandInputRecordSchema,
         CommandInputEnumSchema,
@@ -105,13 +107,13 @@ class CommandInputParameter : SchemaBase
 
 class CommandLineBinding : SchemaBase
 {
-    Optional!bool loadContents_;
-    Optional!int position_;
-    Optional!string prefix_;
-    Optional!bool separate_;
-    Optional!string itemSeparator_;
-    Optional!string valueFrom_;
-    Optional!bool shellQuote_;
+    Union!(None, bool) loadContents_;
+    Union!(None, int) position_;
+    Union!(None, string) prefix_;
+    Union!(None, bool) separate_;
+    Union!(None, string) itemSeparator_;
+    Union!(None, string) valueFrom_;
+    Union!(None, bool) shellQuote_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -146,17 +148,17 @@ class CWLType : SchemaBase
 class File : SchemaBase
 {
     static immutable class_ = "File";
-    @link() Optional!string location_;
-    @link() Optional!string path_;
-    Optional!string basename_;
-    Optional!string dirname_;
-    Optional!string nameroot_;
-    Optional!string nameext_;
-    Optional!string checksum_;
-    Optional!long size_;
-    Optional!(Union!(File, Directory)[]) secondaryFiles_;
-    @link(LinkResolver.id) Optional!string format_;
-    Optional!string contents_;
+    @link() Union!(None, string) location_;
+    @link() Union!(None, string) path_;
+    Union!(None, string) basename_;
+    Union!(None, string) dirname_;
+    Union!(None, string) nameroot_;
+    Union!(None, string) nameext_;
+    Union!(None, string) checksum_;
+    Union!(None, long) size_;
+    Union!(None, Union!(File, Directory)[]) secondaryFiles_;
+    @link(LinkResolver.id) Union!(None, string) format_;
+    Union!(None, string) contents_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -166,11 +168,12 @@ class File : SchemaBase
 class Directory : SchemaBase
 {
     static immutable class_ = "Directory";
-    @link() Optional!string location_;
-    @link() Optional!string path_;
-    Optional!string basename_;
-    Optional!(
-        Union!(File, Directory)[]
+    @link() Union!(None, string) location_;
+    @link() Union!(None, string) path_;
+    Union!(None, string) basename_;
+    Union!(
+        None,
+        Union!(File, Directory)[],
     ) listing_;
 
     mixin genCtor;
@@ -182,9 +185,9 @@ class CommandInputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
-    Optional!(CommandInputRecordField[]) fields_;
-    Optional!string label_;
-    @id Optional!string name_;
+    Union!(None, CommandInputRecordField[]) fields_;
+    Union!(None, string) label_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -209,9 +212,9 @@ class CommandInputRecordField : SchemaBase
             string,
         )[]
     ) type_;
-    Optional!string doc_;
-    Optional!CommandLineBinding inputBinding_;
-    Optional!string label_;
+    Union!(None, string) doc_;
+    Union!(None, CommandLineBinding) inputBinding_;
+    Union!(None, string) label_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -222,9 +225,9 @@ class CommandInputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
-    Optional!string label_;
-    @id Optional!string name_;
-    Optional!CommandLineBinding inputBinding_;
+    Union!(None, string) label_;
+    @id Union!(None, string) name_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -249,8 +252,8 @@ class CommandInputArraySchema : SchemaBase
         )[],
     ) items_;
     static immutable type_ = "array";
-    Optional!string label_;
-    Optional!CommandLineBinding inputBinding_;
+    Union!(None, string) label_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -260,14 +263,15 @@ class CommandInputArraySchema : SchemaBase
 class CommandOutputParameter : SchemaBase
 {
     @id string id_;
-    Optional!string label_;
-    Optional!(string, string[]) secondaryFiles_;
-    Optional!bool streamable_;
-    Optional!(string, string[]) doc_;
-    Optional!CommandOutputBinding outputBinding_;
-    @link(LinkResolver.id) Optional!string format_;
+    Union!(None, string) label_;
+    Union!(None, string, string[]) secondaryFiles_;
+    Union!(None, bool) streamable_;
+    Union!(None, string, string[]) doc_;
+    Union!(None, CommandOutputBinding) outputBinding_;
+    @link(LinkResolver.id) Union!(None, string) format_;
     @typeDSL
-    Optional!(
+    Union!(
+        None,
         CWLType,
         stdout,
         stderr,
@@ -319,9 +323,9 @@ class stderr : SchemaBase // @suppress(dscanner.style.phobos_naming_convention)
 
 class CommandOutputBinding : SchemaBase
 {
-    Optional!(string, string[]) glob_;
-    Optional!bool loadContents_;
-    Optional!string outputEval_;
+    Union!(None, string, string[]) glob_;
+    Union!(None, bool) loadContents_;
+    Union!(None, string) outputEval_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -332,9 +336,9 @@ class CommandOutputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
-    Optional!(CommandOutputRecordField[]) fields_;
-    Optional!string label_;
-    @id Optional!string name_;
+    Union!(None, CommandOutputRecordField[]) fields_;
+    Union!(None, string) label_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -359,8 +363,8 @@ class CommandOutputRecordField : SchemaBase
             string,
         )[],
     ) type_;
-    Optional!string doc_;
-    Optional!CommandOutputBinding outputBinding_;
+    Union!(None, string) doc_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -371,8 +375,8 @@ class CommandOutputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
-    Optional!string label_;
-    Optional!CommandOutputBinding outputBinding_;
+    Union!(None, string) label_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -397,8 +401,8 @@ class CommandOutputArraySchema : SchemaBase
         )[],
     ) items_;
     static immutable type_ = "array";
-    Optional!string label_;
-    Optional!CommandOutputBinding outputBinding_;
+    Union!(None, string) label_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -408,7 +412,7 @@ class CommandOutputArraySchema : SchemaBase
 class InlineJavascriptRequirement : SchemaBase
 {
     static immutable class_ = "InlineJavascriptRequirement";
-    Optional!(string[]) expressionLib_;
+    Union!(None, string[]) expressionLib_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -433,11 +437,12 @@ class InputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
-    Optional!(
+    Union!(
+        None,
         InputRecordField[]
     ) fields_;
-    Optional!string label_;
-    @id Optional!string name_;
+    Union!(None, string) label_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -462,9 +467,9 @@ class InputRecordField : SchemaBase
             string,
         )[],
     ) type_;
-    Optional!string doc_;
-    Optional!CommandLineBinding inputBinding_;
-    Optional!string label_;
+    Union!(None, string) doc_;
+    Union!(None, CommandLineBinding) inputBinding_;
+    Union!(None, string) label_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -475,9 +480,9 @@ class InputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
-    Optional!string label_;
-    @id Optional!string name_;
-    Optional!CommandLineBinding inputBinding_;
+    Union!(None, string) label_;
+    @id Union!(None, string) name_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -502,8 +507,8 @@ class InputArraySchema : SchemaBase
         )[],
     ) items_;
     static immutable type_ = "array";
-    Optional!string label_;
-    Optional!CommandLineBinding inputBinding_;
+    Union!(None, string) label_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -513,12 +518,12 @@ class InputArraySchema : SchemaBase
 class DockerRequirement : SchemaBase
 {
     static immutable class_ = "DockerRequirement";
-    Optional!string dockerPull_;
-    Optional!string dockerLoad_;
-    Optional!string dockerFile_;
-    Optional!string dockerImport_;
-    Optional!string dockerImageId_;
-    Optional!string dockerOutputDirectory_;
+    Union!(None, string) dockerPull_;
+    Union!(None, string) dockerLoad_;
+    Union!(None, string) dockerFile_;
+    Union!(None, string) dockerImport_;
+    Union!(None, string) dockerImageId_;
+    Union!(None, string) dockerOutputDirectory_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -539,8 +544,8 @@ class SoftwareRequirement : SchemaBase
 class SoftwarePackage : SchemaBase
 {
     string package_;
-    Optional!(string[]) version_;
-    Optional!(string[]) specs_;
+    Union!(None, string[]) version_;
+    Union!(None, string[]) specs_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -568,8 +573,8 @@ class InitialWorkDirRequirement : SchemaBase
 class Dirent : SchemaBase
 {
     string entry_;
-    Optional!string entryname_;
-    Optional!bool writable_;
+    Union!(None, string) entryname_;
+    Union!(None, bool) writable_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -609,14 +614,14 @@ class ShellCommandRequirement : SchemaBase
 class ResourceRequirement : SchemaBase
 {
     static immutable class_ = "ResourceRequirement";
-    Optional!(long, string) coresMin_;
-    Optional!(int, string) coresMax_;
-    Optional!(long, string) ramMin_;
-    Optional!(long, string) ramMax_;
-    Optional!(long, string) tmpdirMin_;
-    Optional!(long, string) tmpdirMax_;
-    Optional!(long, string) outdirMin_;
-    Optional!(long, string) outdirMax_;
+    Union!(None, long, string) coresMin_;
+    Union!(None, int, string) coresMax_;
+    Union!(None, long, string) ramMin_;
+    Union!(None, long, string) ramMax_;
+    Union!(None, long, string) tmpdirMin_;
+    Union!(None, long, string) tmpdirMax_;
+    Union!(None, long, string) outdirMin_;
+    Union!(None, long, string) outdirMax_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -674,9 +679,10 @@ class CWLVersion : SchemaBase
     WorkflowOutputParameter[] outputs_;
     static immutable class_ = "Workflow";
     @idMap("id") WorkflowStep[] steps_;
-    @id Optional!string id_;
+    @id Union!(None, string) id_;
     @idMap("class")
-    Optional!(
+    Union!(
+        None, 
         Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
@@ -692,10 +698,10 @@ class CWLVersion : SchemaBase
             StepInputExpressionRequirement,
         )[]
     ) requirements_;
-    @idMap("class") Optional!(Any[]) hints_;
-    Optional!string label_;
-    Optional!string doc_;
-    Optional!CWLVersion cwlVersion_;
+    @idMap("class") Union!(None, Any[]) hints_;
+    Union!(None, string) label_;
+    Union!(None, string) doc_;
+    Union!(None, CWLVersion) cwlVersion_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -705,16 +711,17 @@ class CWLVersion : SchemaBase
 class WorkflowOutputParameter : SchemaBase
 {
     @id string id_;
-    Optional!string label_;
-    Optional!(string, string[]) secondaryFiles_;
-    Optional!bool streamable_;
-    Optional!(string, string[]) doc_;
-    Optional!CommandOutputBinding outputBinding_;
-    @link(LinkResolver.id) Optional!string format_;
-    Optional!(string, string[]) outputSource_;
-    Optional!LinkMergeMethod linkMerge_;
+    Union!(None, string) label_;
+    Union!(None, string, string[]) secondaryFiles_;
+    Union!(None, bool) streamable_;
+    Union!(None, string, string[]) doc_;
+    Union!(None, CommandOutputBinding) outputBinding_;
+    @link(LinkResolver.id) Union!(None, string) format_;
+    Union!(None, string, string[]) outputSource_;
+    Union!(None, LinkMergeMethod) linkMerge_;
     @typeDSL
-    Optional!(
+    Union!(
+        None,
         CWLType,
         OutputRecordSchema,
         OutputEnumSchema,
@@ -753,8 +760,8 @@ class OutputRecordSchema : SchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type")
-    Optional!(OutputRecordField[]) fields_;
-    Optional!string label_;
+    Union!(None, OutputRecordField[]) fields_;
+    Union!(None, string) label_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -779,8 +786,8 @@ class OutputRecordField : SchemaBase
             string,
         )[],
     ) type_;
-    Optional!string doc_;
-    Optional!CommandOutputBinding outputBinding_;
+    Union!(None, string) doc_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -791,8 +798,8 @@ class OutputEnumSchema : SchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
-    Optional!string label_;
-    Optional!CommandOutputBinding outputBinding_;
+    Union!(None, string) label_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -817,8 +824,8 @@ class OutputArraySchema : SchemaBase
         )[],
     ) items_;
     static immutable type_ = "array";
-    Optional!string label_;
-    Optional!CommandOutputBinding outputBinding_;
+    Union!(None, string) label_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -833,7 +840,8 @@ class WorkflowStep : SchemaBase
     Union!(string, WorkflowStepOutput)[] out_;
     Union!(string, CommandLineTool, ExpressionTool, Workflow) run_;
     @idMap("class")
-    Optional!(
+    Union!(
+        None,
         Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
@@ -849,11 +857,11 @@ class WorkflowStep : SchemaBase
             StepInputExpressionRequirement,
         )[]
     ) requirements_;
-    @idMap("class") Optional!(Any[]) hints_;
-    Optional!string label_;
-    Optional!string doc_;
-    Optional!(string, string[]) scatter_;
-    Optional!ScatterMethod scatterMethod_;
+    @idMap("class") Union!(None, Any[]) hints_;
+    Union!(None, string) label_;
+    Union!(None, string) doc_;
+    Union!(None, string, string[]) scatter_;
+    Union!(None, ScatterMethod) scatterMethod_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -863,10 +871,10 @@ class WorkflowStep : SchemaBase
 class WorkflowStepInput : SchemaBase
 {
     @id string id_;
-    Optional!(string, string[]) source_;
-    Optional!LinkMergeMethod linkMerge_;
-    Optional!Any default_;
-    Optional!string valueFrom_;
+    Union!(None, string, string[]) source_;
+    Union!(None, LinkMergeMethod) linkMerge_;
+    Union!(None, Any) default_;
+    Union!(None, string) valueFrom_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -942,9 +950,10 @@ class StepInputExpressionRequirement : SchemaBase
     ExpressionToolOutputParameter[] outputs_;
     static immutable class_ = "ExpressionTool";
     string expression_;
-    @id Optional!string id_;
+    @id Union!(None, string) id_;
     @idMap("class")
-    Optional!(
+    Union!(
+        None,
         Union!(
             InlineJavascriptRequirement,
             SchemaDefRequirement,
@@ -960,10 +969,10 @@ class StepInputExpressionRequirement : SchemaBase
             StepInputExpressionRequirement,
         )[]
     ) requirements_;
-    @idMap("class") Optional!(Any[]) hints_;
-    Optional!string label_;
-    Optional!string doc_;
-    Optional!CWLVersion cwlVersion_;
+    @idMap("class") Union!(None, Any[]) hints_;
+    Union!(None, string) label_;
+    Union!(None, string) doc_;
+    Union!(None, CWLVersion) cwlVersion_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -973,15 +982,16 @@ class StepInputExpressionRequirement : SchemaBase
 class InputParameter : SchemaBase
 {
     @id string id_;
-    Optional!string label_;
-    Optional!(string, string[]) secondaryFiles_;
-    Optional!bool streamable_;
-    Optional!(string, string[]) doc_;
-    @link(LinkResolver.id) Optional!(string, string[]) format_;
-    Optional!CommandLineBinding inputBinding_;
-    Optional!Any default_;
+    Union!(None, string) label_;
+    Union!(None, string, string[]) secondaryFiles_;
+    Union!(None, bool) streamable_;
+    Union!(None, string, string[]) doc_;
+    @link(LinkResolver.id) Union!(None, string, string[]) format_;
+    Union!(None, CommandLineBinding) inputBinding_;
+    Union!(None, Any) default_;
     @typeDSL
-    Optional!(
+    Union!(
+        None,
         CWLType,
         InputRecordSchema,
         InputEnumSchema,
@@ -1004,14 +1014,15 @@ class InputParameter : SchemaBase
 class ExpressionToolOutputParameter : SchemaBase
 {
     @id string id_;
-    Optional!string label_;
-    Optional!(string, string[]) secondaryFiles_;
-    Optional!bool streamable_;
-    Optional!(string, string[]) doc_;
-    Optional!CommandOutputBinding outputBinding_;
-    @link(LinkResolver.id) Optional!string format_;
+    Union!(None, string) label_;
+    Union!(None, string, string[]) secondaryFiles_;
+    Union!(None, bool) streamable_;
+    Union!(None, string, string[]) doc_;
+    Union!(None, CommandOutputBinding) outputBinding_;
+    @link(LinkResolver.id) Union!(None, string) format_;
     @typeDSL
-    Optional!(
+    Union!(
+        None,
         CWLType,
         OutputRecordSchema,
         OutputEnumSchema,

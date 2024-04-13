@@ -59,9 +59,9 @@ if (!is(T: Node))
             static if (!is(T == U))
             {
                 import salad.primitives : Any;
-                import salad.type : Optional;
+                import salad.type : Union;
 
-                static if (is(T == Optional!Any) || is(T == Optional!(Any[])))
+                static if (is(T == Union!(None, Any)) || is(T == Union!(None, Any[])))
                 {
                     return t.match!(
                         (None _) => default_,
@@ -221,7 +221,7 @@ if (!is(T: Node))
 
 @safe unittest
 {
-    import salad.type : Optional;
+    import salad.type : None, Union;
 
     class E
     {
@@ -237,7 +237,7 @@ if (!is(T: Node))
     class C
     {
         @idMap("id")
-        Optional!(E[]) elems_;
+        Union!(None, E[]) elems_;
 
         this(E[] elems) { elems_ = elems; }
     }
@@ -251,7 +251,7 @@ if (!is(T: Node))
 
 @safe unittest
 {
-    import salad.type : Optional, SumType;
+    import salad.type : None, SumType, Union;
 
     class E1
     {
@@ -279,7 +279,7 @@ if (!is(T: Node))
     class C
     {
         @idMap("id")
-        Optional!(ElemType[]) elems_;
+        Union!(None, ElemType[]) elems_;
 
         this(ElemType[] elems) { elems_ = elems; }
     }
@@ -339,9 +339,9 @@ if (!is(T: Node))
             static if (!is(T == U))
             {
                 import salad.primitives : Any;
-                import salad.type : Optional;
+                import salad.type : Union;
 
-                static if (is(T == Optional!Any) || is(T == Optional!(Any[])))
+                static if (is(T == Union!(None, Any)) || is(T == Union!(None, Any[])))
                 {
                     return t.tryMatch!((T.Types[0] val) => edig!(K, U)(val));
                 }
@@ -476,7 +476,7 @@ if (!is(T: Node))
 
 @safe unittest
 {
-    import salad.type : Optional;
+    import salad.type : None, Union;
 
     class E
     {
@@ -492,7 +492,7 @@ if (!is(T: Node))
     class C
     {
         @idMap("id")
-        Optional!(E[]) elems_;
+        Union!(None, E[]) elems_;
 
         this(E[] elems) { elems_ = elems; }
     }
@@ -506,7 +506,7 @@ if (!is(T: Node))
 
 @safe unittest
 {
-    import salad.type : Union, Optional, tryMatch;
+    import salad.type : None, Union, tryMatch;
 
     class E1
     {
@@ -534,7 +534,7 @@ if (!is(T: Node))
     class C
     {
         @idMap("id")
-        Optional!(ElemType[]) elems_;
+        Union!(None, ElemType[]) elems_;
 
         this(ElemType[] elems) { elems_ = elems; }
     }

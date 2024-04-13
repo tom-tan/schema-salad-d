@@ -12,7 +12,7 @@ version(unittest):
 import salad.meta.impl : genCtor_;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
-import salad.type : Optional;
+import salad.type : None, Union;
 
 enum saladVersion = "v1.1";
 
@@ -24,7 +24,7 @@ mixin template genCtor()
 class Root : SchemaBase
 {
     string id_;
-    Optional!string value_;
+    Union!(None, string) value_;
 
     mixin genCtor;
 }

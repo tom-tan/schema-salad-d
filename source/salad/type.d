@@ -7,7 +7,9 @@ module salad.type;
 
 public import std.sumtype;
 import std.meta : allSatisfy, anySatisfy, NoDuplicates, templateNot;
-import std.traits : isArray;
+import std.traits : isArray, Unqual;
+
+import salad.primitives : Any, SchemaBase;
 
 struct None{}
 
@@ -25,7 +27,7 @@ enum isOptional(T) = isSumType!T && is(T.Types[0] == None) && allSatisfy!(templa
 @safe unittest
 {
     import std.exception : assertNotThrown;
-    auto op = Optional!int.init;
+    auto op = Union!(None, int).init;
     op.tryMatch!((None _) {})
       .assertNotThrown;
 }
@@ -50,7 +52,7 @@ if (isOptional!T && T.Types.length == 2)
 ///
 @safe unittest
 {
-    Optional!int num;
+    Union!(None, int) num;
     assert(num.orElse(5) == 5);
 
     num = 1;
@@ -59,7 +61,7 @@ if (isOptional!T && T.Types.length == 2)
 
 @safe unittest
 {
-    Optional!(string[]) arr;
+    Union!(None, string[]) arr;
     assert(arr.orElse(["a", "b", "c"]) == ["a", "b", "c"]);
     assert(arr.orElse([]) == (string[]).init);
     
@@ -71,7 +73,7 @@ if (isOptional!T && T.Types.length == 2)
 {
     static class C {}
 
-    Optional!C c;
+    Union!(None, C) c;
     assert(c.orElse(null) is null);
 
     c = new C;

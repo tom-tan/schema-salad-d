@@ -95,7 +95,7 @@ mixin template genCtor_(string saladVersion_)
                     import std.traits : Unqual;
                     auto i = getSymbolsByUDA!(This, id)[0];
                     alias idType = Unqual!(typeof(i));
-                    static assert(is(idType == string) || is(idType == Optional!string));
+                    static assert(is(idType == string) || is(idType == Union!(None, string)));
                     static if (is(idType == string))
                     {
                         return i.resolveIdentifier(context);
@@ -300,7 +300,7 @@ version(unittest)
 
     enum fieldName = "param";
     Node n = [fieldName: true];
-    Optional!bool param_;
+    Union!(None, bool) param_;
     LoadingContext con;
 
     mixin(Assign!(n, param_, con));
@@ -317,7 +317,7 @@ unittest
 
     enum fieldName = "params";
     Node n = [fieldName: [1, 2, 3]];
-    Optional!(int[]) params_;
+    Union!(None, int[]) params_;
     LoadingContext con;
 
     mixin(Assign!(n, params_, con));
@@ -470,6 +470,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
     else
     {
         import std.meta : Filter;
+        import salad.meta.impl : isSaladEnum, isSaladRecord;
         import salad.exception : DocumentException;
 
         enum isSchemaBase(T) = is(T : SchemaBase);
