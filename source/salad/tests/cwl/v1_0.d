@@ -53,6 +53,7 @@ static if (__traits(compiles, { hashOf(OutputArraySchema.init); })) {}
             EnvVarRequirement,
             ShellCommandRequirement,
             ResourceRequirement,
+            Any,
         )[]
     ) requirements_;
     @idMap("class") Union!(None, Any[]) hints_;
@@ -696,6 +697,7 @@ class CWLVersion : SchemaBase
             ScatterFeatureRequirement,
             MultipleInputFeatureRequirement,
             StepInputExpressionRequirement,
+            Any,
         )[]
     ) requirements_;
     @idMap("class") Union!(None, Any[]) hints_;
@@ -855,6 +857,7 @@ class WorkflowStep : SchemaBase
             ScatterFeatureRequirement,
             MultipleInputFeatureRequirement,
             StepInputExpressionRequirement,
+            Any,
         )[]
     ) requirements_;
     @idMap("class") Union!(None, Any[]) hints_;
@@ -967,6 +970,7 @@ class StepInputExpressionRequirement : SchemaBase
             ScatterFeatureRequirement,
             MultipleInputFeatureRequirement,
             StepInputExpressionRequirement,
+            Any,
         )[]
     ) requirements_;
     @idMap("class") Union!(None, Any[]) hints_;
@@ -1245,11 +1249,10 @@ alias importFromURI = import_!DocumentRootType;
 }
 
 /// Supporting extension objects in array
-version(none) @safe unittest
+@safe unittest
 {
     import salad.resolver : absoluteURI;
-    import salad.type : tryMatch;
-    import salad.util : edig;
+    import salad.type : match, tryMatch;
     import std.exception : assertNotThrown;
 
     auto uri = "examples/cwltool/mpi_simple.cwl".absoluteURI;
@@ -1257,4 +1260,14 @@ version(none) @safe unittest
     auto c = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
                                .tryMatch!((CommandLineTool c) => c)
                                .assertNotThrown;
+
+    c.requirements_.match!(
+        (None _) {},
+        (reqs) {
+            assert(reqs.length == 1);
+            auto n = reqs[0].tryMatch!((Any a) => a).assertNotThrown.value;
+            assert(n["class"] == "cwltool:MPIRequirement");
+            assert(n["processes"] == 2);
+        }
+    );
 }
