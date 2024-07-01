@@ -425,7 +425,7 @@ ExplicitContext splitContext(Node node, string uri) @safe
 
                 stdThreadLocalLog.warning(
                     !sch.path.exists,
-                    format!"RDF schema `%s` not found"(sch),
+                    format!"RDF schema `%s` not found: "(sch),
                     s.startMark,
                 );
             }
