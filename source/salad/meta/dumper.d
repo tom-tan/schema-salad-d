@@ -85,7 +85,7 @@ mixin template genDumper()
                     ).array,
                 );
             }
-            if (normalized.baseURI.scheme != "file")
+            if (!normalized.baseURI.empty && normalized.baseURI.scheme != "file")
             {
                 ret.add("$base", normalized.baseURI);
             }

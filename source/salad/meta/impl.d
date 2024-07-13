@@ -144,7 +144,7 @@ mixin template genCtor_(string saladVersion_)
                 import salad.resolver : resolveLink;
                 import std : canFind, format;
 
-                if (["$namespaces", "$schemas", "$graph"].canFind(f))
+                if (["$base", "$namespaces", "$schemas", "$graph"].canFind(f))
                 {
                     continue;
                 }
