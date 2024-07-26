@@ -57,3 +57,13 @@ struct link // @suppress(dscanner.style.phobos_naming_convention)
 {
     LinkResolver resolver = LinkResolver.link;
 }
+
+/**
+ * UDA for the fields with default value
+ * Each value is stored in JSON format.
+ * See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
+ */
+struct defaultValue // @suppress(dscanner.style.phobos_naming_convention)
+{
+    string value;
+}

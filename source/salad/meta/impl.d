@@ -32,15 +32,39 @@ mixin template genCtor_(string saladVersion_)
 
     enum saladVersion = saladVersion_;
 
-    this() pure @nogc nothrow @safe
+    this() @safe
     {
         import salad.meta.impl : hasIdentifier;
-        import std.traits : getSymbolsByUDA;
+        import std.traits : FieldNameTuple, getSymbolsByUDA, hasUDA;
+
+        alias This = typeof(this);
 
         super();
-        static if (hasIdentifier!(typeof(this)))
+        static if (hasIdentifier!This)
         {
             identifier = "";
+        }
+
+        static if (isSaladRecord!This)
+        {
+            Node unused = (Node[string]).init;
+            static foreach (field; FieldNameTuple!This)
+            {
+                import salad.meta.uda : defaultValue;
+                static if (hasUDA!(__traits(getMember, this, field), defaultValue))
+                {
+                    import dyaml : YAMLNull;
+                    import salad.meta.impl : Assign, as_;
+                    import std : endsWith, format;
+                    static assert(
+                        field.endsWith("_"),
+                        format!"Bug in the generated parser: Invalid field name with @defaultValue: %s.%s"(
+                            This.stringof, field,
+                        )
+                    );
+                    mixin(Assign!(unused, __traits(getMember, this, field), LoadingContext.init));
+                }
+            }
         }
     }
 
@@ -257,6 +281,31 @@ template Assign(alias node, alias field, alias context, string file = __FILE__, 
             }
 EOS"(line, file, param, node.stringof, field.stringof, field.stringof,
     T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL), context.stringof);
+    }
+    else static if (hasUDA!(field, defaultValue))
+    {
+        enum defValue = getUDAs!(field, defaultValue)[0].value;
+        enum Assign = format!q"EOS
+            #line %s "%s"
+            {
+                import dyaml : YAMLNull;
+
+                Node f = YAMLNull();
+                if (auto f_ = "%s" in %s)
+                {
+                    f = *f_;
+                }
+                if (f.type == NodeType.null_)
+                {
+                    import dyaml : Loader;
+                    import std : assertNotThrown;
+                    f = Loader.fromString(q"<%s>").load.assertNotThrown("Bug in the generated parser");
+                }
+                %s = f.as_!(%s, %s, %s, LinkResolver.%s, %s)(%s);
+            }
+EOS"(line, file, param, node.stringof, defValue,
+field.stringof, T.stringof, hasUDA!(field, typeDSL), idMap_, lresolver, hasUDA!(field, secondaryFilesDSL),
+context.stringof);
     }
     else
     {

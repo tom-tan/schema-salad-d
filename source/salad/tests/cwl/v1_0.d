@@ -13,7 +13,7 @@ version(unittest):
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.parser : import_ = importFromURI;
-import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
+import salad.meta.uda : defaultValue, documentRoot, id, idMap, link, LinkResolver, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : None, Union;
 
@@ -111,7 +111,7 @@ class CommandLineBinding : SchemaBase
     Union!(None, bool) loadContents_;
     Union!(None, int) position_;
     Union!(None, string) prefix_;
-    Union!(None, bool) separate_;
+    @defaultValue("true") bool separate_;
     Union!(None, string) itemSeparator_;
     Union!(None, string) valueFrom_;
     Union!(None, bool) shellQuote_;
@@ -1093,6 +1093,8 @@ alias importFromURI = import_!DocumentRootType;
     assert(cmd.edig!(["hints", "ResourceRequirement"], ResourceRequirement)
               .assertNotThrown
               .dig!("coresMin", long) == 2);
+    // Test for @defaultValue
+    assert(cmd.edig!(["inputs", "reference", "inputBinding", "separate"], bool) == true);
 
     auto node = Node(cmd);
 }
@@ -1270,4 +1272,11 @@ alias importFromURI = import_!DocumentRootType;
             assert(n["processes"] == 2);
         }
     );
+}
+
+/// Test for defalut constructor with default values
+unittest
+{
+    auto clb = new CommandLineBinding;
+    assert(clb.separate_);
 }
