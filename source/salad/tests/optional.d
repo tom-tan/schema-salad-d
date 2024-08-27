@@ -9,24 +9,24 @@ module salad.tests.optional;
 
 version(unittest):
 
-import salad.meta.impl : genCtor_;
+import salad.meta.impl : genBody_;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, typeDSL;
-import salad.primitives : SchemaBase;
+import salad.primitives : RecordSchemaBase, SchemaBase;
 import salad.type : None, Union;
 
 enum saladVersion = "v1.1";
 
-mixin template genCtor()
+mixin template genBody()
 {
-    mixin genCtor_!(saladVersion);
+    mixin genBody_!saladVersion;
 }
 
-class Root : SchemaBase
+class Root : RecordSchemaBase
 {
     string id_;
     Union!(None, string) value_;
 
-    mixin genCtor;
+    mixin genBody;
 }
 
 /+

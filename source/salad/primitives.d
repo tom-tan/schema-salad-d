@@ -26,6 +26,32 @@ abstract class SchemaBase
     Mark mark;
 }
 
+/// Base class for record schema objects
+abstract class RecordSchemaBase : SchemaBase
+{
+    this() @nogc nothrow pure @safe {
+        super();
+    }
+
+    this(Mark mark, in LoadingContext context = LoadingContext.init) nothrow pure @safe
+    {
+        super(mark, context);
+    }
+}
+
+/// Base class for enum schema objects
+abstract class EnumSchemaBase : SchemaBase
+{
+    this() @nogc nothrow pure @safe {
+        super();
+    }
+
+    this(Mark mark, in LoadingContext context = LoadingContext.init) nothrow pure @safe
+    {
+        super(mark, context);
+    }
+}
+
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 class Any : SchemaBase
 {

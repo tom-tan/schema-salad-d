@@ -7,7 +7,7 @@
 module salad.meta.impl;
 
 import salad.context : LoadingContext;
-import salad.primitives : Any, SchemaBase;
+import salad.primitives : Any, EnumSchemaBase, RecordSchemaBase, SchemaBase;
 import salad.meta.uda;
 import salad.type;
 
@@ -16,218 +16,39 @@ import std.traits : hasStaticMember, isArray, isScalarType, isSomeString, Unqual
 
 import dyaml;
 
-enum isSaladRecord(T) = is(Unqual!T : SchemaBase) && !is(Unqual!T : Any) && !__traits(compiles, T.Symbol);
-enum isSaladEnum(T) = is(Unqual!T : SchemaBase) && !is(Unqual!T : Any) && __traits(compiles, T.Symbol);
+enum isSaladRecord(T) = is(Unqual!T : RecordSchemaBase);
+enum isSaladEnum(T) = is(Unqual!T : EnumSchemaBase);
 
 enum defaultSaladVersion = "v1.1";
 
 ///
-mixin template genCtor_(string saladVersion_)
+mixin template genBody_(string saladVersion_)
 {
-    private import dyaml : Node, NodeType;
-    private import salad.context : LoadingContext;
-    private import salad.meta.impl : isSaladRecord, isSaladEnum;
+    import salad.meta.impl : isSaladEnum, isSaladRecord;
 
-    static assert(is(typeof(this) : SchemaBase));
+    alias This = typeof(this);
+    static assert(is(This : SchemaBase));
 
     enum saladVersion = saladVersion_;
 
-    this() @safe
+    static if (isSaladRecord!This)
     {
-        import salad.meta.impl : hasIdentifier;
-        import std.traits : FieldNameTuple, getSymbolsByUDA, hasUDA;
-
-        alias This = typeof(this);
-
-        super();
-        static if (hasIdentifier!This)
-        {
-            identifier = "";
-        }
-
-        static if (isSaladRecord!This)
-        {
-            Node unused = (Node[string]).init;
-            static foreach (field; FieldNameTuple!This)
-            {
-                import salad.meta.uda : defaultValue;
-                static if (hasUDA!(__traits(getMember, this, field), defaultValue))
-                {
-                    import dyaml : YAMLNull;
-                    import salad.meta.impl : Assign, as_;
-                    import std : endsWith, format;
-                    static assert(
-                        field.endsWith("_"),
-                        format!"Bug in the generated parser: Invalid field name with @defaultValue: %s.%s"(
-                            This.stringof, field,
-                        )
-                    );
-                    mixin(Assign!(unused, __traits(getMember, this, field), LoadingContext.init));
-                }
-            }
-        }
+        import s = salad.meta.impl.record;
+        mixin s.genCtor;
+        mixin s.genIdentifier;
+        mixin s.genDumper;
     }
-
-    static if (isSaladRecord!(typeof(this)))
+    else static if (isSaladEnum!This)
     {
-        this(Node node, in LoadingContext context = LoadingContext.init) @trusted
-        {
-            import dyaml : Mark;
-            import salad.exception : docEnforce;
-            import salad.meta.impl : Assign, as_, hasIdentifier, StaticMembersOf;
-            import salad.meta.uda : LinkResolver;
-            import salad.util : edig;
-            import salad.type : None, Optional, SumType;
-            import std.algorithm : endsWith;
-            import std.container : make, RedBlackTree;
-            import std.conv : to;
-            import std.format : format;
-            import std.range : empty;
-            import std.traits : getSymbolsByUDA, FieldNameTuple, hasUDA;
-
-            alias This = typeof(this);
-
-            auto rest = make!(RedBlackTree!string)(node.mappingKeys!string);
-
-            static foreach(m; StaticMembersOf!This)
-            {
-                static if (m.endsWith("_"))
-                {
-                    auto val = docEnforce(
-                        m[0..$-1] in node,
-                        format!"Missing field `%s` in %s"(m[0..$-1], This.stringof),
-                        node.startMark,
-                    );
-                    docEnforce(
-                        __traits(getMember, this, m) == val.as!string,
-                        format!"Conflict the value of %s.%s (Expected: %s, Actual: %s)"(
-                            This.stringof, m[0..$-1], __traits(getMember, this, m), val.as!string
-                        ),
-                        node.startMark,
-                    );
-                    rest.removeKey(m[0..$-1]);
-                }
-            }
-
-            static if (hasIdentifier!This)
-            {
-                mixin(Assign!(node, getSymbolsByUDA!(This, id)[0], context));
-                rest.removeKey(getSymbolsByUDA!(This, id)[0].stringof[5..$-1]);
-
-                identifier = (() {
-                    import salad.resolver : resolveIdentifier;
-                    import std.traits : Unqual;
-                    auto i = getSymbolsByUDA!(This, id)[0];
-                    alias idType = Unqual!(typeof(i));
-                    static assert(is(idType == string) || is(idType == Union!(None, string)));
-                    static if (is(idType == string))
-                    {
-                        return i.resolveIdentifier(context);
-                    }
-                    else
-                    {
-                        import salad.type : match;
-
-                        return i.match!(
-                            (string s) => s.resolveIdentifier(context),
-                            none => "",
-                        );
-                    }
-                })();
-
-                static immutable idFieldName = getSymbolsByUDA!(This, id)[0].stringof;
-
-                auto con = LoadingContext(
-                    identifier.empty ? context.baseURI : identifier,
-                    context.fileURI,
-                    context.namespaces.to!(string[string]),
-                    context.subscope,
-                    context.schemas.dup,
-                );
-            }
-            else
-            {
-                static immutable idFieldName = "";
-                auto con = context;
-            }
-
-            super(node.startMark, con);
-
-            static foreach (field; FieldNameTuple!This)
-            {
-                static if (field.endsWith("_") && field != idFieldName~"_")
-                {
-                    mixin(Assign!(node, __traits(getMember, this, field), con));
-                    rest.removeKey(field[0..$-1]);
-                }
-            }
-
-            foreach(f; rest[])
-            {
-                import salad.primitives : Any;
-                import salad.resolver : resolveLink;
-                import std : canFind, format;
-
-                if (["$base", "$namespaces", "$schemas", "$graph"].canFind(f))
-                {
-                    continue;
-                }
-
-                docEnforce(
-                    f.canFind(":"),
-                    format!"Invalid field found: `%s` in %s"(f, This.stringof),
-                    node.startMark,
-                );
-                auto resolved = f.resolveLink(con);
-                extension_fields[resolved] = node[f].as_!Any(con);
-            }
-        }
+        import s = salad.meta.impl.enum_;
+        mixin s.genCtor;
+        mixin s.genOpEq;
+        mixin s.genDumper;
     }
-    else static if (isSaladEnum!(typeof(this)))
+    else
     {
-        this(Node node, in LoadingContext context = LoadingContext.init) @safe
-        {
-            import dyaml : Mark;
-            import salad.exception : docEnforce;
-            import std.algorithm : canFind;
-            import std.format : format;
-            import std.traits : EnumMembers;
-
-            docEnforce(node.type == NodeType.string,
-                format!"Invalid type for %s: string is expected"(typeof(this).stringof),
-                node.startMark);
-            auto val = node.as!string;
-            docEnforce([EnumMembers!Symbol].canFind(val),
-                format!"Invalid value for %s: `%s`"(typeof(this).stringof, val),
-                node.startMark);
-            super(node.startMark, context);
-            value = cast(Symbol)val;
-        }
-
-        this(string value) @safe
-        {
-            this(Node(value));
-        }
-    }
-}
-
-///
-mixin template genIdentifier()
-{
-    private import std.traits : getSymbolsByUDA;
-
-    static if (getSymbolsByUDA!(typeof(this), id).length == 1)
-    {
-        string identifier;
-    }
-}
-
-///
-mixin template genOpEq()
-{
-    bool opEquals(string s) const @nogc nothrow pure @safe
-    {
-        return value == s;
+        // TODO: genBody for Any to add `saladVersion` field
+        static assert(false, format!"Unsupported schema type: %s"(This.stringof));
     }
 }
 
@@ -239,6 +60,7 @@ enum StaticMembersOf(T) = Filter!(ApplyLeft!(hasStaticMember, T), Filter!(isDefi
 ///
 template Assign(alias node, alias field, alias context, string file = __FILE__, size_t line = __LINE__)
 {
+    import dyaml : NodeType;
     import std.format : format;
     import std.traits : getUDAs, hasUDA, select;
 

@@ -6,21 +6,20 @@
  */
 module salad.schema;
 
-import salad.meta.dumper : genDumper;
-import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
+import salad.meta.impl : genBody_;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
-import salad.primitives : SchemaBase;
+import salad.primitives : EnumSchemaBase, RecordSchemaBase, SchemaBase;
 import salad.type : Union, Optional;
 
 enum saladVersion = "v1.1";
 
-mixin template genCtor()
+mixin template genBody()
 {
-    mixin genCtor_!(saladVersion);
+    mixin genBody_!saladVersion;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordSchema
-@documentRoot class SaladRecordSchema : SchemaBase
+@documentRoot class SaladRecordSchema : RecordSchemaBase
 {
     @id string name_;
     static immutable type_ = "record";
@@ -36,13 +35,11 @@ mixin template genCtor()
     Optional!(string, string[]) extends_;
     @idMap("specializeFrom", "specializeTo") Optional!(SpecializeDef[]) specialize_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladRecordField
-class SaladRecordField : SchemaBase
+class SaladRecordField : RecordSchemaBase
 {
     @id string name_;
     @typeDSL
@@ -63,13 +60,11 @@ class SaladRecordField : SchemaBase
     Optional!(string, JsonldPredicate) jsonldPredicate_;
     Optional!Any default_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#PrimitiveType
-class PrimitiveType : SchemaBase
+class PrimitiveType : EnumSchemaBase
 {
     enum Symbol
     {
@@ -84,27 +79,23 @@ class PrimitiveType : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 public import salad.primitives : Any;
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordSchema
-class RecordSchema : SchemaBase
+class RecordSchema : RecordSchemaBase
 {
     static immutable type_ = "record";
     @idMap("name", "type") Optional!(RecordField[]) fields_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#RecordField
-class RecordField : SchemaBase
+class RecordField : RecordSchemaBase
 {
     @id string name_;
     @typeDSL 
@@ -123,24 +114,20 @@ class RecordField : SchemaBase
     ) type_;
     Optional!(string, string[]) doc_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#EnumSchema
-class EnumSchema : SchemaBase
+class EnumSchema : RecordSchemaBase
 {
     string[] symbols_;
     static immutable type_ = "enum";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#ArraySchema
-class ArraySchema : SchemaBase
+class ArraySchema : RecordSchemaBase
 {
     Union!(
         PrimitiveType,
@@ -157,13 +144,11 @@ class ArraySchema : SchemaBase
     ) items_;
     static immutable type_ = "array";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#JsonldPredicate
-class JsonldPredicate : SchemaBase
+class JsonldPredicate : RecordSchemaBase
 {
     Optional!string _id_;
     Optional!string _type_;
@@ -177,24 +162,20 @@ class JsonldPredicate : SchemaBase
     Optional!bool secondaryFilesDSL_;
     Optional!string subscope_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SpecializeDef
-class SpecializeDef : SchemaBase
+class SpecializeDef : RecordSchemaBase
 {
     string specializeFrom_;
     string specializeTo_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#SaladEnumSchema
-@documentRoot class SaladEnumSchema : SchemaBase
+@documentRoot class SaladEnumSchema : RecordSchemaBase
 {
     @id string name_;
     string[] symbols_;
@@ -208,13 +189,11 @@ class SpecializeDef : SchemaBase
     Optional!bool documentRoot_;
     Optional!(string, string[]) extends_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Documentation
-@documentRoot class Documentation : SchemaBase
+@documentRoot class Documentation : RecordSchemaBase
 {
     @id string name_;
     static immutable type_ = "documentation";
@@ -224,7 +203,5 @@ class SpecializeDef : SchemaBase
     Optional!(string, string[]) docChild_;
     Optional!string docAfter_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }

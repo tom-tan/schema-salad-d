@@ -9,98 +9,7 @@ import dyaml : Node;
 import salad.context : LoadingContext;
 import salad.primitives : SchemaBase;
 import salad.type : isSumType;
-import std.traits : isArray, isScalarType, isSomeString, Unqual;
-
-///
-mixin template genDumper()
-{
-    private import dyaml : Node;
-
-    ///
-    Node opCast(T: Node)() const
-    {
-        static if (isSaladRecord!(typeof(this)))
-        {
-            import dyaml : NodeType;
-            import std.algorithm : each, filter, endsWith;
-            import std.array : array, byPair;
-            import std.range : empty;
-            import salad.meta.dumper : normalizeContexts, toNode;
-            import salad.resolver : scheme, shortname;
-
-            alias This = typeof(this);
-
-            LoadingContext normalized = context;
-
-            auto ret = Node((Node[string]).init);
-            static foreach (field; __traits(allMembers, This))
-            {
-                static if (field.endsWith("_"))
-                {
-                    {
-                        auto valNode = __traits(getMember, this, field).toNode;
-                        switch(valNode.type)
-                        {
-                        case NodeType.null_: break;
-                        case NodeType.mapping:
-                            normalized = normalizeContexts(normalized, valNode);
-                            goto default;
-                        case NodeType.sequence:
-                            // TODO: supporting nested sequence
-                            auto elems = valNode.sequence.array;
-                            elems.filter!(e => e.type == NodeType.mapping).each!((ref e) =>
-                                normalized = normalizeContexts(normalized, e)
-                            );
-                            valNode = Node(elems);
-                            goto default;
-                        default:
-                            ret.add(field[0..$-1].toNode, valNode);
-                        }
-                    }
-                }
-            }
-
-            foreach(k, v; extension_fields.byPair)
-            {
-                ret.add(k.shortname(normalized), v.toNode);
-            }
-
-            if (normalized.namespaces.length > 0)
-            {
-                ret.add("$namespaces", normalized.namespaces);
-            }
-
-            if (!normalized.schemas.empty)
-            {
-                import std.algorithm : map;
-                import std.array : array;
-                import std.path : relativePath;
-
-                import salad.resolver : isAbsoluteURI, path;
-
-                ret.add(
-                    "$schemas",
-                    normalized.schemas.map!(s =>
-                        s.isAbsoluteURI ? s.path.relativePath(normalized.fileURI.path) : s
-                    ).array,
-                );
-            }
-            if (!normalized.baseURI.empty && normalized.baseURI.scheme != "file")
-            {
-                ret.add("$base", normalized.baseURI);
-            }
-            return ret;
-        }
-        else static if (isSaladEnum!(typeof(this)))
-        {
-            return Node(cast(string)value);
-        }
-        else
-        {
-            static assert(false, "It must be a SchemaRecord type or SchemaEnum type");
-        }
-    }
-}
+import std : isArray, isScalarType, isSomeString, Unqual;
 
 Node toNode(T)(T t)
     if (is(Unqual!T : SchemaBase) || isScalarType!T || isSomeString!T)
@@ -111,8 +20,7 @@ Node toNode(T)(T t)
 Node toNode(T)(T t)
     if (!isSomeString!T && isArray!T)
 {
-    import std.algorithm : map;
-    import std.array : array;
+    import std : array, map;
 
     return Node(t.map!toNode.array);
 }
