@@ -28,7 +28,7 @@ mixin template genCtor()
             {
                 import dyaml : NodeType, YAMLNull;
                 import salad.meta.impl : Assign, as_;
-                import std : endsWith, format;
+                import std : endsWith, format, SumType;
                 static assert(
                     field.endsWith("_"),
                     format!"Bug in the generated parser: Invalid field name with @defaultValue: %s.%s"(

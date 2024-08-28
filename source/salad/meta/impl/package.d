@@ -7,12 +7,12 @@
 module salad.meta.impl;
 
 import salad.context : LoadingContext;
-import salad.primitives : Any, EnumSchemaBase, RecordSchemaBase, SchemaBase;
+import salad.primitives : Any, EnumSchemaBase, MapSchemaBase, RecordSchemaBase, SchemaBase, UnionSchemaBase;
 import salad.meta.uda;
 import salad.type;
 
 import std.meta : ApplyLeft, Filter;
-import std.traits : hasStaticMember, isArray, isScalarType, isSomeString, Unqual;
+import std.traits : hasStaticMember, isArray, isAssociativeArray, isScalarType, isSomeString, Unqual;
 
 import dyaml;
 
@@ -26,7 +26,7 @@ enum defaultSaladVersion = "v1.1";
 ///
 mixin template genBody_(string saladVersion_)
 {
-    import salad.meta.impl : isSaladEnum, isSaladRecord;
+    import salad.meta.impl : isSaladEnum, isSaladMap, isSaladRecord, isSaladUnion;
     import salad.primitives : SchemaBase;
 
     alias This = typeof(this);
@@ -335,6 +335,32 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
 T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
       LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
      (Node node, in LoadingContext context) @trusted
+        if (isAssociativeArray!T)
+{
+    import salad.exception : docEnforce;
+
+    docEnforce(
+        node.type == NodeType.mapping,
+        "Mapping is expected but it is not",
+        node.startMark
+    );
+    T ret;
+    foreach(pair; node.mapping)
+    {
+        if (pair.value.type == NodeType.null_)
+        {
+            continue;
+        }
+        import std : ValueType;
+        alias VT = ValueType!T;
+        ret[pair.key.as!string] = pair.value.as_!(VT)(context);
+    }
+    return ret;
+}
+
+T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
+      LinkResolver lresolver = LinkResolver.none, bool secondaryFilesDSL = false)
+     (Node node, in LoadingContext context) @trusted
         if (isSumType!T)
 {
     import salad.resolver : resolveDirectives;
@@ -391,16 +417,19 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
             }
         }
 
-        alias RecordTypes = Filter!(isSaladRecord, Types);
-        static if (RecordTypes.length == 0)
+        /// RecordLikeTypes: compound types such as Record, Map and AssocArray
+        import std : isAssociativeArray;
+        enum isRecordLikeType(T) = isSaladRecord!T || isSaladMap!T || isSaladUnion!T || isAssociativeArray!T;
+        alias RecordLikeTypes = Filter!(isRecordLikeType, Types);
+        static if (RecordLikeTypes.length == 0)
         {
             // nop
         }
-        else static if (RecordTypes.length == 1)
+        else static if (RecordLikeTypes.length == 1)
         {
             if (expanded.type == NodeType.mapping)
             {
-                return T(expanded.as_!(RecordTypes[0])(r.context));
+                return T(expanded.as_!(RecordLikeTypes[0])(r.context));
             }
         }
         else
@@ -410,13 +439,13 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
                 import salad.util : edig;
                 import std.meta : Filter, templateNot;
 
-                enum isDispatchable(T) = StaticMembersOf!T.length > 0;
+                enum isDispatchable(T) = isSaladRecord!T && StaticMembersOf!T.length > 0;
 
-                alias DispatchableRecords = Filter!(isDispatchable, RecordTypes);
-                alias NonDispatchableRecords = Filter!(templateNot!isDispatchable, RecordTypes);
-                static assert(NonDispatchableRecords.length < 2,
-                    "There are too many non-dispatchable record candidates: " ~
-                        NonDispatchableRecords.stringof);
+                alias DispatchableRecords = Filter!(isDispatchable, RecordLikeTypes);
+                alias NonDispatchableRecordLikes = Filter!(templateNot!isDispatchable, RecordLikeTypes);
+                static assert(NonDispatchableRecordLikes.length < 2,
+                    "There are too many non-dispatchable candidates: " ~
+                        NonDispatchableRecordLikes.stringof);
 
                 enum DispatchFieldName = StaticMembersOf!(DispatchableRecords[0])[0];
 
@@ -451,9 +480,9 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
                 }
                 else
                 {
-                    static if (NonDispatchableRecords.length == 1)
+                    static if (NonDispatchableRecordLikes.length == 1)
                     {
-                        return T(expanded.as_!(NonDispatchableRecords[0])(r.context));
+                        return T(expanded.as_!(NonDispatchableRecordLikes[0])(r.context));
                     }
                     else static if (hasAny)
                     {
@@ -461,7 +490,7 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
                     }
                     else
                     {
-                        throw new DocumentException("Unknown record type", expanded.startMark);
+                        throw new DocumentException("Unknown record like type", expanded.startMark);
                     }
                 }
             }
@@ -560,11 +589,11 @@ T as_(T, bool typeDSL = false, idMap idMap_ = idMap.init,
         }
 
         static assert(Types.length ==
-                ArrayTypes.length + RecordTypes.length + EnumTypes.length +
+                ArrayTypes.length + RecordLikeTypes.length + EnumTypes.length +
                     (hasString ? 1 : 0) +
                     IntTypes.length + DecimalTypes.length + BooleanTypes.length + (hasAny ? 1 : 0),
-                format!"Internal error: %s (%s) but Array: %s, Record: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s, hasAny: %s"( // @suppress(dscanner.style.long_line)
-                    Types.stringof, Types.length, ArrayTypes.stringof, RecordTypes.stringof, EnumTypes.stringof,
+                format!"Internal error: %s (%s) but Array: %s, RecordLike: %s, Enum: %s, hasString: %s, Integer: %s, Decimal: %s, Boolean: %s, hasAny: %s"( // @suppress(dscanner.style.long_line)
+                    Types.stringof, Types.length, ArrayTypes.stringof, RecordLikeTypes.stringof, EnumTypes.stringof,
                     hasString, IntTypes.stringof, DecimalTypes.stringof, BooleanTypes.stringof, hasAny,
                 ));
     }

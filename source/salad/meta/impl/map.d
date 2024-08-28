@@ -15,6 +15,7 @@ mixin template genCtor()
     this() @safe { super(); }
     this(Node node, in LoadingContext context = LoadingContext.init) @trusted
     {
+        import dyaml : NodeType;
         import salad.exception : docEnforce;
         import std : format, ValueType;
         docEnforce(
@@ -22,8 +23,13 @@ mixin template genCtor()
             format!"%s requires a mapping node but a given node type is %s"(typeof(this).stringof, node.type),
             node.startMark,
         );
-        foreach(string k, Node v; node.mapping)
+        foreach(pair; node.mapping)
         {
+            import salad.meta.impl : as_;
+
+            auto k = pair.key.as!string;
+            auto v = pair.value;
+
             if (v.type == NodeType.null_)
             {
                 continue;

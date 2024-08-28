@@ -15,6 +15,7 @@ mixin template genCtor()
     this() @safe { super(); }
     this(Node node, in LoadingContext context = LoadingContext.init) @trusted
     {
+        import salad.meta.impl : as_;
         super(node.startMark, context);
         payload = node.as_!(typeof(payload))(context);
     }
