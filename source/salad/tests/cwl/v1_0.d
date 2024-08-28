@@ -13,7 +13,7 @@ version(unittest):
 import salad.meta.impl : genBody_;
 import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : defaultValue, documentRoot, id, idMap, link, LinkResolver, typeDSL;
-import salad.primitives : EnumSchemaBase, RecordSchemaBase, SchemaBase;
+import salad.primitives : EnumSchemaBase, RecordSchemaBase;
 import salad.type : None, Union;
 
 enum saladVersion = "v1.1";

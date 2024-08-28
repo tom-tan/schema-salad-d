@@ -52,6 +52,32 @@ abstract class EnumSchemaBase : SchemaBase
     }
 }
 
+/// Base class for union schema objects
+abstract class UnionSchemaBase : SchemaBase
+{
+    this() @nogc nothrow pure @safe {
+        super();
+    }
+
+    this(Mark mark, in LoadingContext context = LoadingContext.init) nothrow pure @safe
+    {
+        super(mark, context);
+    }
+}
+
+/// Base class for map schema objects
+abstract class MapSchemaBase : SchemaBase
+{
+    this() @nogc nothrow pure @safe {
+        super();
+    }
+
+    this(Mark mark, in LoadingContext context = LoadingContext.init) nothrow pure @safe
+    {
+        super(mark, context);
+    }
+}
+
 /// See_Also: https://www.commonwl.org/v1.2/SchemaSalad.html#Any
 class Any : SchemaBase
 {

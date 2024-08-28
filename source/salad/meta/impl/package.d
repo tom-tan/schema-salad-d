@@ -18,6 +18,8 @@ import dyaml;
 
 enum isSaladRecord(T) = is(Unqual!T : RecordSchemaBase);
 enum isSaladEnum(T) = is(Unqual!T : EnumSchemaBase);
+enum isSaladUnion(T) = is(Unqual!T : UnionSchemaBase);
+enum isSaladMap(T) = is(Unqual!T : MapSchemaBase);
 
 enum defaultSaladVersion = "v1.1";
 
@@ -25,6 +27,7 @@ enum defaultSaladVersion = "v1.1";
 mixin template genBody_(string saladVersion_)
 {
     import salad.meta.impl : isSaladEnum, isSaladRecord;
+    import salad.primitives : SchemaBase;
 
     alias This = typeof(this);
     static assert(is(This : SchemaBase));
@@ -43,6 +46,18 @@ mixin template genBody_(string saladVersion_)
         import s = salad.meta.impl.enum_;
         mixin s.genCtor;
         mixin s.genOpEq;
+        mixin s.genDumper;
+    }
+    else static if (isSaladUnion!This)
+    {
+        import s = salad.meta.impl.union_;
+        mixin s.genCtor;
+        mixin s.genDumper;
+    }
+    else static if (isSaladMap!This)
+    {
+        import s = salad.meta.impl.map;
+        mixin s.genCtor;
         mixin s.genDumper;
     }
     else
