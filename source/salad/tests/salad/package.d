@@ -3,16 +3,18 @@
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module salad;
+module salad.tests.salad;
 
-public import salad.schema;
+version(unittest):
+
+public import salad.tests.salad.schema;
 
 import salad.meta.parser : DocRootType = DocumentRootType, import_ = importFromURI;
 
 ///
-alias importFromURI = import_!(salad.schema);
+alias importFromURI = import_!(salad.tests.salad.schema);
 ///
-alias DocumentRootType = DocRootType!(salad.schema);
+alias DocumentRootType = DocRootType!(salad.tests.salad.schema);
 
 /// Loading SALAD metaschema
 // disabled due to https://github.com/common-workflow-language/schema_salad/issues/626
@@ -42,9 +44,6 @@ version(none):
 }
 
 /// Loading CWL v1.1 schema
-/// Bugs: Does not work due to `:` in a string
-/// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
-version(none)
 @safe unittest
 {
     import salad.type : tryMatch;
@@ -56,15 +55,23 @@ version(none)
 }
 
 /// Loading CWL v1.2 schema
-/// Bugs: Does not work due to `:` in a string
-/// See_Also: https://dlang-community.github.io/D-YAML/articles/spec_differences.html
-version(none)
 @safe unittest
 {
     import salad.type : tryMatch;
     import std.exception : assertNotThrown;
 
     auto uri = "https://raw.githubusercontent.com/common-workflow-language/cwl-v1.2/main/CommonWorkflowLanguage.yml";
+    auto schemas = importFromURI(uri).tryMatch!((DocumentRootType[] drts) => drts)
+                                     .assertNotThrown;
+}
+
+/// Loading CWL v1.3 schema
+@safe unittest
+{
+    import salad.type : tryMatch;
+    import std.exception : assertNotThrown;
+
+    auto uri = "https://raw.githubusercontent.com/common-workflow-language/cwl-v1.3/main/CommonWorkflowLanguage.yml";
     auto schemas = importFromURI(uri).tryMatch!((DocumentRootType[] drts) => drts)
                                      .assertNotThrown;
 }

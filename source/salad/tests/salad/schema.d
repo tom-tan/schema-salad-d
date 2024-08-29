@@ -4,7 +4,9 @@
  * Copyright: © 2021 Tomoya Tanjo
  * License: Apache-2.0
  */
-module salad.schema;
+module salad.tests.salad.schema;
+
+version(unittest):
 
 import salad.meta.impl : genBody_;
 import salad.meta.uda : documentRoot, id, idMap, typeDSL;
