@@ -608,20 +608,27 @@ auto expandDSL(string saladVersion, bool typeDSL, bool secondaryFilesDSL)(Node n
         Node expanded;
         if (node.type == NodeType.string)
         {
+            import salad.util : SemVer;
+            import salad.logger : SLogEntry;
             import std.algorithm : canFind, endsWith, map;
             import std.array : array, split;
             import std.conv : to;
-            import std.experimental.logger;
+            import std : stdThreadLocalLog;
 
             auto s = node.as!string;
 
-            // auto vers = saladVersion[1..$].split(".").map!(to!int).array;
-            // auto mark = node.startMark;
-            // sharedLog.warningf(
-            //     vers < [1, 3] && s.canFind("[][]"),
-            //     "[nested-array] Using nested array with syntax sugar (e.g., `%s`) has a portability issue.",
-            //     s,
-            // );
+            stdThreadLocalLog.warning(
+                s.canFind("[][]") && SemVer(saladVersion) < "v1.3.0-dev0",
+                () {
+                    import std : format;
+                    auto mark = node.startMark;
+                    return SLogEntry()
+                        .add("message", format!"Using nested array with syntax sugar (e.g., `%s`) has a portability issue."(s))
+                        .add("file", mark.name)
+                        .add("line", mark.line+1)
+                        .add("column", mark.column+1);
+                }()
+            );
 
             if (s.endsWith("[]?"))
             {
