@@ -575,3 +575,76 @@ if (!is(T: Node))
     auto e = Union!(E1, E2)(new E1("foo", 1));
     assert(e.dig!("id", string) == "foo");
 }
+
+/**
+ * A struct to handle version strings of SALAD.
+ * It is similar to Semantic Versioning but the following points are different:
+ * - its string starts with `v`, and
+ * - it ends with `-dev*` in case of development versions
+ * Note: this struct does not handle other suffix such as `-alpha1`
+ * See_Also: https://semver.org/
+ */
+@safe struct SemVer
+{
+    string ver;
+
+    this(string ver_) pure
+    {
+        import std : enforce;
+        enforce(ver_[0] == 'v');
+        ver = ver_;
+    }
+
+    int opCmp(string semver) const pure
+    {
+        auto lhs = ver.toSemVerSeq;
+        auto rhs = semver.toSemVerSeq;
+        return lhs == rhs ? 0 :
+               lhs < rhs ? -1 :
+               1;
+    }
+
+    int opCmp(SemVer rhs) const pure
+    {
+        return this.opCmp(rhs.ver);
+    }
+}
+
+private:
+
+auto toSemVerSeq(string ver) pure @safe
+{
+    import std : array, empty, enforce, findSplit, format, ifThrown, map, split, to;
+
+    enforce(ver[0] == 'v', format!"Invalid SALAD version that does not start with `v`: `%s`"(ver));
+    auto ret = ver[1..$].findSplit("-dev");
+    string[] mainVerStrs;
+    int devVer;
+    if (ret[1].empty) // release version
+    {
+        mainVerStrs = ret[0].split(".");
+        devVer = int.max;
+    }
+    else
+    {
+        mainVerStrs = ret[0].split(".");
+        devVer = ret[2].to!int.ifThrown(throw new Exception(format!"Invalid development version in the string: `%s` in `%s`"("dev"~ret[2], ver)));
+    }
+    enforce(mainVerStrs.length == 3, format!"Invalid SALAD version that does not have major, minor and patch versions: `%s`"(ver));
+    int[] mainVers = mainVerStrs.map!(to!int).array;
+    return mainVers~devVer;
+}
+
+pure @safe unittest
+{
+    assert("v1.2.0".toSemVerSeq == [1, 2, 0, int.max]);
+    assert("v1.3.0-dev3".toSemVerSeq == [1, 3, 0, 3]);
+    assert("v1.3.0".toSemVerSeq > "v1.3.0-dev3".toSemVerSeq);
+}
+
+pure @safe unittest
+{
+    assert(SemVer("v1.3.0") > SemVer("v1.3.0-dev3"));
+    assert(SemVer("v1.3.0") > "v1.3.0-dev3");
+    assert("v1.3.0" > SemVer("v1.3.0-dev3"));
+}
