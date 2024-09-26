@@ -55,6 +55,7 @@ mixin template genDumper()
     ///
     Node opCast(T: Node)() const
     {
+        // TODO: remove duplication with salad.meta.dumper.toNode
         LoadingContext normalized = context;
 
         Node ret = (Node[string]).init;

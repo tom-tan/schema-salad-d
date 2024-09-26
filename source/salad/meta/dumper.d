@@ -9,7 +9,7 @@ import dyaml : Node;
 import salad.context : LoadingContext;
 import salad.primitives : SchemaBase;
 import salad.type : isSumType;
-import std : isArray, isScalarType, isSomeString, Unqual;
+import std : isArray, isAssociativeArray, isScalarType, isSomeString, Unqual;
 
 Node toNode(T)(T t)
     if (is(Unqual!T : SchemaBase) || isScalarType!T || isSomeString!T)
@@ -42,6 +42,59 @@ Node toNode(T)(T t)
     {
         return t.match!(e => e.toNode);
     }
+}
+
+Node toNode(T)(T t)
+    if (isAssociativeArray!T)
+{
+    static assert(is(KeyType!T : string));
+
+    Node ret = (Node[string]).init;
+    LoadingContext normalized;
+    foreach(k, v; t)
+    {
+        auto valNode = v.toNode;
+        switch(valNode.type)
+        {
+        case NodeType.null_: break;
+        case NodeType.mapping:
+            normalized = normalizeContexts(normalized, valNode);
+            goto default;
+        case NodeType.sequence:
+            auto elems = valNode.sequence.array;
+            elems.filter!(e => e.type == NodeType.mapping).each!((ref e) =>
+                normalized = normalizeContexts(normalized, e)
+            );
+            valNode = Node(elems);
+            goto default;
+        default:
+            ret.add(k.toNode, valNode);
+        }
+    }
+
+    if (normalized.namespaces.length > 0)
+    {
+        ret.add("$namespaces", normalized.namespaces);
+    }
+
+    if (!normalized.schemas.empty)
+    {
+        import std : array, map, relativePath;
+
+        import salad.resolver : isAbsoluteURI, path;
+
+        ret.add(
+            "$schemas",
+            normalized.schemas.map!(s =>
+                s.isAbsoluteURI ? s.path.relativePath(normalized.fileURI.path) : s
+            ).array,
+        );
+    }
+    if (!normalized.baseURI.empty && normalized.baseURI.scheme != "file")
+    {
+        ret.add("$base", normalized.baseURI);
+    }
+    return ret;
 }
 
 /**
