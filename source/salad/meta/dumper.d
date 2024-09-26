@@ -47,12 +47,19 @@ Node toNode(T)(T t)
 Node toNode(T)(T t)
     if (isAssociativeArray!T)
 {
-    static assert(is(KeyType!T : string));
+    import std : array, each, empty, filter, format, KeyType;
+    import salad.resolver : scheme;
+
+    static assert(is(KeyType!T : string),
+        format!"Key type is %s but string is needed"((KeyType!T).stringof)
+    );
 
     Node ret = (Node[string]).init;
     LoadingContext normalized;
     foreach(k, v; t)
     {
+        import dyaml : NodeType;
+
         auto valNode = v.toNode;
         switch(valNode.type)
         {

@@ -32,3 +32,20 @@ mixin template genDumper()
         return payload.toNode;
     }
 }
+
+@safe unittest
+{
+    import dyaml : Node;
+    import salad.primitives : UnionSchemaBase;
+    import salad.type : Union;
+    import salad.meta.impl : genBody_;
+
+    static class Foo : UnionSchemaBase
+    {
+        Union!(bool, Foo[string]) payload;
+        mixin genBody_!"v1.3";
+    }
+
+    auto foo = new Foo;
+    auto n = Node(foo);
+}

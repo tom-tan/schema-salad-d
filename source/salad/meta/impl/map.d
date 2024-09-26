@@ -39,6 +39,7 @@ mixin template genCtor()
             auto resolved = k.resolveIdentifier(context);
             if (resolved.isAbsoluteURI)
             {
+                import salad.primitives : Any;
                 extension_fields[resolved] = v.as_!Any(context);
                 continue;
             }
@@ -55,13 +56,18 @@ mixin template genDumper()
     ///
     Node opCast(T: Node)() const
     {
+        import salad.resolver : scheme;
+        import std : array, each, empty, filter;
+
         // TODO: remove duplication with salad.meta.dumper.toNode
         LoadingContext normalized = context;
 
         Node ret = (Node[string]).init;
         foreach(k, v; payload)
         {
+            import dyaml : NodeType;
             import salad.meta.dumper : normalizeContexts, toNode;
+
             auto valNode = v.toNode;
             switch(valNode.type)
             {
@@ -70,7 +76,6 @@ mixin template genDumper()
                 normalized = normalizeContexts(normalized, valNode);
                 goto default;
             case NodeType.sequence:
-                // TODO: supporting nested sequence
                 auto elems = valNode.sequence.array;
                 elems.filter!(e => e.type == NodeType.mapping).each!((ref e) =>
                     normalized = normalizeContexts(normalized, e)
@@ -112,4 +117,20 @@ mixin template genDumper()
         }
         return ret;
     }
+}
+
+unittest
+{
+    import dyaml : Node;
+    import salad.primitives : MapSchemaBase;
+    import salad.meta.impl : genBody_;
+
+    static class Foo : MapSchemaBase
+    {
+        Foo[string] payload;
+        mixin genBody_!"v1.3";
+    }
+
+    auto foo = new Foo;
+    auto n = Node(foo);
 }
