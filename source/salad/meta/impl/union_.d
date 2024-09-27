@@ -26,10 +26,10 @@ mixin template genDumper()
     private import dyaml : Node;
 
     ///
-    Node opCast(T: Node)() const
+    override Node toNode(bool skip_null_fields = true) const @safe
     {
         import salad.meta.dumper : toNode;
-        return payload.toNode;
+        return payload.toNode(skip_null_fields);
     }
 }
 

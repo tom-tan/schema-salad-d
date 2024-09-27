@@ -54,7 +54,7 @@ mixin template genDumper()
     private import dyaml : Node;
 
     ///
-    Node opCast(T: Node)() const
+    override Node toNode(bool skip_null_fields = true) const @safe
     {
         import salad.resolver : scheme;
         import std : array, each, empty, filter;
@@ -68,10 +68,15 @@ mixin template genDumper()
             import dyaml : NodeType;
             import salad.meta.dumper : normalizeContexts, toNode;
 
-            auto valNode = v.toNode;
+            auto valNode = v.toNode(skip_null_fields);
             switch(valNode.type)
             {
-            case NodeType.null_: break;
+            case NodeType.null_:
+                if (skip_null_fields)
+                {
+                    break;
+                }
+                goto default;
             case NodeType.mapping:
                 normalized = normalizeContexts(normalized, valNode);
                 goto default;
@@ -91,7 +96,7 @@ mixin template genDumper()
         {
             import salad.meta.dumper : toNode;
             import salad.resolver : shortname;
-            ret.add(k.shortname(normalized), v.toNode);
+            ret.add(k.shortname(normalized), v.toNode(skip_null_fields));
         }
 
         if (normalized.namespaces.length > 0)
@@ -119,7 +124,7 @@ mixin template genDumper()
     }
 }
 
-unittest
+@safe unittest
 {
     import dyaml : Node;
     import salad.primitives : MapSchemaBase;
@@ -133,4 +138,37 @@ unittest
 
     auto foo = new Foo;
     auto n = Node(foo);
+}
+
+///
+@safe unittest
+{
+    import dyaml : Node, NodeType;
+    import salad.primitives : MapSchemaBase;
+    import salad.meta.impl : genBody_;
+    import salad.type : None, Union;
+
+    static class Foo : MapSchemaBase
+    {
+        Union!(None, Foo)[string] payload;
+        mixin genBody_!"v1.3";
+    }
+
+    auto foo = new Foo;
+    () @trusted {
+        foo.payload["test"] = None();
+    } ();
+
+    {
+        // default converter: fields with null value are omitted
+        auto n = Node(foo);
+        assert("test" !in n);
+    }
+
+    {
+        // `toNode(skip_null_fields = false)` leaves the fields with null value
+        auto n = foo.toNode(false);
+        assert("test" in n);
+        assert(n["test"].type == NodeType.null_);
+    }
 }

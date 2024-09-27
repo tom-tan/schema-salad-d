@@ -53,7 +53,7 @@ mixin template genDumper()
 {
     import dyaml : Node;
 
-    Node opCast(T: Node)() const
+    override Node toNode(bool skip_null_fields = true) const @safe
     {
         return Node(cast(string)value);
     }

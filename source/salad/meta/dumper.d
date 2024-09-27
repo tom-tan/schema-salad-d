@@ -11,21 +11,21 @@ import salad.primitives : SchemaBase;
 import salad.type : isSumType;
 import std : isArray, isAssociativeArray, isScalarType, isSomeString, Unqual;
 
-Node toNode(T)(T t)
-    if (is(Unqual!T : SchemaBase) || isScalarType!T || isSomeString!T)
+Node toNode(T)(T t, bool skip_null_fields = true) @safe
+    if (isScalarType!T || isSomeString!T)
 {
     return Node(t);
 }
 
-Node toNode(T)(T t)
+Node toNode(T)(T t, bool skip_null_fields = true) @safe
     if (!isSomeString!T && isArray!T)
 {
     import std : array, map;
 
-    return Node(t.map!toNode.array);
+    return Node(t.map!(e => e.toNode(skip_null_fields)).array);
 }
 
-Node toNode(T)(T t)
+Node toNode(T)(T t, bool skip_null_fields = true) @safe
     if (isSumType!T)
 {
     import dyaml : YAMLNull;
@@ -35,16 +35,16 @@ Node toNode(T)(T t)
     {
         return t.match!(
             (None _) => Node(YAMLNull()),
-            other => other.toNode,
+            other => other.toNode(skip_null_fields),
         );
     }
     else
     {
-        return t.match!(e => e.toNode);
+        return t.match!(e => e.toNode(skip_null_fields));
     }
 }
 
-Node toNode(T)(T t)
+Node toNode(T)(T t, bool skip_null_fields = true) @safe
     if (isAssociativeArray!T)
 {
     import std : array, each, empty, filter, format, KeyType;
@@ -60,10 +60,15 @@ Node toNode(T)(T t)
     {
         import dyaml : NodeType;
 
-        auto valNode = v.toNode;
+        auto valNode = v.toNode(skip_null_fields);
         switch(valNode.type)
         {
-        case NodeType.null_: break;
+        case NodeType.null_:
+            if (skip_null_fields)
+            {
+                break;
+            }
+            goto default;
         case NodeType.mapping:
             normalized = normalizeContexts(normalized, valNode);
             goto default;
@@ -115,7 +120,7 @@ Node toNode(T)(T t)
  *
  * Note: A term `normalized contexts` is schema-salad-d specific.
  */
-auto normalizeContexts(LoadingContext parent, ref Node child)
+auto normalizeContexts(LoadingContext parent, ref Node child) @safe
 {
     import std : multiwayUnion;
 
@@ -149,7 +154,9 @@ auto normalizeContexts(LoadingContext parent, ref Node child)
     {
         import std : array, map;
 
-        newParentContext.schemas = multiwayUnion([parent.schemas, schs.sequence.map!"a.as!string".array]).array;
+        newParentContext.schemas = () @trusted {
+            return multiwayUnion([parent.schemas, schs.sequence.map!"a.as!string".array]).array;
+        } ();
         child.removeAt("$schemas");
     }
 

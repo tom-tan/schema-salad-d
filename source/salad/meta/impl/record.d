@@ -167,7 +167,7 @@ mixin template genDumper()
     private import dyaml : Node;
 
     ///
-    Node opCast(T: Node)() const
+    override Node toNode(bool skip_null_fields = true) const @safe
     {
         import dyaml : NodeType;
         import salad.meta.dumper : normalizeContexts, toNode;
@@ -182,10 +182,15 @@ mixin template genDumper()
             static if (field.endsWith("_"))
             {
                 {
-                    auto valNode = __traits(getMember, this, field).toNode;
+                    auto valNode = __traits(getMember, this, field).toNode(skip_null_fields);
                     switch(valNode.type)
                     {
-                    case NodeType.null_: break;
+                    case NodeType.null_:
+                        if (skip_null_fields)
+                        {
+                            break;
+                        }
+                        goto default;
                     case NodeType.mapping:
                         normalized = normalizeContexts(normalized, valNode);
                         goto default;
@@ -206,7 +211,7 @@ mixin template genDumper()
 
         foreach(k, v; extension_fields.byPair)
         {
-            ret.add(k.shortname(normalized), v.toNode);
+            ret.add(k.shortname(normalized), v.toNode(skip_null_fields));
         }
 
         if (normalized.namespaces.length > 0)

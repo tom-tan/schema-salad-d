@@ -7,19 +7,26 @@
  */
 module salad.primitives;
 
-import dyaml : Mark;
+import dyaml : Mark, Node;
 import salad.context : LoadingContext;
 
 /// Base class for schema objects
 abstract class SchemaBase
 {
+    ///
     this() @nogc nothrow pure @safe {}
 
+    ///
     this(Mark mark, in LoadingContext context = LoadingContext.init) nothrow pure @safe
     {
         this.mark = mark;
         this.context = context;
     }
+
+    ///
+    Node toNode(bool skip_null_fields = true) const @safe;
+    ///
+    Node opCast(T: Node)() const @safe => toNode;
 
     LoadingContext context;
     Any[string] extension_fields;
@@ -104,7 +111,7 @@ class Any : SchemaBase
     }
 
     ///
-    Node opCast(T: Node)() const @nogc nothrow @safe
+    override Node toNode(bool skip_null_fields = true) const @nogc nothrow @safe
     {
         return value;
     }
