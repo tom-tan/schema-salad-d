@@ -10,6 +10,14 @@ module salad.primitives;
 import dyaml : Mark, Node;
 import salad.context : LoadingContext;
 
+/// A way to handle fields with null value (null fields) when converting them into a YAML node
+enum OmitStrategy
+{
+    none,    /// leave them as is
+    shallow, /// omit them in the root level but leave them as is in other levels
+    deep,    /// omit them in all the levels
+}
+
 /// Base class for schema objects
 abstract class SchemaBase
 {
@@ -24,7 +32,7 @@ abstract class SchemaBase
     }
 
     ///
-    Node toNode(bool skip_null_fields = true) const @safe;
+    Node toNode(OmitStrategy os = OmitStrategy.none) const @safe;
     ///
     Node opCast(T: Node)() const @safe => toNode;
 
@@ -111,7 +119,7 @@ class Any : SchemaBase
     }
 
     ///
-    override Node toNode(bool skip_null_fields = true) const @nogc nothrow @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.none) const @nogc nothrow @safe
     {
         return value;
     }

@@ -51,9 +51,10 @@ mixin template genOpEq()
 ///
 mixin template genDumper()
 {
-    import dyaml : Node;
+    private import dyaml : Node;
+    private import salad.primitives : OmitStrategy;
 
-    override Node toNode(bool skip_null_fields = true) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
     {
         return Node(cast(string)value);
     }

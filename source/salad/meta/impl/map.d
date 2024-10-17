@@ -52,9 +52,10 @@ mixin template genCtor()
 mixin template genDumper()
 {
     private import dyaml : Node;
+    private import salad.primitives : OmitStrategy;
 
     ///
-    override Node toNode(bool skip_null_fields = true) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
     {
         import salad.resolver : scheme;
         import std : array, each, empty, filter;
@@ -63,16 +64,17 @@ mixin template genDumper()
         LoadingContext normalized = context;
 
         Node ret = (Node[string]).init;
+        auto childOs = os == OmitStrategy.shallow ? OmitStrategy.none : os;
         foreach(k, v; payload)
         {
             import dyaml : NodeType;
             import salad.meta.dumper : normalizeContexts, toNode;
 
-            auto valNode = v.toNode(skip_null_fields);
+            auto valNode = v.toNode(childOs);
             switch(valNode.type)
             {
             case NodeType.null_:
-                if (skip_null_fields)
+                if (os == OmitStrategy.shallow || os == OmitStrategy.deep)
                 {
                     break;
                 }
@@ -96,7 +98,8 @@ mixin template genDumper()
         {
             import salad.meta.dumper : toNode;
             import salad.resolver : shortname;
-            ret.add(k.shortname(normalized), v.toNode(skip_null_fields));
+            // extension fields with null value must not be omitted
+            ret.add(k.shortname(normalized), v.toNode(OmitStrategy.none));
         }
 
         if (normalized.namespaces.length > 0)
@@ -144,7 +147,7 @@ mixin template genDumper()
 @safe unittest
 {
     import dyaml : Node, NodeType;
-    import salad.primitives : MapSchemaBase;
+    import salad.primitives : MapSchemaBase, OmitStrategy;
     import salad.meta.impl : genBody_;
     import salad.type : None, Union;
 
@@ -160,15 +163,19 @@ mixin template genDumper()
     } ();
 
     {
-        // default converter: fields with null value are omitted
         auto n = Node(foo);
-        assert("test" !in n);
+        assert("test" in n);
+        assert(n["test"].type == NodeType.null_);
     }
 
     {
-        // `toNode(skip_null_fields = false)` leaves the fields with null value
-        auto n = foo.toNode(false);
+        auto n = foo.toNode(OmitStrategy.none);
         assert("test" in n);
         assert(n["test"].type == NodeType.null_);
+    }
+
+    {
+        auto n = foo.toNode(OmitStrategy.deep);
+        assert("test" !in n);
     }
 }

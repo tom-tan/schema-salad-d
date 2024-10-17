@@ -24,12 +24,13 @@ mixin template genCtor()
 mixin template genDumper()
 {
     private import dyaml : Node;
+    private import salad.primitives : OmitStrategy;
 
     ///
-    override Node toNode(bool skip_null_fields = true) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
     {
         import salad.meta.dumper : toNode;
-        return payload.toNode(skip_null_fields);
+        return payload.toNode(os);
     }
 }
 

@@ -165,9 +165,10 @@ mixin template genIdentifier()
 mixin template genDumper()
 {
     private import dyaml : Node;
+    private import salad.primitives : OmitStrategy;
 
     ///
-    override Node toNode(bool skip_null_fields = true) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
     {
         import dyaml : NodeType;
         import salad.meta.dumper : normalizeContexts, toNode;
@@ -177,16 +178,17 @@ mixin template genDumper()
         LoadingContext normalized = context;
 
         auto ret = Node((Node[string]).init);
+        auto childOs = os == OmitStrategy.shallow ? OmitStrategy.none : os;
         static foreach (field; __traits(allMembers, This))
         {
             static if (field.endsWith("_"))
             {
                 {
-                    auto valNode = __traits(getMember, this, field).toNode(skip_null_fields);
+                    auto valNode = __traits(getMember, this, field).toNode(childOs);
                     switch(valNode.type)
                     {
                     case NodeType.null_:
-                        if (skip_null_fields)
+                        if (os == OmitStrategy.shallow || os == OmitStrategy.deep)
                         {
                             break;
                         }
@@ -211,7 +213,7 @@ mixin template genDumper()
 
         foreach(k, v; extension_fields.byPair)
         {
-            ret.add(k.shortname(normalized), v.toNode(skip_null_fields));
+            ret.add(k.shortname(normalized), v.toNode(OmitStrategy.none));
         }
 
         if (normalized.namespaces.length > 0)

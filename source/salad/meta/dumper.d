@@ -7,25 +7,25 @@ module salad.meta.dumper;
 
 import dyaml : Node;
 import salad.context : LoadingContext;
-import salad.primitives : SchemaBase;
+import salad.primitives : OmitStrategy, SchemaBase;
 import salad.type : isSumType;
 import std : isArray, isAssociativeArray, isScalarType, isSomeString, Unqual;
 
-Node toNode(T)(T t, bool skip_null_fields = true) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     if (isScalarType!T || isSomeString!T)
 {
     return Node(t);
 }
 
-Node toNode(T)(T t, bool skip_null_fields = true) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     if (!isSomeString!T && isArray!T)
 {
     import std : array, map;
 
-    return Node(t.map!(e => e.toNode(skip_null_fields)).array);
+    return Node(t.map!(e => e.toNode(os)).array);
 }
 
-Node toNode(T)(T t, bool skip_null_fields = true) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     if (isSumType!T)
 {
     import dyaml : YAMLNull;
@@ -35,19 +35,20 @@ Node toNode(T)(T t, bool skip_null_fields = true) @safe
     {
         return t.match!(
             (None _) => Node(YAMLNull()),
-            other => other.toNode(skip_null_fields),
+            other => other.toNode(os),
         );
     }
     else
     {
-        return t.match!(e => e.toNode(skip_null_fields));
+        return t.match!(e => e.toNode(os));
     }
 }
 
-Node toNode(T)(T t, bool skip_null_fields = true) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     if (isAssociativeArray!T)
 {
     import std : array, each, empty, filter, format, KeyType;
+    import salad.primitives : OmitStrategy;
     import salad.resolver : scheme;
 
     static assert(is(KeyType!T : string),
@@ -55,16 +56,17 @@ Node toNode(T)(T t, bool skip_null_fields = true) @safe
     );
 
     Node ret = (Node[string]).init;
+    auto childOs = os == OmitStrategy.shallow ? OmitStrategy.none : os;
     LoadingContext normalized;
     foreach(k, v; t)
     {
         import dyaml : NodeType;
 
-        auto valNode = v.toNode(skip_null_fields);
+        auto valNode = v.toNode(childOs);
         switch(valNode.type)
         {
         case NodeType.null_:
-            if (skip_null_fields)
+            if (os == OmitStrategy.shallow || os == OmitStrategy.deep)
             {
                 break;
             }
