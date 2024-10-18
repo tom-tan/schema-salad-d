@@ -55,16 +55,21 @@ mixin template genDumper()
     private import salad.primitives : OmitStrategy;
 
     ///
-    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.default_) const @safe
     {
         import salad.resolver : scheme;
         import std : array, each, empty, filter;
+
+        if (os == OmitStrategy.default_)
+        {
+            os = OmitStrategy.none;
+        }
 
         // TODO: remove duplication with salad.meta.dumper.toNode
         LoadingContext normalized = context;
 
         Node ret = (Node[string]).init;
-        auto childOs = os == OmitStrategy.shallow ? OmitStrategy.none : os;
+        auto childOs = os == OmitStrategy.shallow  ? OmitStrategy.none : os;
         foreach(k, v; payload)
         {
             import dyaml : NodeType;

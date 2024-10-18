@@ -13,9 +13,10 @@ import salad.context : LoadingContext;
 /// A way to handle fields with null value (null fields) when converting them into a YAML node
 enum OmitStrategy
 {
-    none,    /// leave them as is
-    shallow, /// omit them in the root level but leave them as is in other levels
-    deep,    /// omit them in all the levels
+    default_, /// use default strategy for each schema object
+    none,     /// leave them as is
+    shallow,  /// omit them in the root level but leave them as is in other levels
+    deep,     /// omit them in all the levels
 }
 
 /// Base class for schema objects
@@ -32,9 +33,9 @@ abstract class SchemaBase
     }
 
     ///
-    Node toNode(OmitStrategy os = OmitStrategy.none) const @safe;
+    Node toNode(OmitStrategy os = OmitStrategy.default_) const @safe;
     ///
-    Node opCast(T: Node)() const @safe => toNode;
+    Node opCast(T: Node)() const @safe => toNode(OmitStrategy.default_);
 
     LoadingContext context;
     Any[string] extension_fields;
@@ -119,7 +120,7 @@ class Any : SchemaBase
     }
 
     ///
-    override Node toNode(OmitStrategy os = OmitStrategy.none) const @nogc nothrow @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.default_) const @nogc nothrow @safe
     {
         return value;
     }

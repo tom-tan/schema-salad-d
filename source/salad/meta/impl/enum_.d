@@ -54,7 +54,7 @@ mixin template genDumper()
     private import dyaml : Node;
     private import salad.primitives : OmitStrategy;
 
-    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.default_) const @safe
     {
         return Node(cast(string)value);
     }

@@ -27,7 +27,7 @@ mixin template genDumper()
     private import salad.primitives : OmitStrategy;
 
     ///
-    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.default_) const @safe
     {
         import salad.meta.dumper : toNode;
         return payload.toNode(os);

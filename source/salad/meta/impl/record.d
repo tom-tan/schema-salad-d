@@ -168,12 +168,17 @@ mixin template genDumper()
     private import salad.primitives : OmitStrategy;
 
     ///
-    override Node toNode(OmitStrategy os = OmitStrategy.none) const @safe
+    override Node toNode(OmitStrategy os = OmitStrategy.default_) const @safe
     {
         import dyaml : NodeType;
         import salad.meta.dumper : normalizeContexts, toNode;
         import salad.resolver : scheme, shortname;
         import std : array, byPair, each, empty, endsWith, filter;
+
+        if (os == OmitStrategy.default_)
+        {
+            os = OmitStrategy.shallow;
+        }
 
         LoadingContext normalized = context;
 

@@ -11,13 +11,13 @@ import salad.primitives : OmitStrategy, SchemaBase;
 import salad.type : isSumType;
 import std : isArray, isAssociativeArray, isScalarType, isSomeString, Unqual;
 
-Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.default_) @safe
     if (isScalarType!T || isSomeString!T)
 {
     return Node(t);
 }
 
-Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.default_) @safe
     if (!isSomeString!T && isArray!T)
 {
     import std : array, map;
@@ -25,7 +25,7 @@ Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     return Node(t.map!(e => e.toNode(os)).array);
 }
 
-Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.default_) @safe
     if (isSumType!T)
 {
     import dyaml : YAMLNull;
@@ -44,7 +44,7 @@ Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     }
 }
 
-Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
+Node toNode(T)(T t, OmitStrategy os = OmitStrategy.default_) @safe
     if (isAssociativeArray!T)
 {
     import std : array, each, empty, filter, format, KeyType;
@@ -54,6 +54,11 @@ Node toNode(T)(T t, OmitStrategy os = OmitStrategy.none) @safe
     static assert(is(KeyType!T : string),
         format!"Key type is %s but string is needed"((KeyType!T).stringof)
     );
+
+    if (os == OmitStrategy.default_)
+    {
+        os = OmitStrategy.none;
+    }
 
     Node ret = (Node[string]).init;
     auto childOs = os == OmitStrategy.shallow ? OmitStrategy.none : os;
