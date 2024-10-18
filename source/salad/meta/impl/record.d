@@ -175,11 +175,6 @@ mixin template genDumper()
         import salad.resolver : scheme, shortname;
         import std : array, byPair, each, empty, endsWith, filter;
 
-        if (os == OmitStrategy.default_)
-        {
-            os = OmitStrategy.shallow;
-        }
-
         LoadingContext normalized = context;
 
         auto ret = Node((Node[string]).init);
@@ -193,7 +188,7 @@ mixin template genDumper()
                     switch(valNode.type)
                     {
                     case NodeType.null_:
-                        if (os == OmitStrategy.shallow || os == OmitStrategy.deep)
+                        if (os == OmitStrategy.default_ || os == OmitStrategy.shallow || os == OmitStrategy.deep)
                         {
                             break;
                         }

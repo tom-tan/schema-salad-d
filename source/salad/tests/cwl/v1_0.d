@@ -1175,3 +1175,44 @@ unittest
     auto clb = new CommandLineBinding;
     assert(clb.separate_);
 }
+
+unittest
+{
+    import dyaml : Node;
+    import salad.resolver : absoluteURI;
+    import salad.type : tryMatch;
+    import core.exception : AssertError;
+    import std : assertNotThrown, enforce;
+
+    auto uri = "examples/cwl-v1.0/bwa-mem-tool.cwl".absoluteURI;
+
+    auto c = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                               .tryMatch!((CommandLineTool c) => c)
+                               .assertNotThrown;
+    // all the optional fields with null value must be omitted (exception: `default`)
+    auto node = Node(c);
+    assert("id" !in node);
+    auto inp = enforce!AssertError("inputs" in node);
+    assert("label" !in (*inp)[0]);
+}
+
+unittest
+{
+    import dyaml : Node, NodeType;
+    import salad.resolver : absoluteURI;
+    import salad.type : tryMatch;
+    import core.exception : AssertError;
+    import std : assertNotThrown, enforce;
+
+    auto uri = "examples/cwl-v1.0/params.cwl".absoluteURI;
+
+    auto c = importFromURI(uri).tryMatch!((DocumentRootType r) => r)
+                               .tryMatch!((CommandLineTool c) => c)
+                               .assertNotThrown;
+    // all the null fields in `default` and user-defined type must not be omitted
+    auto node = Node(c);
+    assert("id" !in node); // Optional fields with null value must be omitted
+    auto bar = (*enforce!AssertError("inputs" in node))[0];
+    auto baz = enforce!AssertError("b\"az" in bar["default"]);
+    assert(baz.type == NodeType.null_);
+}

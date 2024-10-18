@@ -60,11 +60,6 @@ mixin template genDumper()
         import salad.resolver : scheme;
         import std : array, each, empty, filter;
 
-        if (os == OmitStrategy.default_)
-        {
-            os = OmitStrategy.none;
-        }
-
         // TODO: remove duplication with salad.meta.dumper.toNode
         LoadingContext normalized = context;
 

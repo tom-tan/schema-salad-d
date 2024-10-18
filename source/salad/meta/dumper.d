@@ -55,11 +55,6 @@ Node toNode(T)(T t, OmitStrategy os = OmitStrategy.default_) @safe
         format!"Key type is %s but string is needed"((KeyType!T).stringof)
     );
 
-    if (os == OmitStrategy.default_)
-    {
-        os = OmitStrategy.none;
-    }
-
     Node ret = (Node[string]).init;
     auto childOs = os == OmitStrategy.shallow ? OmitStrategy.none : os;
     LoadingContext normalized;
