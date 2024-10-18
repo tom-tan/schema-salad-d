@@ -16,10 +16,13 @@
 					"/dlang/dc/src/phobos",
 					// for ldc and gdc
 					"/dlang/dc/import"
-				]
+				],
+				"files.associations": {
+					"*.cwl": "yaml"
+				}
 			},
 			"extensions": [
-				"sbg-rabix.benten-cwl",
+				"redhat.vscode-yaml",
 				"webfreak.dlang-bundle"
 			]
 		}
